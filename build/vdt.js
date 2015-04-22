@@ -1925,7 +1925,7 @@ Parser.prototype = {
         } else if (ch === '<') {
             token = this._parseJSXElement();
         } else {
-            token = this._scanJSXText(['<', '>', '{', '}']);
+            token = this._scanJSXText(['<', '{']);
         }
 
         return token;
@@ -1974,6 +1974,7 @@ Parser.prototype = {
 };
 
 module.exports = Parser;
+
 },{"./utils":37}],36:[function(require,module,exports){
 /**
  * @fileoverview stringify ast of jsx to js
