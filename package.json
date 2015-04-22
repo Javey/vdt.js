@@ -6,6 +6,15 @@
     "virtual-dom": "^2.0.1"
   },
   "scripts": {
-    "build": "browserify src/vdt.js -o build/vdt.js -s Vdt && uglifyjs build/vdt.js -o build/vdt.min.js -m"
+    "build": "browserify src/vdt.js -o build/vdt.js -s Vdt && uglifyjs build/vdt.js -o build/vdt.min.js -m",
+    "test": "node_modules/.bin/mocha --compilers coffee:coffee-script/register test/parser.coffee"
+  },
+  "devDependencies": {
+    "coffee-script": "^1.9.2",
+    "jquery": "^2.1.3",
+    "mocha": "^2.2.4",
+    "should": "^6.0.1",
+    "todomvc-app-css": "^2.0.1",
+    "todomvc-common": "^1.0.1"
   }
 }

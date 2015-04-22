@@ -39,6 +39,10 @@
         });
         template.update(users);
     }, 1000);
+
+    document.querySelector('input').addEventListener('input', function(e) {
+        console.log(e.target.value)
+    }, false);
 </script>
 </body>
 </html>

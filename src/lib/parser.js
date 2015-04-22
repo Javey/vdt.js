@@ -265,7 +265,7 @@ Parser.prototype = {
         } else if (ch === '<') {
             token = this._parseJSXElement();
         } else {
-            token = this._scanJSXText(['<', '>', '{', '}']);
+            token = this._scanJSXText(['<', '{']);
         }
 
         return token;
