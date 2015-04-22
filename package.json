@@ -1,0 +1,8 @@
+{
+  "name": "vdt.js",
+  "version": "0.0.1",
+  "description": "A template engine using virtual-dom",
+  "dependencies": {
+    "virtual-dom": "^2.0.1"
+  }
+}
