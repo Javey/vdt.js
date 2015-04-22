@@ -9,6 +9,7 @@
     var a = 1;
     var b = 2;
     <div class="users">
+        <input value={users[1].name} />
         <ul>
             {users.map(function(user, index) {
                 return <li class="user" id={user.id}>{index}: {user.name}</li>
@@ -17,7 +18,7 @@
         <div>this is a({a})</div>
     </div>
 </script>
-<script type="text/javascript" src="../build/vdt.min.js"></script>
+<script type="text/javascript" src="../build/vdt.js"></script>
 <script type="text/javascript">
     var users = [
         {name: 'John', id: '1'},

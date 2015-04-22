@@ -1810,13 +1810,24 @@ Parser.prototype = {
             }
             this.index++;
         }
-        return {
+        var ret = {
             type: Type.JSXElement,
             typeName: TypeName[Type.JSXElement],
             value: this.source.slice(start, this.index),
             attributes: this._parseJSXAttribute(),
-            children: this._parseJSXChildren()
+            children: []
+        };
+
+        if (this._char() === '/') {
+            // self closing tag
+            this.index++;
+            this._expect('>')
+        } else {
+            this._expect('>');
+            ret.children = this._parseJSXChildren();
         }
+
+        return ret;
     },
 
     _parseJSXAttribute: function() {
@@ -1834,8 +1845,6 @@ Parser.prototype = {
                 ret.push(attr);
             }
         }
-
-        this._expect('>');
 
         return ret;
     },
