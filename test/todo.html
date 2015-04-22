@@ -17,16 +17,16 @@
         <input id="toggle-all" class="toggle-all" type="checkbox">
         <label for="toggle-all">Mark all as complete</label>
         <script type="text/vdt" id="todo_template">
-            <ul class="todo-list">
-                {list.map(function(item) {
+            <ul className="todo-list">
+                {list.map(function(item, i) {
                     return (
-                        <li class="aa">
-                            <div class="view">
-                                <input class="toggle" type="checkbox" checked={item.completed} />
+                        <li className={item.completed ? 'completed' : ''} index={i}>
+                            <div className="view">
+                                <input className="toggle" type="checkbox" checked={item.completed} />
                                 <label>{item.title}</label>
-                                <button class="destroy"></button>
+                                <button className="destroy"></button>
                             </div>
-                            <input class="edit" value={item.value} />
+                            <input className="edit" value={item.title} />
                         </li>
                     )
                 })}
