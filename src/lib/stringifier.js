@@ -7,10 +7,10 @@
 var Utils = require('./utils'),
     Type = Utils.Type;
 
-var Stringify = function() {};
+var Stringifier = function() {};
 
-Stringify.prototype = {
-    constructor: Stringify,
+Stringifier.prototype = {
+    constructor: Stringifier,
 
     stringify: function(ast) {
         return this._visitJSXExpressionContainer(ast, true);
@@ -31,6 +31,7 @@ Stringify.prototype = {
     },
 
     _visit: function(element) {
+        element = element || {};
         switch (element.type) {
             case Type.JS:
                 return this._visitJS(element);
@@ -74,4 +75,4 @@ Stringify.prototype = {
     }
 };
 
-module.exports = Stringify;
+module.exports = Stringifier;

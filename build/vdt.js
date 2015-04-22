@@ -1985,10 +1985,10 @@ module.exports = Parser;
 var Utils = require('./utils'),
     Type = Utils.Type;
 
-var Stringify = function() {};
+var Stringifier = function() {};
 
-Stringify.prototype = {
-    constructor: Stringify,
+Stringifier.prototype = {
+    constructor: Stringifier,
 
     stringify: function(ast) {
         return this._visitJSXExpressionContainer(ast, true);
@@ -2009,6 +2009,7 @@ Stringify.prototype = {
     },
 
     _visit: function(element) {
+        element = element || {};
         switch (element.type) {
             case Type.JS:
                 return this._visitJS(element);
@@ -2052,7 +2053,7 @@ Stringify.prototype = {
     }
 };
 
-module.exports = Stringify;
+module.exports = Stringifier;
 
 },{"./utils":37}],37:[function(require,module,exports){
 /**
@@ -2110,12 +2111,12 @@ var Utils = {
 module.exports = Utils;
 },{}],38:[function(require,module,exports){
 var parser = new (require('./lib/parser')),
-    stringify = new (require('./lib/stringify')),
+    stringifier = new (require('./lib/stringifier')),
     virtualDom = require('virtual-dom');
 
 var Vdt = function(source) {
     var ast = parser.parse(source),
-        hscript = stringify.stringify(ast);
+        hscript = stringifier.stringify(ast);
 
     hscript = 'var h = Vdt.virtualDom.h;\nwith(obj) {' + hscript + '};';
     var templateFn = new Function('obj', hscript);
@@ -2141,11 +2142,11 @@ var Vdt = function(source) {
 };
 
 Vdt.parser = parser;
-Vdt.stringify = stringify;
+Vdt.stringifier = stringifier;
 Vdt.virtualDom = virtualDom;
 
 module.exports = Vdt;
-},{"./lib/parser":35,"./lib/stringify":36,"virtual-dom":4}],39:[function(require,module,exports){
+},{"./lib/parser":35,"./lib/stringifier":36,"virtual-dom":4}],39:[function(require,module,exports){
 
 },{}]},{},[38])(38)
 });

@@ -7,7 +7,7 @@
   },
   "scripts": {
     "build": "browserify src/vdt.js -o build/vdt.js -s Vdt && uglifyjs build/vdt.js -o build/vdt.min.js -m",
-    "test": "node_modules/.bin/mocha --compilers coffee:coffee-script/register test/parser.coffee"
+    "test": "node_modules/.bin/mocha --compilers coffee:coffee-script/register test/*.coffee"
   },
   "devDependencies": {
     "coffee-script": "^1.9.2",

@@ -2,7 +2,7 @@ var templateDom = document.getElementById('todo_template'),
     templateStr = templateDom.innerHTML,
     templateFn = Vdt(templateStr);
 
-var list = [];
+var list = [{title: 'test', completed: false}];
 
 var dom = templateFn({list: list});
 templateDom.parentNode.insertBefore(dom, templateDom);
@@ -30,6 +30,14 @@ document.querySelector('.toggle-all').addEventListener('click', function(e) {
         item.completed = e.target.checked;
     });
     update();
+});
+
+dom.addEventListener('click', function(e) {
+    if (e.target.className === 'toggle') {
+        var index = e.target.parentNode.parentNode.index;
+        list[index].completed = e.target.checked;
+        update();
+    }
 });
 
 function update() {

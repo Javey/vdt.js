@@ -1,10 +1,10 @@
 var parser = new (require('./lib/parser')),
-    stringify = new (require('./lib/stringify')),
+    stringifier = new (require('./lib/stringifier')),
     virtualDom = require('virtual-dom');
 
 var Vdt = function(source) {
     var ast = parser.parse(source),
-        hscript = stringify.stringify(ast);
+        hscript = stringifier.stringify(ast);
 
     hscript = 'var h = Vdt.virtualDom.h;\nwith(obj) {' + hscript + '};';
     var templateFn = new Function('obj', hscript);
@@ -30,7 +30,7 @@ var Vdt = function(source) {
 };
 
 Vdt.parser = parser;
-Vdt.stringify = stringify;
+Vdt.stringifier = stringifier;
 Vdt.virtualDom = virtualDom;
 
 module.exports = Vdt;

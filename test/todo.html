@@ -7,16 +7,25 @@
     <link type="text/css" rel="stylesheet" href="../node_modules/todomvc-app-css/index.css"/>
 </head>
 <body>
-<section class="todoapp">
-    <header class="header">
-        <h1>todos</h1>
-        <input class="new-todo" placeholder="What needs to be done?" autofocus>
-    </header>
-    <!-- This section should be hidden by default and shown when there are todos -->
-    <section class="main">
-        <input id="toggle-all" class="toggle-all" type="checkbox">
-        <label for="toggle-all">Mark all as complete</label>
-        <script type="text/vdt" id="todo_template">
+<script type="text/vdt" id="todo_template">
+    var isAllDone = true, remaining = 0;
+    for (var i = 0, l = list.length; i < l; i++) {
+        if (!list[i].completed) {
+            isAllDone = false;
+            remaining++;
+        }
+    }
+    if (!list.length) {
+        isAllDone = false;
+    }
+    <section className="todoapp">
+        <header className="header">
+            <h1>todos</h1>
+            <input className="new-todo" placeholder="What needs to be done?" autofocus />
+        </header>
+        <section className="main">
+            <input id="toggle-all" className="toggle-all" type="checkbox" checked={isAllDone}/>
+            <label htmlFor="toggle-all">Mark all as complete</label>
             <ul className="todo-list">
                 {list.map(function(item, i) {
                     return (
@@ -31,28 +40,24 @@
                     )
                 })}
             </ul>
-        </script>
+        </section>
+        <footer className="footer">
+            <span className="todo-count"><strong>{remaining}</strong> item{remaining > 1 ? 's' : ''} left</span>
+            <ul className="filters">
+                <li>
+                    <a className="selected" href="#/">All</a>
+                </li>
+                <li>
+                    <a href="#/active">Active</a>
+                </li>
+                <li>
+                    <a href="#/completed">Completed</a>
+                </li>
+            </ul>
+            <button className="clear-completed">Clear completed</button>
+        </footer>
     </section>
-    <!-- This footer should hidden by default and shown when there are todos -->
-    <footer class="footer">
-        <!-- This should be `0 items left` by default -->
-        <span class="todo-count"><strong>0</strong> item left</span>
-        <!-- Remove this if you don't implement routing -->
-        <ul class="filters">
-            <li>
-                <a class="selected" href="#/">All</a>
-            </li>
-            <li>
-                <a href="#/active">Active</a>
-            </li>
-            <li>
-                <a href="#/completed">Completed</a>
-            </li>
-        </ul>
-        <!-- Hidden if no completed items are left ↓ -->
-        <button class="clear-completed">Clear completed</button>
-    </footer>
-</section>
+</script>
 <footer class="info">
     <p>Double-click to edit a todo</p>
     <!-- Remove the below line ↓ -->
