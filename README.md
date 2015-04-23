@@ -13,7 +13,9 @@ and uses [JSX](https://facebook.github.io/react/docs/jsx-in-depth.html) as templ
 * One-way reactive data flow.
 * Simple and lightweight. Rewrite a compiler instead of [jstransform](https://github.com/facebook/jstransform). Discard ES6 syntax sugar.
 
-# Example [demo](http://javey.github.io/vdt/demo.html)
+# Example
+
+[demo](http://javey.github.io/vdt/demo.html)
 
 ```html
 <!DOCTYPE html>
