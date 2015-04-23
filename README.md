@@ -6,10 +6,10 @@ It uses [JSX](https://facebook.github.io/react/docs/jsx-in-depth.html) as templa
 
 # Features
 
-*. Just the ui. Just the template further more.
-*. Virtual-dom. Diff update unlike [Handlebars](https://github.com/daaain/Handlebars)/[mustache.js](https://github.com/janl/mustache.js).
-*. One-way reactive data flow.
-*. Simple and lightweight. Rewrite a compiler instead of [jstransform](https://github.com/facebook/jstransform). Discard es6 syntax sugar.
+* Just the ui. Just the template further more.
+* Virtual-dom. Diff update unlike [Handlebars](https://github.com/daaain/Handlebars)/[mustache.js](https://github.com/janl/mustache.js).
+* One-way reactive data flow.
+* Simple and lightweight. Rewrite a compiler instead of [jstransform](https://github.com/facebook/jstransform). Discard es6 syntax sugar.
 
 # Example
 
@@ -72,22 +72,22 @@ It uses [JSX](https://facebook.github.io/react/docs/jsx-in-depth.html) as templa
 
 Compile JSX template source then return a function.
 
-*. @param `source` {String} JSX template source
-*. @return {Function} a function used to handle data
+* @param `source` {String} JSX template source
+* @return {Function} a function used to handle data
 
 ## Vdt.parse(source)
 
 Parse JSX template to an ast object
 
-*. @param `source` {String} JSX template source
-*. @return {Object} abstract syntax tree object
+* @param `source` {String} JSX template source
+* @return {Object} abstract syntax tree object
 
 ## Vdt.stringify(ast)
 
 Stringify the ast object to hscript string.
 
-*. @param `ast` {Object} abstract syntax tree object
-*. @return {String} hscript string with a return expression at end
+* @param `ast` {Object} abstract syntax tree object
+* @return {String} hscript string with a return expression at end
 
 ## Vdt.virtualDom
 
@@ -99,14 +99,14 @@ The funtion returned by Vdt/Vdt.compile.
 
 ### template(data, [thisArg])
 
-*. @param `data` {Object} data passed to template
-*. @param `thisArg` {Object} the binding of this in template
-*. @return {Dom} html dom
+* @param `data` {Object} data passed to template
+* @param `thisArg` {Object} the binding of this in template
+* @return {Dom} html dom
 
 ### template.update(data)
 
-*. @param `data` {Object} whole data passed to template
-*. @return {Dom} html dom which has updated
+* @param `data` {Object} whole data passed to template
+* @return {Dom} html dom which has updated
 
 
 
