@@ -18,26 +18,29 @@
     if (!list.length) {
         isAllDone = false;
     }
+
     <section className="todoapp">
         <header className="header">
             <h1>todos</h1>
             <input className="new-todo" placeholder="What needs to be done?" autofocus />
         </header>
         <section className="main">
-            <input id="toggle-all" className="toggle-all" type="checkbox" checked={isAllDone}/>
+            {list.length ? <input id="toggle-all" className="toggle-all" type="checkbox" checked={isAllDone}/> : null}
             <label htmlFor="toggle-all">Mark all as complete</label>
             <ul className="todo-list">
                 {list.map(function(item, i) {
-                    return (
-                        <li className={item.completed ? 'completed' : ''} index={i}>
-                            <div className="view">
-                                <input className="toggle" type="checkbox" checked={item.completed} />
-                                <label>{item.title}</label>
-                                <button className="destroy"></button>
-                            </div>
-                            <input className="edit" value={item.title} />
-                        </li>
-                    )
+                    return filter(item, i) ?
+                        (
+                            <li className={(item.completed ? 'completed' : '') + (i === editingIndex ? ' editing' : '')} index={i}>
+                                <div className="view">
+                                    <input className="toggle" type="checkbox" checked={item.completed} />
+                                    <label>{item.title}</label>
+                                    <button className="destroy"></button>
+                                </div>
+                                <input className="edit" value={item.title} />
+                            </li>
+                        )
+                        : null;
                 })}
             </ul>
         </section>
@@ -45,13 +48,13 @@
             <span className="todo-count"><strong>{remaining}</strong> item{remaining > 1 ? 's' : ''} left</span>
             <ul className="filters">
                 <li>
-                    <a className="selected" href="#/">All</a>
+                    <a className={filterType === 'all' ? 'selected' : ''} href="#/">All</a>
                 </li>
                 <li>
-                    <a href="#/active">Active</a>
+                    <a className={filterType === 'active' ? 'selected' : ''} href="#/active">Active</a>
                 </li>
                 <li>
-                    <a href="#/completed">Completed</a>
+                    <a className={filterType === 'completed' ? 'selected' : ''} href="#/completed">Completed</a>
                 </li>
             </ul>
             <button className="clear-completed">Clear completed</button>
@@ -60,16 +63,12 @@
 </script>
 <footer class="info">
     <p>Double-click to edit a todo</p>
-    <!-- Remove the below line ↓ -->
-    <p>Template by <a href="http://sindresorhus.com">Sindre Sorhus</a></p>
-    <!-- Change this out with your name and url ↓ -->
-    <p>Created by <a href="http://todomvc.com">you</a></p>
+    <p>Created by <a href="http://todomvc.com">Javey</a></p>
     <p>Part of <a href="http://todomvc.com">TodoMVC</a></p>
 </footer>
-<!-- Scripts here. Don't remove ↓ -->
-<script src="../node_modules/todomvc-common/base.js"></script>
+<!--<script src="../node_modules/todomvc-common/base.js"></script>-->
 <script src="../node_modules/jquery/dist/jquery.js"></script>
-<script src="../build/vdt.js"></script>
+<script src="../dist/vdt.js"></script>
 <script src="app.js"></script>
 </body>
 </html>
