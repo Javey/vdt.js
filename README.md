@@ -77,7 +77,7 @@ Compile JSX template source then return a function.
 
 ## The returned function `template`
 
-The function returned by Vdt/Vdt.compile.
+The function returned by `Vdt/Vdt.compile`.
 
 ### template(data, [thisArg])
 
