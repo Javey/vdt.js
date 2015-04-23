@@ -2,47 +2,49 @@
 <html>
 <head lang="en">
     <meta charset="UTF-8">
-    <title>vdt template engine test</title>
+    <title>vdt template engine demo</title>
 </head>
 <body>
-<script type="text/vdt" id="vdt_template">
+<script type="text/vdt" id="template">
     var a = 1;
-    var b = 2;
-    <div class="users">
-        <input value={users[1].name} />
+    <div className="users">
+        <input id="add" value={input} /> input: {input}
         <ul>
             {users.map(function(user, index) {
-                return <li class="user" id={user.id}>{index}: {user.name}</li>
+                return <li className="user" id={user.id}>{index}: {user.name}</li>
             })}
         </ul>
         <div>this is a({a})</div>
     </div>
 </script>
-<script type="text/javascript" src="../build/vdt.js"></script>
+<script type="text/javascript" src="../dist/vdt.js"></script>
 <script type="text/javascript">
-    var users = [
-        {name: 'John', id: '1'},
-        {name: 'Javey', id: '2'},
-        {name: 'Tom', id: '3'},
-        {name: 'Sarah', id: '4'}
-    ];
+    var data = {
+        users: [
+            {name: 'John', id: '1'},
+            {name: 'Javey', id: '2'},
+            {name: 'Tom', id: '3'},
+            {name: 'Sarah', id: '4'}
+        ],
+        input: ''
+    };
 
-    var str = document.getElementById('vdt_template').innerHTML;
-    template = Vdt(str);
+    var str = document.getElementById('template').innerHTML,
+        template = Vdt(str),
+        dom = template(data);
 
-    var dom = template({users: users});
     document.body.appendChild(dom);
 
-    setInterval(function() {
-        users = users.sort(function() {
-            return Math.random() - 0.5;
-        });
-        template.update(users);
-    }, 1000);
-
-    document.querySelector('input').addEventListener('input', function(e) {
-        console.log(e.target.value)
-    }, false);
+    var input = document.getElementById('add');
+    input.addEventListener('input', function(e) {
+        data.input = e.target.value;
+        template.update(data);
+    });
+    input.addEventListener('change', function(e) {
+        data.users.push({name: e.target.value, id: data.users.length});
+        data.input = '';
+        template.update(data);
+    });
 </script>
 </body>
 </html>

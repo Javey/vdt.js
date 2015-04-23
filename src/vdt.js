@@ -23,6 +23,7 @@ var Vdt = function(source) {
             patches = virtualDom.diff(tree, newTree);
         node = virtualDom.patch(node, patches);
         tree = newTree;
+        return node;
     };
 
     ret.source = 'function(obj) {\n' + hscript + '\n}';
