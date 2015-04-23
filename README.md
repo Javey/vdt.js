@@ -1,8 +1,8 @@
 # Vdt.js
 
 Vdt.js is a template engine using virtual-dom technology.
-It is inspired by [React](https://github.com/facebook/react) and [virtual-dom](https://github.com/Matt-Esch/virtual-dom).
-It uses [JSX](https://facebook.github.io/react/docs/jsx-in-depth.html) as template syntax.
+It is inspired by [React](https://github.com/facebook/react) and [virtual-dom](https://github.com/Matt-Esch/virtual-dom),
+and uses [JSX](https://facebook.github.io/react/docs/jsx-in-depth.html) as template syntax.
 
 # Features
 
@@ -75,6 +75,21 @@ Compile JSX template source then return a function.
 * @param `source` {String} JSX template source
 * @return {Function} a function used to handle data
 
+## The returned function `template`
+
+The function returned by Vdt/Vdt.compile.
+
+### template(data, [thisArg])
+
+* @param `data` {Object} data passed to template
+* @param `thisArg` {Object} the binding of this in template
+* @return {Dom} html dom
+
+### template.update(data)
+
+* @param `data` {Object} whole data passed to template
+* @return {Dom} html dom which has updated
+
 ## Vdt.parse(source)
 
 Parse JSX template to an ast object
@@ -92,23 +107,3 @@ Stringify the ast object to hscript string.
 ## Vdt.virtualDom
 
 The object exported by [virtual-dom](https://github.com/Matt-Esch/virtual-dom) module.
-
-## The returned function `template`
-
-The function returned by Vdt/Vdt.compile.
-
-### template(data, [thisArg])
-
-* @param `data` {Object} data passed to template
-* @param `thisArg` {Object} the binding of this in template
-* @return {Dom} html dom
-
-### template.update(data)
-
-* @param `data` {Object} whole data passed to template
-* @return {Dom} html dom which has updated
-
-
-
-
-
