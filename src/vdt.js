@@ -33,5 +33,6 @@ var Vdt = function(source) {
 Vdt.parser = parser;
 Vdt.stringifier = stringifier;
 Vdt.virtualDom = virtualDom;
+Vdt.compile = Vdt;
 
 module.exports = Vdt;
