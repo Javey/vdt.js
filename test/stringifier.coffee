@@ -6,7 +6,7 @@ parser = new Parser
 stringifier = new Stringifier
 
 describe 'Stringifier', ->
-    it 'stringify attribute without value', ->
+    it 'Stringify attribute without value', ->
         source = """
         <input type="checkbox" checked />
         """

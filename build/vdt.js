@@ -1851,6 +1851,9 @@ Parser.prototype = {
 
     _parseJSXAttributeName: function() {
         var start = this.index;
+        if (!isJSXIdentifierPart(this._charCode())) {
+            throw new Error('Unexpected identifier ' + this._char());
+        }
         while (this.index < this.length) {
             var ch = this._charCode();
             if (!isJSXIdentifierPart(ch)) {
