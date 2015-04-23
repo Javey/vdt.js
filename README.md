@@ -4,7 +4,7 @@
 It is inspired by [React](https://github.com/facebook/react)/[virtual-dom](https://github.com/Matt-Esch/virtual-dom),
 and uses [JSX](https://facebook.github.io/react/docs/jsx-in-depth.html) as template syntax.
 
-[todoMVC](http://javey.github.io/vdt-todomvc/) implemented by `Vdt.js`
+[TodoMVC](http://javey.github.io/vdt-todomvc/) implemented by `Vdt.js`
 
 # Features
 
