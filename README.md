@@ -1,7 +1,7 @@
 # Vdt.js
 
-Vdt.js is a template engine using virtual-dom technology.
-It is inspired by [React](https://github.com/facebook/react) and [virtual-dom](https://github.com/Matt-Esch/virtual-dom),
+Vdt.js is a template engine based on virtual-dom technology.
+It is inspired by [React](https://github.com/facebook/react)/[virtual-dom](https://github.com/Matt-Esch/virtual-dom),
 and uses [JSX](https://facebook.github.io/react/docs/jsx-in-depth.html) as template syntax.
 
 # Features
