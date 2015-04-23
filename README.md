@@ -90,6 +90,10 @@ The function returned by `Vdt/Vdt.compile`.
 * @param `data` {Object} whole data passed to template
 * @return {Dom} html dom which has updated
 
+### template.source
+
+The source code of template function.
+
 ## Vdt.parse(source)
 
 Parse JSX template to an ast object
