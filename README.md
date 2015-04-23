@@ -68,6 +68,8 @@ and uses [JSX](https://facebook.github.io/react/docs/jsx-in-depth.html) as templ
 </html>
 ```
 
+link [demo](http://javey.github.io/vdt/demo.html)
+
 # Api
 
 ## Vdt(source)/Vdt.compile(source)
