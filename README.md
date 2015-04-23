@@ -9,7 +9,7 @@ It uses [JSX](https://facebook.github.io/react/docs/jsx-in-depth.html) as templa
 * Just the ui. Just the template further more.
 * Virtual-dom. Diff update unlike [Handlebars](https://github.com/daaain/Handlebars)/[mustache.js](https://github.com/janl/mustache.js).
 * One-way reactive data flow.
-* Simple and lightweight. Rewrite a compiler instead of [jstransform](https://github.com/facebook/jstransform). Discard es6 syntax sugar.
+* Simple and lightweight. Rewrite a compiler instead of [jstransform](https://github.com/facebook/jstransform). Discard ES6 syntax sugar.
 
 # Example
 
@@ -91,11 +91,11 @@ Stringify the ast object to hscript string.
 
 ## Vdt.virtualDom
 
-The object export by [virtual-dom](https://github.com/Matt-Esch/virtual-dom) module.
+The object exported by [virtual-dom](https://github.com/Matt-Esch/virtual-dom) module.
 
 ## The returned function `template`
 
-The funtion returned by Vdt/Vdt.compile.
+The function returned by Vdt/Vdt.compile.
 
 ### template(data, [thisArg])
 
