@@ -12,7 +12,7 @@ describe 'Parser', ->
         """
         parser.parse.bind(parser, source).should.throw('expect string </')
 
-    it 'Unmatched {} in JSXElement should be parsed correctly', ->
+    it 'Redundant } in JSXElement should be parsed correctly', ->
         source = "<div>{a}}</div>"
         parser.parse(source).should.be.eql([
             {
@@ -41,7 +41,7 @@ describe 'Parser', ->
             }
         ])
 
-    it 'Unmatched {} in JS should throw a error', ->
+    it 'Redundant } in JS should throw a error', ->
         source = """
         <ul class="list">
             {[list].map(function(item) {
@@ -50,3 +50,7 @@ describe 'Parser', ->
         </ul>
         """
         parser.parse.bind(parser, source).should.throw('Unexpected identifier }')
+
+    it 'Redundant { in should throw a error', ->
+        source = "<div>{{a}</div>"
+        parser.parse.bind(parser, source).should.throw('expect string }')
