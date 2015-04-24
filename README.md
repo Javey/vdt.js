@@ -4,14 +4,14 @@
 It is inspired by [React](https://github.com/facebook/react)/[virtual-dom](https://github.com/Matt-Esch/virtual-dom),
 and uses [JSX](https://facebook.github.io/react/docs/jsx-in-depth.html) as template syntax.
 
-[TodoMVC](http://javey.github.io/vdt-todomvc/) implemented by `Vdt.js`
+[TodoMVC](http://javey.github.io/vdt-todomvc/) uses `Vdt.js`
 
 # Features
 
-* Just the ui. Just the template further more.
+* Just the ui. Just the template further more. But more powerful than regular template.
 * Virtual-dom. Diff update unlike [Handlebars](https://github.com/daaain/Handlebars)/[mustache.js](https://github.com/janl/mustache.js).
-* One-way reactive data flow.
-* Simple and lightweight. Rewrite a compiler instead of [jstransform](https://github.com/facebook/jstransform). Discard ES6 syntax sugar.
+* Lightweight. Rewrite a compiler instead of [jstransform](https://github.com/facebook/jstransform). Discard ES6 syntax sugar and JS analysis, so it's faster.
+* Easy to use. You can use it with any other js library, such as jQuery. See [TodoMVC](http://javey.github.io/vdt-todomvc/)
 
 # Example
 
@@ -85,11 +85,15 @@ The function returned by `Vdt/Vdt.compile`.
 
 ### template(data, [thisArg])
 
+Handle data and return a dom.
+
 * @param `data` {Object} data passed to template
 * @param `thisArg` {Object} the binding of this in template
 * @return {Dom} html dom
 
 ### template.update(data)
+
+Update the dom using the new data.
 
 * @param `data` {Object} whole data passed to template
 * @return {Dom} html dom which has updated
