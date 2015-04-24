@@ -2118,36 +2118,54 @@ var parser = new (require('./lib/parser')),
     virtualDom = require('virtual-dom');
 
 var Vdt = function(source) {
-    var ast = parser.parse(source),
-        hscript = stringifier.stringify(ast);
+    var templateFn, tree, node, self;
 
-    hscript = 'var h = Vdt.virtualDom.h;\nwith(obj) {' + hscript + '};';
-    var templateFn = new Function('obj', hscript);
+    templateFn = compile(source);
 
-    var tree, node, self;
+    return {
+        render: function(data, thisArg) {
+            self = thisArg;
+            tree = templateFn.call(thisArg, data);
+            node = virtualDom.create(tree);
+            return node;
+        },
 
-    var ret = function(data, thisArg) {
-        self = thisArg;
-        tree = templateFn.call(thisArg, data);
-        node = virtualDom.create(tree);
-        return node;
+        update: function(data) {
+            var newTree = templateFn.call(self, data),
+                patches = virtualDom.diff(tree, newTree);
+            node = virtualDom.patch(node, patches);
+            tree = newTree;
+            return node;
+        }
     };
-
-    ret.update = function(data) {
-        var newTree = templateFn.call(self, data),
-            patches = virtualDom.diff(tree, newTree);
-        node = virtualDom.patch(node, patches);
-        tree = newTree;
-    };
-
-    ret.source = 'function(obj) {\n' + hscript + '\n}';
-
-    return ret;
 };
+
+function compile(source) {
+    var templateFn;
+
+    switch (typeof source) {
+        case 'string':
+            var ast = parser.parse(source),
+                hscript = stringifier.stringify(ast);
+
+            hscript = 'var h = Vdt.virtualDom.h;\nwith(obj) {' + hscript + '};';
+            templateFn = new Function('obj', hscript);
+            templateFn.source = 'function(obj) {\n' + hscript + '\n}';
+            break;
+        case 'function':
+            templateFn = source;
+            break;
+        default:
+            throw new Error('Expect a string or function');
+    }
+
+    return templateFn;
+}
 
 Vdt.parser = parser;
 Vdt.stringifier = stringifier;
 Vdt.virtualDom = virtualDom;
+Vdt.compile = compile;
 
 module.exports = Vdt;
 },{"./lib/parser":35,"./lib/stringifier":36,"virtual-dom":4}],39:[function(require,module,exports){

@@ -30,20 +30,20 @@
     };
 
     var str = document.getElementById('template').innerHTML,
-        template = Vdt(str),
-        dom = template(data);
+        vdt = Vdt(str),
+        dom = vdt.render(data);
 
     document.body.appendChild(dom);
 
     var input = document.getElementById('add');
     input.addEventListener('input', function(e) {
         data.input = e.target.value;
-        template.update(data);
+        vdt.update(data);
     });
     input.addEventListener('change', function(e) {
         data.users.push({name: e.target.value, id: data.users.length});
         data.input = '';
-        template.update(data);
+        vdt.update(data);
     });
 </script>
 </body>

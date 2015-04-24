@@ -52,20 +52,20 @@ and uses [JSX](https://facebook.github.io/react/docs/jsx-in-depth.html) as templ
     };
 
     var str = document.getElementById('template').innerHTML,
-        template = Vdt(str),
-        dom = template(data);
+        vdt = Vdt(str),
+        dom = vdt.render(data);
 
     document.body.appendChild(dom);
 
     var input = document.getElementById('add');
     input.addEventListener('input', function(e) {
         data.input = e.target.value;
-        template.update(data);
+        vdt.update(data);
     });
     input.addEventListener('change', function(e) {
         data.users.push({name: e.target.value, id: data.users.length});
         data.input = '';
-        template.update(data);
+        vdt.update(data);
     });
 </script>
 </body>
@@ -74,18 +74,31 @@ and uses [JSX](https://facebook.github.io/react/docs/jsx-in-depth.html) as templ
 
 # Api
 
-## Vdt(source)/Vdt.compile(source)
+## Vdt(source)
 
-Compile JSX template source then return a function.
+Compile `source` then return a vdt object.
+
+* @param `source` {String|Function} JSX template source or a template function returned by `Vdt.compile`
+* @return {Object} a vdt object
+
+## Vdt.compile(source)
+
+Compile JSX template source then return a template function which should pass to `Vdt`.
+
+The returned function has a property named source. You can use it to pre-process JSX.
 
 * @param `source` {String} JSX template source
-* @return {Function} a function used to handle data
+* @return {Function} a template function should pass to `Vdt`.
 
-## The returned function `template`
+### template.source
 
-The function returned by `Vdt/Vdt.compile`.
+The source code of template function.
 
-### template(data, [thisArg])
+## The `vdt` object
+
+The object returned by `Vdt`.
+
+### vdt.render(data, [thisArg])
 
 Handle data and return a dom.
 
@@ -93,16 +106,12 @@ Handle data and return a dom.
 * @param `thisArg` {Object} the binding of this in template
 * @return {Dom} html dom
 
-### template.update(data)
+### vdt.update(data)
 
 Update the dom using the new data.
 
-* @param `data` {Object} whole data passed to template
+* @param `data` {Object} the whole data passed to template
 * @return {Dom} html dom which has updated
-
-### template.source
-
-The source code of template function.
 
 ## Vdt.parse(source)
 
