@@ -71,7 +71,7 @@ Stringifier.prototype = {
     },
 
     _visitJSXText: function(element) {
-        return "'" + element.value.replace(/[\r\n]/g, '') + "'";
+        return "'" + element.value.replace(/[\r\n]/g, ' ') + "'";
     }
 };
 

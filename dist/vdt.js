@@ -2052,7 +2052,7 @@ Stringifier.prototype = {
     },
 
     _visitJSXText: function(element) {
-        return "'" + element.value.replace(/[\r\n]/g, '') + "'";
+        return "'" + element.value.replace(/[\r\n]/g, ' ') + "'";
     }
 };
 
@@ -2125,13 +2125,13 @@ var Vdt = function(source) {
     return {
         render: function(data, thisArg) {
             self = thisArg;
-            tree = templateFn.call(thisArg, data);
+            tree = templateFn.call(self, data, Vdt);
             node = virtualDom.create(tree);
             return node;
         },
 
         update: function(data) {
-            var newTree = templateFn.call(self, data),
+            var newTree = templateFn.call(self, data, Vdt),
                 patches = virtualDom.diff(tree, newTree);
             node = virtualDom.patch(node, patches);
             tree = newTree;
@@ -2149,8 +2149,8 @@ function compile(source) {
                 hscript = stringifier.stringify(ast);
 
             hscript = 'var h = Vdt.virtualDom.h;\nwith(obj) {' + hscript + '};';
-            templateFn = new Function('obj', hscript);
-            templateFn.source = 'function(obj) {\n' + hscript + '\n}';
+            templateFn = new Function('obj', 'Vdt', hscript);
+            templateFn.source = 'function(obj, Vdt) {\n' + hscript + '\n}';
             break;
         case 'function':
             templateFn = source;
