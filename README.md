@@ -11,7 +11,7 @@ and uses [JSX](https://facebook.github.io/react/docs/jsx-in-depth.html) as templ
 * Just the ui. Just the template further more. But more powerful than regular template.
 * Virtual-dom. Diff update unlike [Handlebars](https://github.com/daaain/Handlebars)/[mustache.js](https://github.com/janl/mustache.js).
 * Lightweight. Rewrite a compiler instead of [jstransform](https://github.com/facebook/jstransform). Discard ES6 syntax sugar and JS analysis, so it's faster.
-* Easy to use. You can use it with any other js library, such as jQuery. See [TodoMVC](http://javey.github.io/vdt-todomvc/)
+* Easy to use. You can use it with any other js library, such as jQuery. See [vdt-todomvc](https://github.com/Javey/vdt-todomvc)
 
 # Example
 
