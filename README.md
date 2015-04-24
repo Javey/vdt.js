@@ -1,5 +1,7 @@
 # Vdt.js
 
+> vdt is short for virtual-dom template
+
 `Vdt.js` is a template engine based on virtual-dom technology.
 It is inspired by [React](https://github.com/facebook/react)/[virtual-dom](https://github.com/Matt-Esch/virtual-dom),
 and uses [JSX](https://facebook.github.io/react/docs/jsx-in-depth.html) as template syntax.
