@@ -12,17 +12,49 @@ var resultTemplate = $('#template').html(),
     lodashTemplate = "\
         <div>\
             <ul>\
-                <% _.each(lists, function(item) { %>\
+                <% lodash.each(lists, function(item) { %>\
                     <li><%= item %></li>\
                 <% }) %>\
             </ul>\
             <div class='test'><%= test %></div> \
-        </div>";
+        </div>",
+    underscoreTemplate = "\
+        <div>\
+            <ul>\
+                <% underscore.each(lists, function(item) { %>\
+                    <li><%= item %></li>\
+                <% }) %>\
+            </ul>\
+            <div class='test'><%= test %></div> \
+        </div>",
+    hbTemplate = "\
+        <div>\
+            <ul>\
+                {{#lists}}\
+                    <li>{{this}}</li>\
+                {{/lists}}\
+            </ul>\
+            <div class='test'>{{test}}</div>\
+        </div>",
+    muTemplate = "\
+        <div>\
+            <ul>\
+                {{#lists}}\
+                    <li>{{.}}</li>\
+                {{/lists}}\
+            </ul>\
+            <div class='test'>{{test}}</div>\
+        </div>",
+    testData = {
+        lists: ['vdt.js', 'lodash', 'underscore', 'benchmark'],
+        test: 'vdt.js'
+    };
 
 var options = {
-    onStart: function() {
+    onStart: function(e) {
         this.Model = {
-            results: [],
+            title: this.name,
+            results: this.pluck('name'),
             fastest: '',
             error: null
         };
@@ -30,8 +62,9 @@ var options = {
         $body.append(this.vdt.render(this.Model));
     },
     onCycle: function(e) {
-        var info = String(e.target);
-        this.Model.results.push(info);
+        var info = String(e.target),
+            name = e.target.name;
+        this.Model.results[this.Model.results.indexOf(name)] = info;
         console.log(info);
         this.vdt.update(this.Model);
     },
@@ -47,49 +80,62 @@ var options = {
     }
 };
 
-var renderSuite = new Benchmark.Suite('render', options);
+var renderSuite = new Benchmark.Suite('Render(compile every time)', options);
 renderSuite
     .add('Vdt.js#render', function() {
         var template = Vdt(vdtTemplate);
-        var $dom = $(template.render({
-            lists: ['vdt.js', 'lodash', 'underscore', 'benchmark'],
-            test: 'vdt.js'
-        }));
+        var $dom = $(template.render(testData));
         $body.append($dom);
         $dom.remove();
     })
     .add('Lodash#render', function() {
-        var template = _.template(lodashTemplate);
-        var $dom = $(template({
-            lists: ['vdt.js', 'lodash', 'underscore', 'benchmark'],
-            test: 'vdt.js'
-        }));
+        var template = lodash.template(lodashTemplate);
+        var $dom = $(template(testData));
+        $body.append($dom);
+        $dom.remove();
+    })
+    .add('Underscore#render', function() {
+        var template = underscore.template(lodashTemplate);
+        var $dom = $(template(testData));
+        $body.append($dom);
+        $dom.remove();
+    })
+    .add('Handlebars#render', function() {
+        var template = Handlebars.compile(hbTemplate);
+        var $dom = $(template(testData));
+        $body.append($dom);
+        $dom.remove();
+    })
+    .add('Mustache#render', function() {
+        Mustache.clearCache();
+        Mustache.parse(muTemplate);
+        var $dom = $(Mustache.render(muTemplate, testData));
         $body.append($dom);
         $dom.remove();
     })
     .run({async: true});
 
-var updateSuite = new Benchmark.Suite('update', _.extend({}, options, {
-    onStart: function() {
-        options.onStart.call(this);
+var updateSuite = new Benchmark.Suite('Update(cache compiled result)', lodash.extend({}, options, {
+    onStart: function(e) {
+        options.onStart.call(this, e);
 
         this.testVdt = Vdt(vdtTemplate);
-        this.testModel = {
-            lists: ['vdt.js', 'lodash', 'underscore', 'benchmark'],
-            test: 'vdt.js'
-        };
-        var $dom = this.testVdtDom = $(this.testVdt.render(this.testModel));
-        $body.append($dom);
+        this.testModel = lodash.extend({}, testData);
+        this.testDom = $('<div/>').append($(this.testVdt.render(this.testModel)));
+        $body.append(this.testDom);
 
-        this.testTemplate = _.template(lodashTemplate);
-        var $testDom = this.testLodashDom = $(this.testTemplate(this.testModel));
-        $body.append($testDom);
+        this.testTemplate = lodash.template(lodashTemplate);
+
+        this.testUSTemplate = underscore.template(underscoreTemplate);
+
+        this.testHB = Handlebars.compile(hbTemplate);
+
+        this.testMU = Mustache.parse(muTemplate);
     },
 
     onComplete: function(e) {
         options.onComplete.call(this, e);
-        this.testVdtDom.remove();
-        this.testLodashDom.remove();
+        this.testDom.remove();
     }
 }));
 updateSuite
@@ -99,9 +145,23 @@ updateSuite
     })
     .add('Lodash#update', function() {
         random(updateSuite.testModel);
-        updateSuite.testLodashDom.remove();
-        var $testDom = updateSuite.testLodashDom = $(updateSuite.testTemplate(updateSuite.testModel));
-        $body.append($testDom);
+        updateSuite.testDom.empty();
+        updateSuite.testDom.append($(updateSuite.testTemplate(updateSuite.testModel)));
+    })
+    .add('Underscore#update', function() {
+        random(updateSuite.testModel);
+        updateSuite.testDom.empty();
+        updateSuite.testDom.append($(updateSuite.testUSTemplate(updateSuite.testModel)));
+    })
+    .add('Handlebars#update', function() {
+        random(updateSuite.testModel);
+        updateSuite.testDom.empty();
+        updateSuite.testDom.append($(updateSuite.testHB(updateSuite.testModel)));
+    })
+    .add('Mustache#update', function() {
+        random(updateSuite.testModel);
+        updateSuite.testDom.empty();
+        updateSuite.testDom.append($(Mustache.render(muTemplate, updateSuite.testModel)));
     })
     .run({async: true});
 

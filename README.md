@@ -15,6 +15,12 @@ and uses [JSX](https://facebook.github.io/react/docs/jsx-in-depth.html) as templ
 * Lightweight. Rewrite a compiler instead of [jstransform](https://github.com/facebook/jstransform). Discard ES6 syntax sugar and JS analysis, so it's faster.
 * Easy to use. You can use it with any other js library, such as jQuery. See [vdt-todomvc](https://github.com/Javey/vdt-todomvc)
 
+# Install
+
+```shell
+npm install vdt.js --save
+```
+
 # Example
 
 [demo](http://javey.github.io/vdt/demo.html)
@@ -130,3 +136,25 @@ Stringify the ast object to hscript string.
 ## Vdt.virtualDom
 
 The object exported by [virtual-dom](https://github.com/Matt-Esch/virtual-dom) module.
+
+# Benchmark
+
+## Render(compile every time)
+
+* Vdt.js#render x 5,454 ops/sec ±2.40% (89 runs sampled)
+* Lodash#render x 2,390 ops/sec ±3.68% (81 runs sampled)
+* Underscore#render x 6,035 ops/sec ±5.86% (81 runs sampled)
+* Handlebars#render x 959 ops/sec ±6.16% (77 runs sampled)
+* Mustache#render x 4,899 ops/sec ±6.09% (84 runs sampled)
+
+__Fastest is Underscore#render__
+
+## Update(cache compiled result)
+
+* Vdt.js#update x 14,724 ops/sec ±3.61% (87 runs sampled)
+* Lodash#update x 7,734 ops/sec ±2.70% (84 runs sampled)
+* Underscore#update x 7,989 ops/sec ±4.52% (89 runs sampled)
+* Handlebars#update x 7,200 ops/sec ±2.63% (86 runs sampled)
+* Mustache#update x 7,747 ops/sec ±2.40% (96 runs sampled)
+
+__Fastest is Vdt.js#update__
