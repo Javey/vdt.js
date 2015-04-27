@@ -139,6 +139,8 @@ The object exported by [virtual-dom](https://github.com/Matt-Esch/virtual-dom) m
 
 # Benchmark
 
+See [Benchmark](http://javey.github.io/vdt/benchmark/benchmark.html)
+
 ## Render(compile every time)
 
 * Vdt.js#render x 5,454 ops/sec ±2.40% (89 runs sampled)
