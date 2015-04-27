@@ -6,10 +6,11 @@
 </head>
 <body>
 <script type="text/vdt" id="template">
-    var a = 1;
+    var a = 1; // this is a
     <div className="users">
         <input id="add" value={input} /> input: {input}
         <ul>
+            {/* output users */}
             {users.map(function(user, index) {
                 return <li className="user" id={user.id}>{index}: {user.name}</li>
             })}
