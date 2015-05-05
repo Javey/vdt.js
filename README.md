@@ -34,15 +34,17 @@ npm install vdt.js --save
 </head>
 <body>
 <script type="text/vdt" id="template">
-    var a = 1;
+    var a = 1; // this is a
     <div className="users">
         <input id="add" value={input} /> input: {input}
         <ul>
+            {/* output users */}
             {users.map(function(user, index) {
                 return <li className="user" id={user.id}>{index}: {user.name}</li>
             })}
         </ul>
-        <div>this is a({a})</div>
+        {/* custom attributes */}
+        <div attributes={{'data-a': a, input: input}} id={a}>this is a({a})</div>
     </div>
 </script>
 <script type="text/javascript" src="../dist/vdt.js"></script>
@@ -76,6 +78,16 @@ npm install vdt.js --save
 </script>
 </body>
 </html>
+```
+
+# Custom attributes
+
+see [vnode.md](https://github.com/Matt-Esch/virtual-dom/blob/7cd99a160f8d7c9953e71e0b26a740dae40e55fc/docs/vnode.md#custom-attributes-data-)
+
+You can write template like this to render custom attributes directly.
+
+```html
+<div attributes={{'data-a': a, input: input}} id={a}>this is a({a})</div>
 ```
 
 # Api

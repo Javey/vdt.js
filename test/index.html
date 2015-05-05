@@ -15,7 +15,8 @@
                 return <li className="user" id={user.id}>{index}: {user.name}</li>
             })}
         </ul>
-        <div>this is a({a})</div>
+        {/* custom attributes */}
+        <div attributes={{'data-a': a, input: input}} id={a}>this is a({a})</div>
     </div>
 </script>
 <script type="text/javascript" src="../dist/vdt.js"></script>
