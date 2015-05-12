@@ -82,13 +82,19 @@ npm install vdt.js --save
 
 # Custom attributes
 
-see [vnode.md](https://github.com/Matt-Esch/virtual-dom/blob/7cd99a160f8d7c9953e71e0b26a740dae40e55fc/docs/vnode.md#custom-attributes-data-)
+See [vnode.md](https://github.com/Matt-Esch/virtual-dom/blob/7cd99a160f8d7c9953e71e0b26a740dae40e55fc/docs/vnode.md#custom-attributes-data-)
 
 You can write template like this to render custom attributes directly.
 
 ```html
 <div attributes={{'data-a': a, input: input}} id={a}>this is a({a})</div>
 ```
+
+# Notice
+
+1. Use `className` instead of `class` in html.
+2. All html tags must be closed. e.g. `<input />`.
+3. Use `{/* comment */}` instead of `<!-- comment -->` in html. It is just Javascript comment wrapped by `{}`.
 
 # Api
 
