@@ -9,7 +9,7 @@ describe 'Vdt', ->
         output = """
         function(obj, Vdt) {
         var h = Vdt.virtualDom.h;
-        with(obj) {return h('div',null, [test])};
+        with(obj || {}) {return h('div',null, [test])};
         }
         """
 

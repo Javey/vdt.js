@@ -33,7 +33,7 @@ function compile(source) {
             var ast = parser.parse(source),
                 hscript = stringifier.stringify(ast);
 
-            hscript = 'var h = Vdt.virtualDom.h;\nwith(obj) {' + hscript + '};';
+            hscript = 'var h = Vdt.virtualDom.h;\nwith(obj || {}) {' + hscript + '};';
             templateFn = new Function('obj', 'Vdt', hscript);
             templateFn.source = 'function(obj, Vdt) {\n' + hscript + '\n}';
             break;
