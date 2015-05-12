@@ -95,6 +95,19 @@ You can write template like this to render custom attributes directly.
 1. Use `className` instead of `class` in html.
 2. All html tags must be closed. e.g. `<input />`.
 3. Use `{/* comment */}` instead of `<!-- comment -->`. It is just Javascript comment which is wrapped by `{}`.
+4. The last html element will be returned. You must wrap all html in a element. e.g.
+    ```html
+    <div>
+        <h1>title</h1>
+        <div>body</div>
+    </div>
+    ```
+    instead of
+    ```html
+    <h1>title</h1>
+    <div>body</div>
+    ```
+    The second one will return only one element `<div>body</body>`.
 
 # Api
 
