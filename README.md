@@ -144,12 +144,16 @@ Handle data and return a dom.
 * @param `thisArg` {Object} the binding of this in template
 * @return {Dom} html dom
 
-### vdt.update(data)
+### vdt.update([data])
 
 Update the dom using the new data.
 
-* @param `data` {Object} the whole data passed to template
+* @param `data` {Object} the whole data passed to template. If it is not provided, `vdt.data` will be used.
 * @return {Dom} html dom which has updated
+
+### vdt.data
+
+The data passed to vdt above. So you can modify it directly.
 
 ## Vdt.parse(source)
 

@@ -2143,25 +2143,34 @@ var parser = new (require('./lib/parser')),
     virtualDom = require('virtual-dom');
 
 var Vdt = function(source) {
-    var templateFn, tree, node, self;
+    var templateFn, tree, node, self, _data;
 
     templateFn = compile(source);
 
     return {
         render: function(data, thisArg) {
             self = thisArg;
-            tree = templateFn.call(self, data, Vdt);
+            this.data = data;
+            tree = templateFn.call(self, this.data, Vdt);
             node = virtualDom.create(tree);
             return node;
         },
 
         update: function(data) {
-            var newTree = templateFn.call(self, data, Vdt),
+            if (arguments.length) {
+                this.data = data;
+            }
+            var newTree = templateFn.call(self, this.data, Vdt),
                 patches = virtualDom.diff(tree, newTree);
             node = virtualDom.patch(node, patches);
             tree = newTree;
             return node;
-        }
+        },
+
+        /**
+         * Restore the data, so you can modify it directly.
+         */
+        data: {}
     };
 };
 
