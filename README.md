@@ -93,7 +93,7 @@ You can write template like this to render custom attributes directly.
 # Notice
 
 1. Use `className` instead of `class` in html.
-2. All html tags must be closed. e.g. `<input />`.
+2. ~~All html tags must be closed. e.g. `<input />`.
 3. Use `{/* comment */}` instead of `<!-- comment -->`. It is just Javascript comment which is wrapped by `{}`.
 4. The last html element will be returned. You must wrap all html in a element. e.g.
 

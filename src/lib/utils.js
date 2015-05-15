@@ -13,7 +13,26 @@ var i = 0,
         JSXAttribute: i++,
         JSXEmptyExpression: i++
     },
-    TypeName = [];
+    TypeName = [],
+
+    SelfClosingTags = {
+        'area': true,
+        'base': true,
+        'br': true,
+        'col': true,
+        'embed': true,
+        'hr': true,
+        'img': true,
+        'input': true,
+        'keygen': true,
+        'link': true,
+        'menuitem': true,
+        'meta': true,
+        'param': true,
+        'source': true,
+        'track': true,
+        'wbr': true
+    };
 
 var hasOwn = Object.prototype.hasOwnProperty;
 
@@ -47,7 +66,11 @@ var Utils = {
     },
 
     Type: Type,
-    TypeName: TypeName
+    TypeName: TypeName,
+
+    isSelfClosingTag: function(tag) {
+        return SelfClosingTags[tag];
+    }
 };
 
 module.exports = Utils;

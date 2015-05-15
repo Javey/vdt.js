@@ -1818,10 +1818,12 @@ Parser.prototype = {
             children: []
         };
 
-        if (this._char() === '/') {
+        if (Utils.isSelfClosingTag(ret.value)) {
             // self closing tag
-            this.index++;
-            this._expect('>')
+            if (this._char() === '/') {
+                this.index++;
+            }
+            this._expect('>');
         } else {
             this._expect('>');
             ret.children = this._parseJSXChildren();
@@ -2074,7 +2076,26 @@ var i = 0,
         JSXAttribute: i++,
         JSXEmptyExpression: i++
     },
-    TypeName = [];
+    TypeName = [],
+
+    SelfClosingTags = {
+        'area': true,
+        'base': true,
+        'br': true,
+        'col': true,
+        'embed': true,
+        'hr': true,
+        'img': true,
+        'input': true,
+        'keygen': true,
+        'link': true,
+        'menuitem': true,
+        'meta': true,
+        'param': true,
+        'source': true,
+        'track': true,
+        'wbr': true
+    };
 
 var hasOwn = Object.prototype.hasOwnProperty;
 
@@ -2108,7 +2129,11 @@ var Utils = {
     },
 
     Type: Type,
-    TypeName: TypeName
+    TypeName: TypeName,
+
+    isSelfClosingTag: function(tag) {
+        return SelfClosingTags[tag];
+    }
 };
 
 module.exports = Utils;
@@ -2148,7 +2173,7 @@ function compile(source) {
             var ast = parser.parse(source),
                 hscript = stringifier.stringify(ast);
 
-            hscript = 'var h = Vdt.virtualDom.h;\nwith(obj) {' + hscript + '};';
+            hscript = 'var h = Vdt.virtualDom.h;\nwith(obj || {}) {' + hscript + '};';
             templateFn = new Function('obj', 'Vdt', hscript);
             templateFn.source = 'function(obj, Vdt) {\n' + hscript + '\n}';
             break;

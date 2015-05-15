@@ -158,10 +158,12 @@ Parser.prototype = {
             children: []
         };
 
-        if (this._char() === '/') {
+        if (Utils.isSelfClosingTag(ret.value)) {
             // self closing tag
-            this.index++;
-            this._expect('>')
+            if (this._char() === '/') {
+                this.index++;
+            }
+            this._expect('>');
         } else {
             this._expect('>');
             ret.children = this._parseJSXChildren();
