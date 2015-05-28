@@ -115,7 +115,7 @@ You can write template like this to render custom attributes directly.
 Take vdt as a express middleware.
 
 ```javascript
-app.use(require('vdt').middleware({
+app.use(require('vdt.js').middleware({
     src: 'vdt/src/path',
     amd: true, // and amd wrapper
     force: false // force compile
