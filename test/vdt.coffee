@@ -1,4 +1,4 @@
-Vdt = require('../src/vdt')
+Vdt = require('../src/lib/vdt')
 
 describe 'Vdt', ->
     it 'Compile JSX to template function', ->

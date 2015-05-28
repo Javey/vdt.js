@@ -1,5 +1,5 @@
-var parser = new (require('./lib/parser')),
-    stringifier = new (require('./lib/stringifier')),
+var parser = new (require('./parser')),
+    stringifier = new (require('./stringifier')),
     virtualDom = require('virtual-dom');
 
 var Vdt = function(source) {

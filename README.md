@@ -110,6 +110,18 @@ You can write template like this to render custom attributes directly.
     ```
     The second one will return only one element `<div>body</body>`.
 
+# Express middleware
+
+Take vdt as a express middleware.
+
+```javascript
+app.use(require('vdt').middleware({
+    src: 'vdt/src/path',
+    amd: true, // and amd wrapper
+    force: false // force compile
+}));
+```
+
 # Api
 
 ## Vdt(source)
