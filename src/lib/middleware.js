@@ -60,8 +60,8 @@ module.exports = function(options) {
             fs.stat(vdtFile, function(err, stats) {
                 if (err) return error(err);
 
-                var obj;
-                if (obj = cache[vdtFile]) {
+                var obj = cache[vdtFile];
+                if (obj && obj.mtime) {
                     if (obj.mtime < stats.mtime) {
                         compile(stats.mtime);
                     } else {

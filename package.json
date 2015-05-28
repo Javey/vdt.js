@@ -1,6 +1,6 @@
 {
   "name": "vdt.js",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "A template engine based on virtual-dom",
   "main": "src/index",
   "scripts": {
