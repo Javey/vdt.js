@@ -124,7 +124,7 @@ app.use(require('vdt.js').middleware({
 
 # Escape & Unescape
 
-Any output will be escaped. If you want prevent it, you can to like below:
+Any output will be escaped. If you want prevent it, you can do like below:
 
 ```javascript
 var a = '<h1>title</h1>';
