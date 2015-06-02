@@ -1824,6 +1824,10 @@ Parser.prototype = {
                 this.index++;
             }
             this._expect('>');
+        } else if (this._char() === '/') {
+            // unknown self closing tag
+            this.index++;
+            this._expect('>')
         } else {
             this._expect('>');
             ret.children = this._parseJSXChildren();
