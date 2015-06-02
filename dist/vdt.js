@@ -1249,7 +1249,7 @@ function diff(a, b) {
 }
 
 function walk(a, b, patch, index) {
-    if (a === b) {
+    if (a === b && !(isWidget(a) && isWidget(b))) {
         return
     }
 
