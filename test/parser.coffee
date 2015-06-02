@@ -144,3 +144,8 @@ describe 'Parser', ->
         """
 
         parser.parse(source).should.be.eql [{"type":2,"typeName":"JSXElement","value":"div","attributes":[],"children":[{"type":1,"typeName":"JSXText","value":"\n    "},{"type":2,"typeName":"JSXElement","value":"input","attributes":[{"type":4,"typeName":"JSXAttribute","name":"type","value":{"type":1,"typeName":"JSXText","value":"text"}}],"children":[]},{"type":1,"typeName":"JSXText","value":"\n    "},{"type":2,"typeName":"JSXElement","value":"span","attributes":[],"children":[{"type":1,"typeName":"JSXText","value":"aaa"}]},{"type":1,"typeName":"JSXText","value":"\n    "},{"type":2,"typeName":"JSXElement","value":"hr","attributes":[],"children":[]},{"type":1,"typeName":"JSXText","value":"\n    "},{"type":2,"typeName":"JSXElement","value":"img","attributes":[{"type":4,"typeName":"JSXAttribute","name":"src","value":{"type":1,"typeName":"JSXText","value":"aaa"}}],"children":[]},{"type":1,"typeName":"JSXText","value":"\n"}]}]
+
+    it 'Parse unknown self-closing tags', ->
+        source = "<Page />"
+
+        parser.parse(source).should.be.eql [{"type":2,"typeName":"JSXElement","value":"Page","attributes":[],"children":[]}]

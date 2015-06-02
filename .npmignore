@@ -3,3 +3,4 @@ test
 .gitignore
 .idea
 benchmark
+npm-debug.log
