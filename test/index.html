@@ -12,11 +12,22 @@
         <ul>
             {/* output users */}
             {users.map(function(user, index) {
-                return <li className="user" id={user.id} ev-click={function(user) {alert('Click ' + user.name);}.bind(null, user)}>{index}: {user.name}</li>
+                return <li className="user" id={user.id} ev-click={
+                    // use es5's bind or underscore's bind
+                    /*function(user) {
+                        alert('Click ' + user.name);
+                    }.bind(null, user)*/
+                    // or closure
+                    (function(user) {
+                        return function() {
+                            alert('Click ' + user.name);
+                        }
+                    })(user)
+                }>{index}: {user.name}</li>
             })}
         </ul>
         {/* custom attributes */}
-        <div attributes={{'data-a': a, input: input}} id={a}>this is a({a})</div>
+        <div attributes={{'data-a': a, input: input}} id={a} ev-dblclick={function() {console.log('Dblclick')}}>this is a({a})</div>
     </div>
 </script>
 <script type="text/javascript" src="../dist/vdt.js"></script>

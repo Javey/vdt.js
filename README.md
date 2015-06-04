@@ -40,11 +40,22 @@ npm install vdt.js --save
         <ul>
             {/* output users */}
             {users.map(function(user, index) {
-                return <li className="user" id={user.id}>{index}: {user.name}</li>
+                return <li className="user" id={user.id} ev-click={
+                    // use es5's bind or underscore's bind
+                    /*function(user) {
+                        alert('Click ' + user.name);
+                    }.bind(null, user)*/
+                    // or closure
+                    (function(user) {
+                        return function() {
+                            alert('Click ' + user.name);
+                        }
+                    })(user)
+                }>{index}: {user.name}</li>
             })}
         </ul>
         {/* custom attributes */}
-        <div attributes={{'data-a': a, input: input}} id={a}>this is a({a})</div>
+        <div attributes={{'data-a': a, input: input}} id={a} ev-dblclick={function() {console.log('Dblclick')}}>this is a({a})</div>
     </div>
 </script>
 <script type="text/javascript" src="../dist/vdt.js"></script>
@@ -124,12 +135,36 @@ app.use(require('vdt.js').middleware({
 
 # Escape & Unescape
 
-Any output will be escaped. If you want prevent it, you can do like below:
+Any output will be escaped. If you want prevent it, you can do it likes below:
 
 ```javascript
 var a = '<h1>title</h1>';
 <div>{a}</div> // a will be escaped, -> <div>&lt;h1&gt;title&lt;/h1&gt;</div>
 <div innerHTML={a}></div> // a will not be escaped -> <div><h1>title</h1></div>
+```
+
+# Event
+
+You can bind event in `vdt` template directly by adding `ev-event` property, likes below:
+
+```javascript
+<ul>
+    {/* output users */}
+    {users.map(function(user, index) {
+        return <li className="user" id={user.id} ev-click={
+            // use es5's bind or underscore's bind
+            /*function(user) {
+                alert('Click ' + user.name);
+            }.bind(null, user)*/
+            // or closure
+            (function(user) {
+                return function() {
+                    alert('Click ' + user.name);
+                }
+            })(user)
+        }>{index}: {user.name}</li>
+    })}
+</ul>
 ```
 
 # Api
