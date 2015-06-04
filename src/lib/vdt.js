@@ -1,9 +1,12 @@
 var parser = new (require('./parser')),
     stringifier = new (require('./stringifier')),
-    virtualDom = require('virtual-dom');
+    virtualDom = require('virtual-dom'),
+    Delegator = require('dom-delegator');
+
+var delegator = new Delegator();
 
 var Vdt = function(source) {
-    var templateFn, tree, node, self, _data;
+    var templateFn, tree, node, self;
 
     templateFn = compile(source);
 
@@ -30,7 +33,23 @@ var Vdt = function(source) {
         /**
          * Restore the data, so you can modify it directly.
          */
-        data: {}
+        data: {},
+
+        getTree: function() {
+            return tree;
+        },
+
+        setTree: function(_tree) {
+            tree = _tree;
+        },
+
+        getNode: function() {
+            return node;
+        },
+
+        setNode: function(_node) {
+            node = _node;
+        }
     };
 };
 
@@ -60,5 +79,6 @@ Vdt.parser = parser;
 Vdt.stringifier = stringifier;
 Vdt.virtualDom = virtualDom;
 Vdt.compile = compile;
+Vdt.delegator = delegator;
 
 module.exports = Vdt;

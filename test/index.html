@@ -12,7 +12,7 @@
         <ul>
             {/* output users */}
             {users.map(function(user, index) {
-                return <li className="user" id={user.id}>{index}: {user.name}</li>
+                return <li className="user" id={user.id} ev-click={function(user) {alert('Click ' + user.name);}.bind(null, user)}>{index}: {user.name}</li>
             })}
         </ul>
         {/* custom attributes */}
