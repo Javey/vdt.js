@@ -12,7 +12,8 @@ var Stringifier = function() {};
 Stringifier.prototype = {
     constructor: Stringifier,
 
-    stringify: function(ast) {
+    stringify: function(ast, autoReturn) {
+        this.autoReturn = autoReturn == undefined ? true : autoReturn;
         return this._visitJSXExpressionContainer(ast, true);
     },
 
@@ -20,7 +21,7 @@ Stringifier.prototype = {
         var str = '', length = ast.length;
         Utils.each(ast, function(element, i) {
             // if is root, add `return` keyword
-            if (isRoot && i === length - 1) {
+            if (this.autoReturn && isRoot && i === length - 1) {
                 str += 'return ' + this._visit(element);
             } else {
                 str += this._visit(element);

@@ -11,3 +11,9 @@ describe 'Stringifier', ->
         <input type="checkbox" checked />
         """
         stringifier.stringify(parser.parse(source)).should.eql("return h('input',{'type': 'checkbox', 'checked': null}, [])")
+
+    it 'Stringify without return', ->
+        source = """
+        <input type="checkbox" checked>
+        """
+        stringifier.stringify(parser.parse(source), false).should.eql("h('input',{'type': 'checkbox', 'checked': null}, [])")

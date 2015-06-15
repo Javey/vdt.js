@@ -15,7 +15,8 @@ module.exports = function(options) {
 
     options = _.extend({
         amd: true,
-        force: false
+        force: false,
+        autoReturn: true
     }, options);
 
     var cache = {};
@@ -39,9 +40,9 @@ module.exports = function(options) {
             fs.readFile(vdtFile, 'utf-8', function(err, contents) {
                 if (err) return error(err);
                 try {
-                    obj.source = Vdt.compile(contents).source;
+                    obj.source = Vdt.compile(contents, options.autoReturn).source;
                     if (options.amd) {
-                        obj.source = 'define(function() {\n return ' + obj.source + '\n})';
+                        obj.source = 'define(function(require) {\n return ' + obj.source + '\n})';
                     }
                     obj.mtime = mtime;
                     return send(obj.source);
