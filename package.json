@@ -1,6 +1,6 @@
 {
   "name": "vdt.js",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "A template engine based on virtual-dom",
   "main": "src/index",
   "scripts": {
@@ -8,6 +8,7 @@
     "test": "node_modules/.bin/mocha --compilers coffee:coffee-script/register test/*.coffee"
   },
   "dependencies": {
+    "dom-delegator": "^13.1.0",
     "lodash": "^3.7.0",
     "virtual-dom": "^2.0.1"
   },
