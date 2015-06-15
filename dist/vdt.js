@@ -2577,7 +2577,8 @@ var Stringifier = function() {};
 Stringifier.prototype = {
     constructor: Stringifier,
 
-    stringify: function(ast) {
+    stringify: function(ast, autoReturn) {
+        this.autoReturn = autoReturn == undefined ? true : autoReturn;
         return this._visitJSXExpressionContainer(ast, true);
     },
 
@@ -2585,7 +2586,7 @@ Stringifier.prototype = {
         var str = '', length = ast.length;
         Utils.each(ast, function(element, i) {
             // if is root, add `return` keyword
-            if (isRoot && i === length - 1) {
+            if (this.autoReturn && isRoot && i === length - 1) {
                 str += 'return ' + this._visit(element);
             } else {
                 str += this._visit(element);
@@ -2727,10 +2728,10 @@ var parser = new (require('./parser')),
 
 var delegator = new Delegator();
 
-var Vdt = function(source) {
+var Vdt = function(source, autoReturn) {
     var templateFn, tree, node, self;
 
-    templateFn = compile(source);
+    templateFn = compile(source, autoReturn);
 
     return {
         render: function(data, thisArg) {
@@ -2741,9 +2742,12 @@ var Vdt = function(source) {
             return node;
         },
 
-        update: function(data) {
+        update: function(data, thisArg) {
             if (arguments.length) {
                 this.data = data;
+                if (arguments.length > 1) {
+                    self = thisArg;
+                }
             }
             var newTree = templateFn.call(self, this.data, Vdt),
                 patches = virtualDom.diff(tree, newTree);
@@ -2775,13 +2779,13 @@ var Vdt = function(source) {
     };
 };
 
-function compile(source) {
+function compile(source, autoReturn) {
     var templateFn;
 
     switch (typeof source) {
         case 'string':
             var ast = parser.parse(source),
-                hscript = stringifier.stringify(ast);
+                hscript = stringifier.stringify(ast, autoReturn);
 
             hscript = 'var h = Vdt.virtualDom.h;\nwith(obj || {}) {' + hscript + '};';
             templateFn = new Function('obj', 'Vdt', hscript);
