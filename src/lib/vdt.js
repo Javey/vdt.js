@@ -64,9 +64,9 @@ function compile(source, autoReturn) {
             var ast = parser.parse(source),
                 hscript = stringifier.stringify(ast, autoReturn);
 
-            hscript = 'var h = Vdt.virtualDom.h;\nwith(obj || {}) {' + hscript + '};';
-            templateFn = new Function('obj', 'Vdt', hscript);
-            templateFn.source = 'function(obj, Vdt) {\n' + hscript + '\n}';
+            hscript = '_Vdt || (_Vdt = Vdt); var h = _Vdt.virtualDom.h;\nwith(obj || {}) {\n' + hscript + '\n};';
+            templateFn = new Function('obj', '_Vdt', hscript);
+            templateFn.source = 'function(obj, _Vdt) {\n' + hscript + '\n}';
             break;
         case 'function':
             templateFn = source;
