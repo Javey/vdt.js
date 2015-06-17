@@ -193,12 +193,12 @@ The source code of template function.
 
 The object returned by `Vdt`.
 
-### vdt.render(data, [thisArg])
+### vdt.render(data)
 
 Handle data and return a dom.
 
 * @param `data` {Object} data passed to template
-* @param `thisArg` {Object} the binding of this in template
+* ~~@param `thisArg` {Object} the binding of this in template.~~ `this` is `data` in template.
 * @return {Dom} html dom
 
 ### vdt.update([data])

@@ -2734,22 +2734,18 @@ var Vdt = function(source, autoReturn) {
     templateFn = compile(source, autoReturn);
 
     return {
-        render: function(data, thisArg) {
-            self = thisArg;
+        render: function(data) {
             this.data = data;
-            tree = templateFn.call(self, this.data, Vdt);
+            tree = templateFn.call(data, data, Vdt);
             node = virtualDom.create(tree);
             return node;
         },
 
-        update: function(data, thisArg) {
+        update: function(data) {
             if (arguments.length) {
                 this.data = data;
-                if (arguments.length > 1) {
-                    self = thisArg;
-                }
             }
-            var newTree = templateFn.call(self, this.data, Vdt),
+            var newTree = templateFn.call(this.data, this.data, Vdt),
                 patches = virtualDom.diff(tree, newTree);
             node = virtualDom.patch(node, patches);
             tree = newTree;
@@ -2787,9 +2783,9 @@ function compile(source, autoReturn) {
             var ast = parser.parse(source),
                 hscript = stringifier.stringify(ast, autoReturn);
 
-            hscript = 'var h = Vdt.virtualDom.h;\nwith(obj || {}) {' + hscript + '};';
-            templateFn = new Function('obj', 'Vdt', hscript);
-            templateFn.source = 'function(obj, Vdt) {\n' + hscript + '\n}';
+            hscript = '_Vdt || (_Vdt = Vdt); var h = _Vdt.virtualDom.h;\nwith(obj || {}) {\n' + hscript + '\n};';
+            templateFn = new Function('obj', '_Vdt', hscript);
+            templateFn.source = 'function(obj, _Vdt) {\n' + hscript + '\n}';
             break;
         case 'function':
             templateFn = source;
