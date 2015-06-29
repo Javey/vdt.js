@@ -2716,6 +2716,17 @@ var Utils = {
 
     isSelfClosingTag: function(tag) {
         return SelfClosingTags[tag];
+    },
+
+    extend: function(dest, source) {
+        if (source) {
+            for (var key in source) {
+                if (hasOwn.call(source, key)) {
+                    dest[key] = source[key];
+                }
+            }
+        }
+        return dest;
     }
 };
 
@@ -2724,14 +2735,15 @@ module.exports = Utils;
 var parser = new (require('./parser')),
     stringifier = new (require('./stringifier')),
     virtualDom = require('virtual-dom'),
+    utils = require('./utils'),
     Delegator = require('dom-delegator');
 
 var delegator = new Delegator();
 
-var Vdt = function(source, autoReturn) {
-    var templateFn, tree, node, self;
+var Vdt = function(source, options) {
+    var templateFn, tree, node;
 
-    templateFn = compile(source, autoReturn);
+    templateFn = compile(source, options);
 
     return {
         render: function(data) {
@@ -2775,13 +2787,22 @@ var Vdt = function(source, autoReturn) {
     };
 };
 
-function compile(source, autoReturn) {
+function compile(source, options) {
     var templateFn;
+
+    // backward compatibility v0.2.2
+    if (options === true || options === false) {
+        options = {autoReturn: options};
+    } else {
+        options = utils.extend({
+            autoReturn: true
+        }, options);
+    }
 
     switch (typeof source) {
         case 'string':
             var ast = parser.parse(source),
-                hscript = stringifier.stringify(ast, autoReturn);
+                hscript = stringifier.stringify(ast, options.autoReturn);
 
             hscript = '_Vdt || (_Vdt = Vdt); var h = _Vdt.virtualDom.h;\nwith(obj || {}) {\n' + hscript + '\n};';
             templateFn = new Function('obj', '_Vdt', hscript);
@@ -2804,7 +2825,7 @@ Vdt.compile = compile;
 Vdt.delegator = delegator;
 
 module.exports = Vdt;
-},{"./parser":49,"./stringifier":50,"dom-delegator":3,"virtual-dom":18}],53:[function(require,module,exports){
+},{"./parser":49,"./stringifier":50,"./utils":51,"dom-delegator":3,"virtual-dom":18}],53:[function(require,module,exports){
 
 },{}],54:[function(require,module,exports){
 module.exports = require('./lib/vdt');

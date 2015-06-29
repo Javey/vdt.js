@@ -6,23 +6,22 @@
 </head>
 <body>
 <script type="text/vdt" id="template">
-    var a = 1; // this is a
+    var a = 1, // this is a
+        showInfo = function(index, name) {
+            alert('Click ' + index + ' ' + name);
+        }
     <div className="users">
         <input id="add" value={input} /> input: {input}
         <ul>
             {/* output users */}
             {users.map(function(user, index) {
                 return <li className="user" id={user.id} ev-click={
-                    // use es5's bind or underscore's bind
-                    /*function(user) {
-                        alert('Click ' + user.name);
-                    }.bind(null, user)*/
+                    // use es5's bind or underscore's bind to pass arguments
+                    showInfo.bind(null, index, user.name)
                     // or closure
-                    (function(user) {
-                        return function() {
-                            alert('Click ' + user.name);
-                        }
-                    })(user)
+                    /*function() {
+                        showInfo(index, user.name);
+                    }*/
                 }>{index}: {user.name}</li>
             })}
         </ul>

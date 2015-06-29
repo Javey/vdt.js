@@ -70,6 +70,17 @@ var Utils = {
 
     isSelfClosingTag: function(tag) {
         return SelfClosingTags[tag];
+    },
+
+    extend: function(dest, source) {
+        if (source) {
+            for (var key in source) {
+                if (hasOwn.call(source, key)) {
+                    dest[key] = source[key];
+                }
+            }
+        }
+        return dest;
     }
 };
 

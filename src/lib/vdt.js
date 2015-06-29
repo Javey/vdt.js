@@ -1,14 +1,15 @@
 var parser = new (require('./parser')),
     stringifier = new (require('./stringifier')),
     virtualDom = require('virtual-dom'),
+    utils = require('./utils'),
     Delegator = require('dom-delegator');
 
 var delegator = new Delegator();
 
-var Vdt = function(source, autoReturn) {
-    var templateFn, tree, node, self;
+var Vdt = function(source, options) {
+    var templateFn, tree, node;
 
-    templateFn = compile(source, autoReturn);
+    templateFn = compile(source, options);
 
     return {
         render: function(data) {
@@ -52,13 +53,22 @@ var Vdt = function(source, autoReturn) {
     };
 };
 
-function compile(source, autoReturn) {
+function compile(source, options) {
     var templateFn;
+
+    // backward compatibility v0.2.2
+    if (options === true || options === false) {
+        options = {autoReturn: options};
+    } else {
+        options = utils.extend({
+            autoReturn: true
+        }, options);
+    }
 
     switch (typeof source) {
         case 'string':
             var ast = parser.parse(source),
-                hscript = stringifier.stringify(ast, autoReturn);
+                hscript = stringifier.stringify(ast, options.autoReturn);
 
             hscript = '_Vdt || (_Vdt = Vdt); var h = _Vdt.virtualDom.h;\nwith(obj || {}) {\n' + hscript + '\n};';
             templateFn = new Function('obj', '_Vdt', hscript);

@@ -34,23 +34,22 @@ npm install vdt.js --save
 </head>
 <body>
 <script type="text/vdt" id="template">
-    var a = 1; // this is a
+    var a = 1, // this is a
+        showInfo = function(index, name) {
+            alert('Click ' + index + ' ' + name);
+        }
     <div className="users">
         <input id="add" value={input} /> input: {input}
         <ul>
             {/* output users */}
             {users.map(function(user, index) {
                 return <li className="user" id={user.id} ev-click={
-                    // use es5's bind or underscore's bind
-                    /*function(user) {
-                        alert('Click ' + user.name);
-                    }.bind(null, user)*/
+                    // use es5's bind or underscore's bind to pass arguments
+                    showInfo.bind(null, index, user.name)
                     // or closure
-                    (function(user) {
-                        return function() {
-                            alert('Click ' + user.name);
-                        }
-                    })(user)
+                    /*function() {
+                        showInfo(index, user.name);
+                    }*/
                 }>{index}: {user.name}</li>
             })}
         </ul>
@@ -129,7 +128,8 @@ Take vdt as a express middleware.
 app.use(require('vdt.js').middleware({
     src: 'vdt/src/path',
     amd: true, // and amd wrapper
-    force: false // force compile
+    force: false, // force compile
+    autoReturn: true // see api of `Vdt` below
 }));
 ```
 
@@ -169,20 +169,22 @@ You can bind event in `vdt` template directly by adding `ev-event` property, lik
 
 # Api
 
-## Vdt(source)
+## Vdt(source, [options])
 
 Compile `source` then return a vdt object.
 
 * @param `source` {String|Function} JSX template source or a template function returned by `Vdt.compile`
+* @param `options.autoReturn=true` {Object|Boolean} If add `return` keyword at end or not. The last element of template have to be a `html tag element` if is `true`.
 * @return {Object} a vdt object
 
-## Vdt.compile(source)
+## Vdt.compile(source, [options])
 
 Compile JSX template source then return a template function which should pass to `Vdt`.
 
 The returned function has a property named source. You can use it to pre-process JSX.
 
 * @param `source` {String} JSX template source
+* @param `options.autoReturn=true` {Object|Boolean} If add `return` keyword at end or not. The last element of template have to be a `html tag element` if is `true`.
 * @return {Function} a template function should pass to `Vdt`.
 
 ### template.source
