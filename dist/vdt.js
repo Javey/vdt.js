@@ -2533,12 +2533,12 @@ Parser.prototype = {
     },
 
     _char: function(index) {
-        index = index || this.index;
+        arguments.length === 0 && (index = this.index);
         return this.source.charAt(index);
     },
 
     _charCode: function(index) {
-        index = index || this.index;
+        arguments.length === 0 && (index = this.index);
         return this.source.charCodeAt(index);
     },
 
@@ -2578,7 +2578,10 @@ Stringifier.prototype = {
     constructor: Stringifier,
 
     stringify: function(ast, autoReturn) {
-        this.autoReturn = autoReturn == undefined ? true : autoReturn;
+        if (arguments.length === 1) {
+            autoReturn = true;
+        }
+        this.autoReturn = !!autoReturn;
         return this._visitJSXExpressionContainer(ast, true);
     },
 

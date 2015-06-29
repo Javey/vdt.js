@@ -295,12 +295,12 @@ Parser.prototype = {
     },
 
     _char: function(index) {
-        index = index || this.index;
+        arguments.length === 0 && (index = this.index);
         return this.source.charAt(index);
     },
 
     _charCode: function(index) {
-        index = index || this.index;
+        arguments.length === 0 && (index = this.index);
         return this.source.charCodeAt(index);
     },
 
