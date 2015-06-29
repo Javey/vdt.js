@@ -13,7 +13,10 @@ Stringifier.prototype = {
     constructor: Stringifier,
 
     stringify: function(ast, autoReturn) {
-        this.autoReturn = autoReturn == undefined ? true : autoReturn;
+        if (arguments.length === 1) {
+            autoReturn = true;
+        }
+        this.autoReturn = !!autoReturn;
         return this._visitJSXExpressionContainer(ast, true);
     },
 
