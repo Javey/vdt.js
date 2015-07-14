@@ -70,9 +70,11 @@ function compile(source, options) {
             var ast = parser.parse(source),
                 hscript = stringifier.stringify(ast, options.autoReturn);
 
-            hscript = '_Vdt || (_Vdt = Vdt); var h = _Vdt.virtualDom.h;\nwith(obj || {}) {\n' + hscript + '\n};';
-            templateFn = new Function('obj', '_Vdt', hscript);
-            templateFn.source = 'function(obj, _Vdt) {\n' + hscript + '\n}';
+            hscript = '_Vdt || (_Vdt = Vdt); blocks || (blocks = {}); var h = _Vdt.virtualDom.h, widgets = this.widgets || {}, _blocks = {}, __blocks = {},\n' +
+                'hasOwn = Object.prototype.hasOwnProperty, extend = function(dest, source) {if (source) {for (var key in source) {if (hasOwn.call(source, key)) {dest[key] = source[key];}}}return dest;};' +
+                'with(obj || {}) {\n' + hscript + '\n}';
+            templateFn = new Function('obj', '_Vdt', 'blocks', hscript);
+            templateFn.source = 'function(obj, _Vdt, blocks) {\n' + hscript + '\n}';
             break;
         case 'function':
             templateFn = source;

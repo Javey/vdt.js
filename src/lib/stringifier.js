@@ -45,6 +45,12 @@ Stringifier.prototype = {
                 return this._visitJSXText(element);
             case Type.JSXExpressionContainer:
                 return this._visitJSXExpressionContainer(element.value);
+            case Type.JSXWidget:
+                return this._visitJSXWidget(element);
+            case Type.JSXBlock:
+                return this._visitJSXBlock(element);
+            case Type.JSXVdt:
+                return this._visitJSXVdt(element);
             default:
                 return 'null';
         }
@@ -55,20 +61,24 @@ Stringifier.prototype = {
     },
 
     _visitJSX: function(element) {
-        var str = "h('" + element.value + "'," + this._visitJSXAttribute(element.attributes) + ", ",
-            children = [];
+        var str = "h('" + element.value + "'," + this._visitJSXAttribute(element.attributes) + ", ";
 
-        Utils.each(element.children, function(child) {
-            children.push(this._visit(child));
+        return str + this._visitJSXChildren(element.children) + ')';
+    },
+
+    _visitJSXChildren: function(children) {
+        var ret = [];
+        Utils.each(children, function(child) {
+            ret.push(this._visit(child));
         }, this);
 
-        return str + '[' + children.join(', ') + '])';
+        return '[' + ret.join(', ') + ']';
     },
 
     _visitJSXAttribute: function(attributes) {
         var ret = [];
         Utils.each(attributes, function(attr) {
-            ret.push("'" + attr.name + "': " + this._visit(attr.value));
+            ret.push("'" + attr.name + "': " + (Utils.isArray(attr.value) ? this._visitJSXChildren(attr.value) : this._visit(attr.value)));
         }, this);
 
         return ret.length ? '{' + ret.join(', ') + '}' : 'null';
@@ -76,6 +86,32 @@ Stringifier.prototype = {
 
     _visitJSXText: function(element) {
         return "'" + element.value.replace(/[\r\n]/g, ' ') + "'";
+    },
+
+    _visitJSXWidget: function(element) {
+        element.attributes.push({name: 'children', value: element.children});
+        return 'new ' + element.value + '(' + this._visitJSXAttribute(element.attributes) + ', typeof widgets === "undefined" ? {} : widgets)';
+    },
+
+    _visitJSXBlock: function(element, isRun) {
+        arguments.length === 1 && (isRun = true);
+        return '(_blocks.' + element.value + ' = function(parent) {return ' + this._visitJSXChildren(element.children) + ';}) && (__blocks.' + element.value + ' = function(parent) {\n' +
+            'return blocks.' + element.value + ' ? blocks.' + element.value + '(function() {\n' +
+                'return _blocks.' + element.value + '(parent);\n' +
+            '}) : _blocks.' + element.value + '(parent);\n' +
+        '})' + (isRun ? ' && __blocks.' + element.value + '()' : '');
+    },
+
+    _visitJSXVdt: function(element) {
+        var ret = '(obj = extend(' + this._visitJSXAttribute(element.attributes) + ' || {}, obj)) && ' + element.value + '.call(this, obj, _Vdt, ',
+            blocks = [];
+        Utils.each(element.children, function(child) {
+            if (child.type === Type.JSXBlock) {
+                blocks.push(this._visitJSXBlock(child, false))
+            }
+        }, this);
+
+        return ret + blocks.join(' && ') + ' && __blocks);';
     }
 };
 

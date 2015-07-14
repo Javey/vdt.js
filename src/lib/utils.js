@@ -11,7 +11,11 @@ var i = 0,
         JSXElement: i++,
         JSXExpressionContainer: i++,
         JSXAttribute: i++,
-        JSXEmptyExpression: i++
+        JSXEmptyExpression: i++,
+
+        JSXWidget: i++,
+        JSXVdt: i++,
+        JSXBlock: i++
     },
     TypeName = [],
 
@@ -81,6 +85,10 @@ var Utils = {
             }
         }
         return dest;
+    },
+
+    isArray: Array.isArray || function(arr) {
+        return Object.prototype.toString.call(arr) === '[object Array]';
     }
 };
 

@@ -2247,7 +2247,7 @@ var Utils = require('./utils'),
     TypeName = Utils.TypeName;
 
 function isJSXIdentifierPart(ch) {
-    return (ch === 36) || (ch === 95) || (ch === 45) ||  // $ (dollar) and _ (underscore) and -
+    return (ch === 58) || (ch === 95) || (ch === 45) ||  // : and _ (underscore) and -
         (ch >= 65 && ch <= 90) ||         // A..Z
         (ch >= 97 && ch <= 122) ||        // a..z
         (ch >= 48 && ch <= 57);         // 0..9
@@ -2297,7 +2297,7 @@ Parser.prototype = {
             if (ch === '\'' || ch === '"') {
                 // skip element(<div>) in quotes
                 this._scanStringLiteral();
-            } else if (this._char() === '<' && /^<\w+\s*[\w>]/.test(this.source.slice(this.index))) {
+            } else if (this._char() === '<' && /^<\w+:?\s*[\w>]/.test(this.source.slice(this.index))) {
                 break;
             } else {
                 if (ch === '{') {
@@ -2381,20 +2381,52 @@ Parser.prototype = {
 
     _parseJSXElement: function() {
         this._expect('<');
-        var start = this.index;
+        var start = this.index,
+            ret = {},
+            flag = this._charCode();
+        if (flag >= 65 && flag <= 90) {
+            // is a widget
+            ret.type = Type.JSXWidget;
+            ret.typeName = TypeName[Type.JSXWidget];
+        } else if (this._charCode(this.index + 1) === 58/* : */){
+            // is a directive
+            start += 2;
+            switch (flag) {
+                case 116: // t
+                    ret.type = Type.JSXVdt;
+                    ret.typeName = TypeName[Type.JSXVdt];
+                    break;
+                case 98: // b
+                    ret.type = Type.JSXBlock;
+                    ret.typeName = TypeName[Type.JSXBlock];
+                    break;
+                default:
+                    throw new Error('Unknown directive ' + String.fromCharCode(flag) + ':');
+            }
+            this.index += 2;
+        } else {
+            // is an element
+            ret.type = Type.JSXElement;
+            ret.typeName = TypeName[Type.JSXElement];
+        }
+
         while (this.index < this.length) {
             if (!isJSXIdentifierPart(this._charCode())) {
                 break;
             }
             this.index++;
         }
-        var ret = {
-            type: Type.JSXElement,
-            typeName: TypeName[Type.JSXElement],
-            value: this.source.slice(start, this.index),
+
+        ret.value = this.source.slice(start, this.index);
+
+        return this._parseAttributeAndChildren(ret);
+    },
+
+    _parseAttributeAndChildren: function(ret) {
+        Utils.extend(ret, {
             attributes: this._parseJSXAttribute(),
             children: []
-        };
+        });
 
         if (Utils.isSelfClosingTag(ret.value)) {
             // self closing tag
@@ -2610,6 +2642,12 @@ Stringifier.prototype = {
                 return this._visitJSXText(element);
             case Type.JSXExpressionContainer:
                 return this._visitJSXExpressionContainer(element.value);
+            case Type.JSXWidget:
+                return this._visitJSXWidget(element);
+            case Type.JSXBlock:
+                return this._visitJSXBlock(element);
+            case Type.JSXVdt:
+                return this._visitJSXVdt(element);
             default:
                 return 'null';
         }
@@ -2620,20 +2658,24 @@ Stringifier.prototype = {
     },
 
     _visitJSX: function(element) {
-        var str = "h('" + element.value + "'," + this._visitJSXAttribute(element.attributes) + ", ",
-            children = [];
+        var str = "h('" + element.value + "'," + this._visitJSXAttribute(element.attributes) + ", ";
 
-        Utils.each(element.children, function(child) {
-            children.push(this._visit(child));
+        return str + this._visitJSXChildren(element.children) + ')';
+    },
+
+    _visitJSXChildren: function(children) {
+        var ret = [];
+        Utils.each(children, function(child) {
+            ret.push(this._visit(child));
         }, this);
 
-        return str + '[' + children.join(', ') + '])';
+        return '[' + ret.join(', ') + ']';
     },
 
     _visitJSXAttribute: function(attributes) {
         var ret = [];
         Utils.each(attributes, function(attr) {
-            ret.push("'" + attr.name + "': " + this._visit(attr.value));
+            ret.push("'" + attr.name + "': " + (Utils.isArray(attr.value) ? this._visitJSXChildren(attr.value) : this._visit(attr.value)));
         }, this);
 
         return ret.length ? '{' + ret.join(', ') + '}' : 'null';
@@ -2641,6 +2683,32 @@ Stringifier.prototype = {
 
     _visitJSXText: function(element) {
         return "'" + element.value.replace(/[\r\n]/g, ' ') + "'";
+    },
+
+    _visitJSXWidget: function(element) {
+        element.attributes.push({name: 'children', value: element.children});
+        return 'new ' + element.value + '(' + this._visitJSXAttribute(element.attributes) + ', typeof widgets === "undefined" ? {} : widgets)';
+    },
+
+    _visitJSXBlock: function(element, isRun) {
+        arguments.length === 1 && (isRun = true);
+        return '(_blocks.' + element.value + ' = function(parent) {return ' + this._visitJSXChildren(element.children) + ';}) && (__blocks.' + element.value + ' = function(parent) {\n' +
+            'return blocks.' + element.value + ' ? blocks.' + element.value + '(function() {\n' +
+                'return _blocks.' + element.value + '(parent);\n' +
+            '}) : _blocks.' + element.value + '(parent);\n' +
+        '})' + (isRun ? ' && __blocks.' + element.value + '()' : '');
+    },
+
+    _visitJSXVdt: function(element) {
+        var ret = '(obj = extend(' + this._visitJSXAttribute(element.attributes) + ' || {}, obj)) && ' + element.value + '.call(this, obj, _Vdt, ',
+            blocks = [];
+        Utils.each(element.children, function(child) {
+            if (child.type === Type.JSXBlock) {
+                blocks.push(this._visitJSXBlock(child, false))
+            }
+        }, this);
+
+        return ret + blocks.join(' && ') + ' && __blocks);';
     }
 };
 
@@ -2660,7 +2728,11 @@ var i = 0,
         JSXElement: i++,
         JSXExpressionContainer: i++,
         JSXAttribute: i++,
-        JSXEmptyExpression: i++
+        JSXEmptyExpression: i++,
+
+        JSXWidget: i++,
+        JSXVdt: i++,
+        JSXBlock: i++
     },
     TypeName = [],
 
@@ -2730,6 +2802,10 @@ var Utils = {
             }
         }
         return dest;
+    },
+
+    isArray: Array.isArray || function(arr) {
+        return Object.prototype.toString.call(arr) === '[object Array]';
     }
 };
 
@@ -2807,9 +2883,11 @@ function compile(source, options) {
             var ast = parser.parse(source),
                 hscript = stringifier.stringify(ast, options.autoReturn);
 
-            hscript = '_Vdt || (_Vdt = Vdt); var h = _Vdt.virtualDom.h;\nwith(obj || {}) {\n' + hscript + '\n};';
-            templateFn = new Function('obj', '_Vdt', hscript);
-            templateFn.source = 'function(obj, _Vdt) {\n' + hscript + '\n}';
+            hscript = '_Vdt || (_Vdt = Vdt); blocks || (blocks = {}); var h = _Vdt.virtualDom.h, widgets = this.widgets || {}, _blocks = {}, __blocks = {},\n' +
+                'hasOwn = Object.prototype.hasOwnProperty, extend = function(dest, source) {if (source) {for (var key in source) {if (hasOwn.call(source, key)) {dest[key] = source[key];}}}return dest;};' +
+                'with(obj || {}) {\n' + hscript + '\n}';
+            templateFn = new Function('obj', '_Vdt', 'blocks', hscript);
+            templateFn.source = 'function(obj, _Vdt, blocks) {\n' + hscript + '\n}';
             break;
         case 'function':
             templateFn = source;

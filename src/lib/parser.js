@@ -9,7 +9,7 @@ var Utils = require('./utils'),
     TypeName = Utils.TypeName;
 
 function isJSXIdentifierPart(ch) {
-    return (ch === 36) || (ch === 95) || (ch === 45) ||  // $ (dollar) and _ (underscore) and -
+    return (ch === 58) || (ch === 95) || (ch === 45) ||  // : and _ (underscore) and -
         (ch >= 65 && ch <= 90) ||         // A..Z
         (ch >= 97 && ch <= 122) ||        // a..z
         (ch >= 48 && ch <= 57);         // 0..9
@@ -59,7 +59,7 @@ Parser.prototype = {
             if (ch === '\'' || ch === '"') {
                 // skip element(<div>) in quotes
                 this._scanStringLiteral();
-            } else if (this._char() === '<' && /^<\w+\s*[\w>]/.test(this.source.slice(this.index))) {
+            } else if (this._char() === '<' && /^<\w+:?\s*[\w>]/.test(this.source.slice(this.index))) {
                 break;
             } else {
                 if (ch === '{') {
@@ -143,20 +143,52 @@ Parser.prototype = {
 
     _parseJSXElement: function() {
         this._expect('<');
-        var start = this.index;
+        var start = this.index,
+            ret = {},
+            flag = this._charCode();
+        if (flag >= 65 && flag <= 90) {
+            // is a widget
+            ret.type = Type.JSXWidget;
+            ret.typeName = TypeName[Type.JSXWidget];
+        } else if (this._charCode(this.index + 1) === 58/* : */){
+            // is a directive
+            start += 2;
+            switch (flag) {
+                case 116: // t
+                    ret.type = Type.JSXVdt;
+                    ret.typeName = TypeName[Type.JSXVdt];
+                    break;
+                case 98: // b
+                    ret.type = Type.JSXBlock;
+                    ret.typeName = TypeName[Type.JSXBlock];
+                    break;
+                default:
+                    throw new Error('Unknown directive ' + String.fromCharCode(flag) + ':');
+            }
+            this.index += 2;
+        } else {
+            // is an element
+            ret.type = Type.JSXElement;
+            ret.typeName = TypeName[Type.JSXElement];
+        }
+
         while (this.index < this.length) {
             if (!isJSXIdentifierPart(this._charCode())) {
                 break;
             }
             this.index++;
         }
-        var ret = {
-            type: Type.JSXElement,
-            typeName: TypeName[Type.JSXElement],
-            value: this.source.slice(start, this.index),
+
+        ret.value = this.source.slice(start, this.index);
+
+        return this._parseAttributeAndChildren(ret);
+    },
+
+    _parseAttributeAndChildren: function(ret) {
+        Utils.extend(ret, {
             attributes: this._parseJSXAttribute(),
             children: []
-        };
+        });
 
         if (Utils.isSelfClosingTag(ret.value)) {
             // self closing tag

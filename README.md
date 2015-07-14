@@ -13,6 +13,7 @@ See [TodoMVC](http://javey.github.io/vdt-todomvc/) implemented by `Vdt.js`
 * Just the ui. Just the template further more. But more powerful than common template.
 * Virtual-dom. Diff update unlike [Handlebars](https://github.com/daaain/Handlebars)/[mustache.js](https://github.com/janl/mustache.js).
 * Lightweight. Rewrite a compiler instead of [jstransform](https://github.com/facebook/jstransform). Discard ES6 syntax sugar and JS analysis, so it's faster.
+* Template can be extended. `<t:parent>` `<b:section>`
 * Easy to use. You can use it with any other js library, such as jQuery. See [vdt-todomvc](https://github.com/Javey/vdt-todomvc)
 
 # Install
@@ -152,19 +153,49 @@ You can bind event in `vdt` template directly by adding `ev-event` property, lik
     {/* output users */}
     {users.map(function(user, index) {
         return <li className="user" id={user.id} ev-click={
-            // use es5's bind or underscore's bind
-            /*function(user) {
-                alert('Click ' + user.name);
-            }.bind(null, user)*/
+            // use es5's bind or underscore's bind to pass arguments
+            showInfo.bind(null, index, user.name)
             // or closure
-            (function(user) {
-                return function() {
-                    alert('Click ' + user.name);
-                }
-            })(user)
+            /*function() {
+                showInfo(index, user.name);
+            }*/
         }>{index}: {user.name}</li>
     })}
 </ul>
+```
+
+# Template Extend
+
+Vdt template can be extended. Use `<t:templateFunction>` and `<b:block>` directive.
+
+Use `<t:templateFunction>` to extend the parent template function. `templateFunction` is a function of parent template.
+
+Use `<t:block`> to set block which can be filled by child.
+
+Use `parent()` to get parent content.
+
+```jsx
+<script type="text/vdt" id="parent">
+    <div className="card">
+        <div className="head">{title></div>
+        <b:body>parent body</b:body>
+        <b:footer>parent footer</b:footer>
+    </div>
+</script>
+```
+
+```jsx
+<script type="text/vdt" id="child">
+    // You can also compile it in node, then require it by require.js
+    var parent = Vdt.compile(document.getElementById('parent').innerHTML);
+    <t:parent title="child card">
+        <b:body>child body</b:body>
+        <b:footer>
+            {parent()}
+            child footer
+        </b:footer>
+    </t:parent>
+</script>
 ```
 
 # Api
