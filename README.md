@@ -177,9 +177,13 @@ Use `parent()` to get parent content.
 ```jsx
 <script type="text/vdt" id="parent">
     <div className="card">
-        <div className="head">{title></div>
-        <b:body>parent body</b:body>
-        <b:footer>parent footer</b:footer>
+        <div className="head">{title}</div>
+        <b:body>
+            <div>parent body</div>
+        </b:body>
+        <b:footer>
+            <div>parent footer</div>
+        </b:footer>
     </div>
 </script>
 ```
@@ -188,11 +192,13 @@ Use `parent()` to get parent content.
 <script type="text/vdt" id="child">
     // You can also compile it in node, then require it by require.js
     var parent = Vdt.compile(document.getElementById('parent').innerHTML);
-    <t:parent title="child card">
-        <b:body>child body</b:body>
+    <t:parent title="child card title">
+        <b:body>
+            <div>child body</div>
+        </b:body>
         <b:footer>
             {parent()}
-            child footer
+            <div>child footer</div>
         </b:footer>
     </t:parent>
 </script>

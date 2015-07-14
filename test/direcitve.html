@@ -6,32 +6,34 @@
 </head>
 <body>
 <script type="text/vdt" id="parent">
-    <div className="test">
-        <b:head>
-            <div>parent head</div>
-        </b:head>
+    <div className="card">
+        <div className="head">{title}</div>
         <b:body>
             <div>parent body</div>
         </b:body>
+        <b:footer>
+            <div>parent footer</div>
+        </b:footer>
     </div>
 </script>
 
 <script type="text/vdt" id="child">
-    <t:parent>
-        <b:head>
-            child head
-        </b:head>
+    // You can also compile it in node, then require it by require.js
+    var parent = Vdt.compile(document.getElementById('parent').innerHTML);
+    <t:parent title="child card title">
         <b:body>
-            {parent()}
             <div>child body</div>
         </b:body>
+        <b:footer>
+            {parent()}
+            <div>child footer</div>
+        </b:footer>
     </t:parent>
 </script>
 
 <script type="text/javascript" src="../dist/vdt.js"></script>
 <script type="text/javascript">
-    var parent = Vdt.compile(document.getElementById('parent').innerHTML),
-        child = Vdt(document.getElementById('child').innerHTML);
+    var child = Vdt(document.getElementById('child').innerHTML);
     document.body.appendChild(child.render());
 </script>
 </body>
