@@ -5,7 +5,17 @@
  */
 
 var Utils = require('./utils'),
-    Type = Utils.Type;
+    Type = Utils.Type,
+
+    attrMap = (function() {
+        var map = {
+            'class': 'className',
+            'for': 'htmlFor'
+        };
+        return function(name) {
+            return map[name] || name;
+        }
+    })();
 
 var Stringifier = function() {};
 
@@ -78,7 +88,7 @@ Stringifier.prototype = {
     _visitJSXAttribute: function(attributes) {
         var ret = [];
         Utils.each(attributes, function(attr) {
-            ret.push("'" + attr.name + "': " + (Utils.isArray(attr.value) ? this._visitJSXChildren(attr.value) : this._visit(attr.value)));
+            ret.push("'" + attrMap(attr.name) + "': " + (Utils.isArray(attr.value) ? this._visitJSXChildren(attr.value) : this._visit(attr.value)));
         }, this);
 
         return ret.length ? '{' + ret.join(', ') + '}' : 'null';

@@ -39,12 +39,12 @@ npm install vdt.js --save
         showInfo = function(index, name) {
             alert('Click ' + index + ' ' + name);
         }
-    <div className="users">
+    <div class="users">
         <input id="add" value={input} /> input: {input}
         <ul>
             {/* output users */}
             {users.map(function(user, index) {
-                return <li className="user" id={user.id} ev-click={
+                return <li class="user" id={user.id} ev-click={
                     // use es5's bind or underscore's bind to pass arguments
                     showInfo.bind(null, index, user.name)
                     // or closure
@@ -103,7 +103,7 @@ You can write template like this to render custom attributes directly.
 
 # Notice
 
-1. Use `className` instead of `class` in html.
+1. ~~Use `className` instead of `class` in html.~~
 2. ~~All html tags must be closed. e.g. `<input />`.~~
 3. Use `{/* comment */}` instead of `<!-- comment -->`. It is just Javascript comment which is wrapped by `{}`.
 4. The last html element will be returned. You must wrap all html in a element. e.g.

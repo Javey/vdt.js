@@ -12,6 +12,13 @@ describe 'Stringifier', ->
         """
         stringifier.stringify(parser.parse(source)).should.eql("return h('input',{'type': 'checkbox', 'checked': null}, [])")
 
+    it 'Stringifier attribute class', ->
+        source = """
+        <div class="aaa"></div>
+        """
+
+        stringifier.stringify(parser.parse(source)).should.eql("return h('div',{'className': 'aaa'}, [])")
+
     it 'Stringify without return', ->
         source = """
         <input type="checkbox" checked>
