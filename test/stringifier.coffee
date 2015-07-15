@@ -81,3 +81,27 @@ describe 'Stringifier', ->
             }) : _blocks.body(parent);
             }) && __blocks);
             """)
+
+    it 'Stringify vdt template with js', ->
+        source = """
+        var a = 1;
+        <t:base>
+            <b:body>good</b:body>
+        </t:base>
+        """
+
+        stringifier.stringify(parser.parse(source)).should.eql("""
+            var a = 1;
+            return (obj = extend(null || {}, obj)) && base.call(this, obj, _Vdt, (_blocks.body = function(parent) {return ['good'];}) && (__blocks.body = function(parent) {
+            return blocks.body ? blocks.body(function() {
+            return _blocks.body(parent);
+            }) : _blocks.body(parent);
+            }) && __blocks);
+            """)
+
+    it 'Stringify empty template directive', ->
+        source = """
+        <t:base />
+        """
+
+        stringifier.stringify(parser.parse(source)).should.eql("return (obj = extend(null || {}, obj)) && base.call(this, obj, _Vdt, __blocks)")

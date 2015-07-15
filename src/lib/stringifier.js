@@ -121,7 +121,7 @@ Stringifier.prototype = {
             }
         }, this);
 
-        return ret + blocks.join(' && ') + ' && __blocks);';
+        return ret + (blocks.length ? blocks.join(' && ') + ' && __blocks);' : '__blocks)');
     }
 };
 
