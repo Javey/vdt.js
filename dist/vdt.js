@@ -2428,7 +2428,7 @@ Parser.prototype = {
             children: []
         });
 
-        if (Utils.isSelfClosingTag(ret.value)) {
+        if (ret.type === Type.JSXElement && Utils.isSelfClosingTag(ret.value)) {
             // self closing tag
             if (this._char() === '/') {
                 this.index++;
