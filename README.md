@@ -2,11 +2,11 @@
 
 > vdt is short for virtual-dom template
 
-`Vdt.js` is a template engine based on virtual-dom technology.
+`Vdt` is a template engine based on virtual-dom technology.
 It is inspired by [React](https://github.com/facebook/react)/[virtual-dom](https://github.com/Matt-Esch/virtual-dom),
 and uses [JSX](https://facebook.github.io/react/docs/jsx-in-depth.html) as template syntax.
 
-See [TodoMVC](http://javey.github.io/vdt-todomvc/) implemented by `Vdt.js`
+See [TodoMVC](http://javey.github.io/vdt-todomvc/) implemented by `Vdt`
 
 # Features
 
@@ -19,7 +19,7 @@ See [TodoMVC](http://javey.github.io/vdt-todomvc/) implemented by `Vdt.js`
 # Install
 
 ```shell
-npm install vdt.js --save
+npm install vdt --save
 ```
 
 # Example
@@ -126,7 +126,7 @@ You can write template like this to render custom attributes directly.
 Take vdt as a express middleware.
 
 ```javascript
-app.use(require('vdt.js').middleware({
+app.use(require('vdt').middleware({
     src: 'vdt/src/path',
     amd: true, // and amd wrapper
     force: false, // force compile
