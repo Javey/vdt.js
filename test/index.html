@@ -65,17 +65,21 @@
         blocks || (blocks = {});
         var _blocks = {};
         var __blocks = {};
-        with(obj || {}) {
-//            return h('div',null, [(_blocks.a = function(parent) {return '1'}) && (__blocks.a = function(parent) {
+        console.log(this);
+        with (obj || {}) {
+            return h('div',null, [(_blocks.a = function(parent) {console.log('parent', this);return '1'}) && (__blocks.a = function(parent) {
+                console.log(this);
+                var self = this;
+                return blocks.a ? blocks.a.call(this, function() {
+                    console.log(self);
+                    return _blocks.a.call(self, parent);
+                }) : _blocks.a.call(this, parent);
+            }) && __blocks.a.call(this)]);
+//            return h('div',null, ['     ', (_blocks.a = function(parent) {return ['         ', h('div',null, ['aaa']), '         '];}) && (__blocks.a = function(parent) {
 //                return blocks.a ? blocks.a(function() {
 //                    return _blocks.a(parent);
 //                }) : _blocks.a(parent);
-//            }) && __blocks.a()])
-            return h('div',null, ['     ', (_blocks.a = function(parent) {return ['         ', h('div',null, ['aaa']), '         '];}) && (__blocks.a = function(parent) {
-                return blocks.a ? blocks.a(function() {
-                    return _blocks.a(parent);
-                }) : _blocks.a(parent);
-            }) && __blocks.a(), ' '])
+//            }) && __blocks.a(), ' ']);
         }
     };
     var child = function(obj, _Vdt, blocks) {
@@ -83,11 +87,21 @@
         blocks || (blocks = {});
         var _blocks = {};
         var __blocks = {};
-        with(obj || {}) {
-            return parent(obj, _Vdt, (_blocks.a = function(parent) {return [parent(), '2'];}) && (__blocks.a = function(parent) {
-                return blocks.a ? blocks.a(function() {
-                    return _blocks.a(parent);
-                }) : _blocks.a(parent);
+        console.log(this);
+        with (obj || {}) {
+            return parent.call(this, obj, _Vdt, (_blocks.a = function(parent) {return [parent(), ['2', (_blocks.b = function(parent) {
+                return 'b';
+            }) && (__blocks.b = function(parent) {
+                return blocks.b ? blocks.b(function() {
+                    return _blocks.b(parent);
+                }) : _blocks.b(parent);
+            }) && __blocks.b()]];}) && (__blocks.a = function(parent) {
+                console.log('child', this);
+                var self = this;
+                return blocks.a ? blocks.a.call(this, function() {
+                    console.log(self);
+                    return _blocks.a.call(self, parent);
+                }) : _blocks.a.call(this, parent);
             }) && __blocks);
         }
     };
@@ -96,7 +110,7 @@
         blocks || (blocks = {});
         var _blocks = {};
         var __blocks = {};
-        with(obj || {}) {
+        with (obj || {}) {
             return child(obj, _Vdt, (_blocks.a = function(parent) {return parent() + '3';}) && (__blocks.a = function(parent) {
                 return blocks.a ? blocks.a(function() {
                     return _blocks.a(parent);
@@ -112,12 +126,12 @@
                 return parent() + '4';
             }
         };
-        with(obj || {}) {
+        with (obj || {}) {
             return grandson(obj, _Vdt, _blocks);
         }
     };
     var inheritVdt = Vdt(child);
-    document.body.appendChild(inheritVdt.render());
+    document.body.appendChild(inheritVdt.render({a: 1}));
 </script>
 </body>
 </html>
