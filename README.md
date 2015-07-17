@@ -13,7 +13,7 @@ See [TodoMVC](http://javey.github.io/vdt-todomvc/) implemented by `Vdt`
 * Just the ui. Just the template further more. But more powerful than common template.
 * Virtual-dom. Diff update unlike [Handlebars](https://github.com/daaain/Handlebars)/[mustache.js](https://github.com/janl/mustache.js).
 * Lightweight. Rewrite a compiler instead of [jstransform](https://github.com/facebook/jstransform). Discard ES6 syntax sugar and JS analysis, so it's faster.
-* Template can be extended. `<t:parent>` `<b:section>`
+* Template can be extended. `<t:template>` `<b:block>`
 * Easy to use. You can use it with any other js library, such as jQuery. See [vdt-todomvc](https://github.com/Javey/vdt-todomvc)
 
 # Install
@@ -40,11 +40,11 @@ npm install vdt --save
             alert('Click ' + index + ' ' + name);
         }
     <div class="users">
-        <input id="add" value={input} /> input: {input}
+        <input value={input} ev-change={add} ev-input={change}/> input: {input}
         <ul>
             {/* output users */}
             {users.map(function(user, index) {
-                return <li class="user" id={user.id} ev-click={
+                return <li className="user" id={user.id} ev-click={
                     // use es5's bind or underscore's bind to pass arguments
                     showInfo.bind(null, index, user.name)
                     // or closure
@@ -60,32 +60,29 @@ npm install vdt --save
 </script>
 <script type="text/javascript" src="../dist/vdt.js"></script>
 <script type="text/javascript">
-    var data = {
-        users: [
-            {name: 'John', id: '1'},
-            {name: 'Javey', id: '2'},
-            {name: 'Tom', id: '3'},
-            {name: 'Sarah', id: '4'}
-        ],
-        input: ''
-    };
+    var vdt = Vdt(document.getElementById('template').innerHTML),
+        model = {
+            users: [
+                {name: 'John', id: '1'},
+                {name: 'Javey', id: '2'},
+                {name: 'Tom', id: '3'},
+                {name: 'Sarah', id: '4'}
+            ],
+            input: '',
 
-    var str = document.getElementById('template').innerHTML,
-        vdt = Vdt(str),
-        dom = vdt.render(data);
+            add: function(e) {
+                model.users.push({name: e.target.value, id: model.users.length});
+                model.input = '';
+                vdt.update();
+            },
 
-    document.body.appendChild(dom);
+            change: function(e) {
+                model.input = e.target.value;
+                vdt.update();
+            }
+        };
 
-    var input = document.getElementById('add');
-    input.addEventListener('input', function(e) {
-        data.input = e.target.value;
-        vdt.update(data);
-    });
-    input.addEventListener('change', function(e) {
-        data.users.push({name: e.target.value, id: data.users.length});
-        data.input = '';
-        vdt.update(data);
-    });
+    document.body.appendChild(vdt.render(model));
 </script>
 </body>
 </html>
