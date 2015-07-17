@@ -2703,10 +2703,11 @@ Stringifier.prototype = {
     _visitJSXBlock: function(element, isRun) {
         arguments.length === 1 && (isRun = true);
         return '(_blocks.' + element.value + ' = function(parent) {return ' + this._visitJSXChildren(element.children) + ';}) && (__blocks.' + element.value + ' = function(parent) {\n' +
-            'return blocks.' + element.value + ' ? blocks.' + element.value + '(function() {\n' +
-                'return _blocks.' + element.value + '(parent);\n' +
-            '}) : _blocks.' + element.value + '(parent);\n' +
-        '})' + (isRun ? ' && __blocks.' + element.value + '()' : '');
+            'var self = this;' +
+            'return blocks.' + element.value + ' ? blocks.' + element.value + '.call(this, function() {\n' +
+                'return _blocks.' + element.value + '.call(self, parent);\n' +
+            '}) : _blocks.' + element.value + '.call(this, parent);\n' +
+        '})' + (isRun ? ' && __blocks.' + element.value + '.call(this)' : '');
     },
 
     _visitJSXVdt: function(element) {
