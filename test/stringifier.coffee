@@ -51,10 +51,10 @@ describe 'Stringifier', ->
 
         stringifier.stringify(parser.parse(source)).should.eql("""
             return h('div',null, ['     ', (_blocks.content = function(parent) {return ['         ', h('div',null, ['aaa']), '     '];}) && (__blocks.content = function(parent) {
-            return blocks.content ? blocks.content(function() {
-            return _blocks.content(parent);
-            }) : _blocks.content(parent);
-            }) && __blocks.content(), ' '])
+            var self = this;return blocks.content ? blocks.content.call(this, function() {
+            return _blocks.content.call(self, parent);
+            }) : _blocks.content.call(this, parent);
+            }) && __blocks.content.call(this), ' '])
             """)
 
     it 'Stringify vdt template directive', ->
@@ -72,13 +72,13 @@ describe 'Stringifier', ->
 
         stringifier.stringify(parser.parse(source)).should.eql("""
             return (obj = extend(null || {}, obj)) && parent.call(this, obj, _Vdt, (_blocks.head = function(parent) {return ['         child head     '];}) && (__blocks.head = function(parent) {
-            return blocks.head ? blocks.head(function() {
-            return _blocks.head(parent);
-            }) : _blocks.head(parent);
+            var self = this;return blocks.head ? blocks.head.call(this, function() {
+            return _blocks.head.call(self, parent);
+            }) : _blocks.head.call(this, parent);
             }) && (_blocks.body = function(parent) {return ['         ', parent(), '         ', h('div',null, ['child body']), '     '];}) && (__blocks.body = function(parent) {
-            return blocks.body ? blocks.body(function() {
-            return _blocks.body(parent);
-            }) : _blocks.body(parent);
+            var self = this;return blocks.body ? blocks.body.call(this, function() {
+            return _blocks.body.call(self, parent);
+            }) : _blocks.body.call(this, parent);
             }) && __blocks);
             """)
 
@@ -93,9 +93,9 @@ describe 'Stringifier', ->
         stringifier.stringify(parser.parse(source)).should.eql("""
             var a = 1;
             return (obj = extend(null || {}, obj)) && base.call(this, obj, _Vdt, (_blocks.body = function(parent) {return ['good'];}) && (__blocks.body = function(parent) {
-            return blocks.body ? blocks.body(function() {
-            return _blocks.body(parent);
-            }) : _blocks.body(parent);
+            var self = this;return blocks.body ? blocks.body.call(this, function() {
+            return _blocks.body.call(self, parent);
+            }) : _blocks.body.call(this, parent);
             }) && __blocks);
             """)
 
