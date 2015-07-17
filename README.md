@@ -163,9 +163,9 @@ You can bind event in `vdt` template directly by adding `ev-event` property, lik
 
 # Template Extend
 
-Vdt template can be extended. Use `<t:templateFunction>` and `<b:block>` directive.
+Vdt template can be extended. Use `<t:template>` and `<b:block>` directive.
 
-Use `<t:templateFunction>` to extend the parent template function. `templateFunction` is a function of parent template.
+Use `<t:template>` to extend the parent template function. `template` is a function of parent template.
 
 Use `<t:block`> to set block which can be filled by child.
 
