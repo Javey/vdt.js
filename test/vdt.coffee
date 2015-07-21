@@ -20,7 +20,6 @@ describe 'Vdt', ->
         }
         return dest;
         };
-        extend(__blocks, blocks);
         with (obj || {}) {
         return h('div',null, [test])
         }
@@ -48,7 +47,6 @@ describe 'Vdt', ->
         }
         return dest;
         };
-        extend(__blocks, blocks);
         with (obj || {}) {
         h('div',null, [test])
         }

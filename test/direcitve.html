@@ -14,7 +14,7 @@
         <b:footer>
             <div>parent footer</div>
             <b:nested>
-                <div>nested footer</div>
+                <div>parent nested footer</div>
             </b:nested>
         </b:footer>
     </div>
@@ -38,14 +38,16 @@
 </script>
 
 <script type="text/vdt" id="grandson">
-    var parent = Vdt.compile(document.getElementById('child').innerHTML);
-    <t:parent title="child card title">
+    var _parent = Vdt.compile(document.getElementById('child').innerHTML);
+    <t:_parent title="grandson card title">
         <b:body>
-            <div>child body</div>
+            <div>grandson body</div>
         </b:body>
         <b:child_nested>
             {parent()}
             <div>grandson footer</div>
+            <t:_parent title="nested template">
+            </t:_parent>
         </b:child_nested>
     </t:parent>
 </script>
@@ -54,6 +56,8 @@
 <script type="text/javascript">
     var child = Vdt(document.getElementById('child').innerHTML);
     document.body.appendChild(child.render());
+
+    document.body.appendChild(document.createElement('hr'));
 
     var grandson = Vdt(document.getElementById('grandson').innerHTML);
     document.body.appendChild(grandson.render());

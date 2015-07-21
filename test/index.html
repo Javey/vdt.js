@@ -92,25 +92,25 @@
     };
     var child = function(obj, _Vdt, blocks) {
         _Vdt || (_Vdt = Vdt); var h = _Vdt.virtualDom.h;
-        blocks || (blocks = {});
-        var _blocks = {};
-        var __blocks = {};
-        console.log(this);
         with (obj || {}) {
-            return parent.call(this, obj, _Vdt, (_blocks.a = function(parent) {return [parent(), ['2', (_blocks.b = function(parent) {
-                return 'b';
-            }) && (__blocks.b = function(parent) {
-                return blocks.b ? blocks.b(function() {
-                    return _blocks.b(parent);
-                }) : _blocks.b(parent);
-            }) && __blocks.b()]];}) && (__blocks.a = function(parent) {
-                console.log('child', this);
-                var self = this;
-                return blocks.a ? blocks.a.call(this, function() {
-                    console.log(self);
-                    return _blocks.a.call(self, parent);
-                }) : _blocks.a.call(this, parent);
-            }) && __blocks);
+            return (function(blocks) {
+                var _blocks = {};
+                var __blocks = {};
+                return parent.call(this, obj, _Vdt, (_blocks.a = function(parent) {return [parent(), ['2', (_blocks.b = function(parent) {
+                    return 'b';
+                }) && (__blocks.b = function(parent) {
+                    return blocks.b ? blocks.b(function() {
+                        return _blocks.b(parent);
+                    }) : _blocks.b(parent);
+                }) && __blocks.b()]];}) && (__blocks.a = function(parent) {
+                    console.log('child', this);
+                    var self = this;
+                    return blocks.a ? blocks.a.call(this, function() {
+                        console.log(self);
+                        return _blocks.a.call(self, parent);
+                    }) : _blocks.a.call(this, parent);
+                }) && __blocks);
+            }).call(this, blocks || {})
         }
     };
     var grandson = function(obj, _Vdt, blocks) {

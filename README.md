@@ -171,6 +171,9 @@ Use `<t:block`> to set block which can be filled by child.
 
 Use `parent()` to get parent content.
 
+1. **`parent` is a keyword for referencing parent block, so don't name template function as `parent`.**
+2. **`<t:template>` can be nested in `<t:block>`; `<b:block>` can be nested in `<b:block>`.**
+
 ```jsx
 <script type="text/vdt" id="parent">
     <div className="card">
@@ -188,8 +191,8 @@ Use `parent()` to get parent content.
 ```jsx
 <script type="text/vdt" id="child">
     // You can also compile it in node, then require it by require.js
-    var parent = Vdt.compile(document.getElementById('parent').innerHTML);
-    <t:parent title="child card title">
+    var father = Vdt.compile(document.getElementById('parent').innerHTML);
+    <t:father title="child card title">
         <b:body>
             <div>child body</div>
         </b:body>
@@ -197,7 +200,7 @@ Use `parent()` to get parent content.
             {parent()}
             <div>child footer</div>
         </b:footer>
-    </t:parent>
+    </t:father>
 </script>
 ```
 

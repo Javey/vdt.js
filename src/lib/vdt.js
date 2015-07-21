@@ -83,7 +83,6 @@ function compile(source, options) {
                         '}',
                         'return dest;',
                     '};',
-                'extend(__blocks, blocks);',
                 'with (obj || {}) {',
                     hscript,
                 '}'

@@ -51,7 +51,8 @@ describe 'Stringifier', ->
 
         stringifier.stringify(parser.parse(source)).should.eql("""
             return h('div',null, ['     ', (_blocks.content = function(parent) {return ['         ', h('div',null, ['aaa']), '     '];}) && (__blocks.content = function(parent) {
-            var self = this;return blocks.content ? blocks.content.call(this, function() {
+            var self = this;
+            return blocks.content ? blocks.content.call(this, function() {
             return _blocks.content.call(self, parent);
             }) : _blocks.content.call(this, parent);
             }) && __blocks.content.call(this), ' '])
@@ -71,15 +72,19 @@ describe 'Stringifier', ->
         """
 
         stringifier.stringify(parser.parse(source)).should.eql("""
-            return (obj = extend(null || {}, obj)) && parent.call(this, obj, _Vdt, (_blocks.head = function(parent) {return ['         child head     '];}) && (__blocks.head = function(parent) {
-            var self = this;return blocks.head ? blocks.head.call(this, function() {
+            return (function(blocks) {
+            var _blocks = {}, __blocks = extend({}, blocks), _obj = extend(null || {}, obj);
+            return parent.call(this, _obj, _Vdt, (_blocks.head = function(parent) {return ['         child head     '];}) && (__blocks.head = function(parent) {
+            var self = this;
+            return blocks.head ? blocks.head.call(this, function() {
             return _blocks.head.call(self, parent);
             }) : _blocks.head.call(this, parent);
             }) && (_blocks.body = function(parent) {return ['         ', parent(), '         ', h('div',null, ['child body']), '     '];}) && (__blocks.body = function(parent) {
-            var self = this;return blocks.body ? blocks.body.call(this, function() {
+            var self = this;
+            return blocks.body ? blocks.body.call(this, function() {
             return _blocks.body.call(self, parent);
             }) : _blocks.body.call(this, parent);
-            }) && __blocks);
+            }) && __blocks)}).call(this, blocks)
             """)
 
     it 'Stringify vdt template with js', ->
@@ -92,11 +97,14 @@ describe 'Stringifier', ->
 
         stringifier.stringify(parser.parse(source)).should.eql("""
             var a = 1;
-            return (obj = extend(null || {}, obj)) && base.call(this, obj, _Vdt, (_blocks.body = function(parent) {return ['good'];}) && (__blocks.body = function(parent) {
-            var self = this;return blocks.body ? blocks.body.call(this, function() {
+            return (function(blocks) {
+            var _blocks = {}, __blocks = extend({}, blocks), _obj = extend(null || {}, obj);
+            return base.call(this, _obj, _Vdt, (_blocks.body = function(parent) {return ['good'];}) && (__blocks.body = function(parent) {
+            var self = this;
+            return blocks.body ? blocks.body.call(this, function() {
             return _blocks.body.call(self, parent);
             }) : _blocks.body.call(this, parent);
-            }) && __blocks);
+            }) && __blocks)}).call(this, blocks)
             """)
 
     it 'Stringify empty template directive', ->
@@ -104,4 +112,33 @@ describe 'Stringifier', ->
         <t:base />
         """
 
-        stringifier.stringify(parser.parse(source)).should.eql("return (obj = extend(null || {}, obj)) && base.call(this, obj, _Vdt, __blocks)")
+        stringifier.stringify(parser.parse(source)).should.eql("return (function(blocks) {\nvar _blocks = {}, __blocks = extend({}, blocks), _obj = extend(null || {}, obj);\nreturn base.call(this, _obj, _Vdt, __blocks)}).call(this, blocks)")
+
+    it 'Stringify nested t:directive', ->
+        source = """
+        <t:base1>
+            <b:body>
+                <t:base2>
+                    <b:body>base2 body</b:body>
+                </t:base2>
+            </b:body>
+        </t:base1>
+        """
+
+        stringifier.stringify(parser.parse(source)).should.eql("""
+            return (function(blocks) {
+            var _blocks = {}, __blocks = extend({}, blocks), _obj = extend(null || {}, obj);
+            return base1.call(this, _obj, _Vdt, (_blocks.body = function(parent) {return ['         ', (function(blocks) {
+            var _blocks = {}, __blocks = extend({}, blocks), _obj = extend(null || {}, obj);
+            return base2.call(this, _obj, _Vdt, (_blocks.body = function(parent) {return ['base2 body'];}) && (__blocks.body = function(parent) {
+            var self = this;
+            return blocks.body ? blocks.body.call(this, function() {
+            return _blocks.body.call(self, parent);
+            }) : _blocks.body.call(this, parent);
+            }) && __blocks)}).call(this, {}), '     '];}) && (__blocks.body = function(parent) {
+            var self = this;
+            return blocks.body ? blocks.body.call(this, function() {
+            return _blocks.body.call(self, parent);
+            }) : _blocks.body.call(this, parent);
+            }) && __blocks)}).call(this, blocks)
+            """)
