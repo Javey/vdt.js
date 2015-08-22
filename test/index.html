@@ -26,7 +26,8 @@
             })}
         </ul>
         {/* custom attributes */}
-        <div attributes={{'data-a': a, input: input}} id={a} ev-dblclick={function() {console.log('Dblclick')}}>this is a({a})</div>
+        <div attributes={{'data-a': a, input: input}} id={a} ev-dblclick={function() {console.log('Dblclick')}}>This is a({a})</div>
+        <div>Now: {time}</div>
     </div>
 </script>
 
@@ -41,6 +42,7 @@
                 {name: 'Sarah', id: '4'}
             ],
             input: '',
+            time: new Date().toLocaleTimeString(),
 
             add: function(e) {
                 model.users.push({name: e.target.value, id: model.users.length});
@@ -55,6 +57,11 @@
         };
 
     document.body.appendChild(vdt.render(model));
+
+    setInterval(function() {
+        vdt.data.time = new Date().toLocaleTimeString();
+        vdt.update();
+    }, 1000);
 
 //    var input = document.getElementById('add');
 //    input.addEventListener('input', function(e) {
