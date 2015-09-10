@@ -1,6 +1,6 @@
 {
   "name": "vdt",
-  "version": "0.3.6",
+  "version": "0.3.7",
   "description": "A template engine based on virtual-dom",
   "main": "src/index",
   "scripts": {
@@ -9,7 +9,6 @@
   },
   "dependencies": {
     "dom-delegator": "^13.1.0",
-    "lodash": "^3.7.0",
     "virtual-dom": "^2.0.1"
   },
   "devDependencies": {

@@ -1,7 +1,7 @@
 var url = require('url'),
     Vdt = require('./vdt'),
     fs = require('fs'),
-    _ = require('lodash'),
+    Utils = require('./utils'),
     Path = require('path');
 
 module.exports = function(options) {
@@ -13,7 +13,7 @@ module.exports = function(options) {
         }
     }
 
-    options = _.extend({
+    options = Utils.extend({
         amd: true,
         force: false,
         autoReturn: true
