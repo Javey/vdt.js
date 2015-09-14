@@ -2904,15 +2904,7 @@ function compile(source, options) {
                 '_Vdt || (_Vdt = Vdt);',
                 'blocks || (blocks = {});',
                 'var h = _Vdt.virtualDom.h, widgets = this.widgets || {}, _blocks = {}, __blocks = {},',
-                    'hasOwn = Object.prototype.hasOwnProperty,',
-                    'extend = function(dest, source) {',
-                        'if (source) {',
-                            'for (var key in source) {',
-                                'if (hasOwn.call(source, key)) {dest[key] = source[key];}',
-                            '}',
-                        '}',
-                        'return dest;',
-                    '};',
+                    'extend = _Vdt.utils.extend;',
                 'with (obj || {}) {',
                     hscript,
                 '}'
@@ -2935,6 +2927,7 @@ Vdt.stringifier = stringifier;
 Vdt.virtualDom = virtualDom;
 Vdt.compile = compile;
 Vdt.delegator = delegator;
+Vdt.utils = utils;
 
 module.exports = Vdt;
 },{"./parser":49,"./stringifier":50,"./utils":51,"dom-delegator":3,"virtual-dom":18}],53:[function(require,module,exports){
