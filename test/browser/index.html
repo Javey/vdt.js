@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Mocha</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="mocha.css"/>
+</head>
+<body>
+<div id="mocha"></div>
+
+<script type="text/vdt" id="parent">
+    <div className="card">
+        <div className="head">{title}</div>
+        <b:body>
+            <div>parent body</div>
+        </b:body>
+        <b:footer>
+            <div>parent footer</div>
+            <b:nested>
+                <div>parent nested footer</div>
+            </b:nested>
+        </b:footer>
+    </div>
+</script>
+<script type="text/vdt" id="child">
+    // You can also compile it in node, then require it by require.js
+    var parent = Vdt.compile(document.getElementById('parent').innerHTML);
+    <t:parent title="child title">
+        <b:body>
+            <div>child body</div>
+        </b:body>
+        <b:footer>
+            {parent()}
+            <div>child footer</div>
+            <b:child_nested>
+                <div>child nested footer</div>
+            </b:child_nested>
+        </b:footer>
+    </t:parent>
+</script>
+
+<script type="text/vdt" id="child_with_title">
+    var parent = Vdt.compile(document.getElementById('parent').innerHTML);
+    <t:parent title={typeof title !== 'undefined' ? title : "child title"}>
+        <b:body>
+            <div>child body</div>
+        </b:body>
+        <b:footer>
+            {parent()}
+            <div>child footer</div>
+            <b:child_nested>
+                <div>child nested footer</div>
+            </b:child_nested>
+        </b:footer>
+    </t:parent>
+</script>
+
+<script type="text/vdt" id="grandson">
+    var _parent = Vdt.compile(document.getElementById('child_with_title').innerHTML);
+    <t:_parent title="grandson title">
+        <b:body>
+            <div>grandson body</div>
+        </b:body>
+        <b:child_nested>
+            {parent()}
+            <div>grandson footer</div>
+            <t:_parent title="nested template">
+            </t:_parent>
+        </b:child_nested>
+    </t:_parent>
+</script>
+
+<script src="mocha.js"></script>
+<script src="should.js"></script>
+<script src="../../dist/vdt.js"></script>
+<script src="../../node_modules/jquery/dist/jquery.js"></script>
+<script>mocha.setup('bdd')</script>
+<script src="tests.js"></script>
+<script>
+    if (window.mochaPhantomJS) {
+        mochaPhantomJS.run();
+    } else {
+        mocha.run();
+    }
+</script>
+</body>
+</html>
