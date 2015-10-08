@@ -7,50 +7,54 @@ var parser = new (require('./parser')),
 var delegator = new Delegator();
 
 var Vdt = function(source, options) {
-    var templateFn, tree, node;
-
-    templateFn = compile(source, options);
-
-    return {
+    var vdt = {
         render: function(data) {
-            this.data = data;
-            tree = templateFn.call(data, data, Vdt);
-            node = virtualDom.create(tree);
-            return node;
+            if (arguments.length) {
+                vdt.data = data;
+            }
+            vdt.tree = vdt.template.call(vdt.data, vdt.data, Vdt);
+            vdt.node = virtualDom.create(vdt.tree);
+            return vdt.node;
         },
 
         update: function(data) {
             if (arguments.length) {
-                this.data = data;
+                vdt.data = data;
             }
-            var newTree = templateFn.call(this.data, this.data, Vdt),
-                patches = virtualDom.diff(tree, newTree);
-            node = virtualDom.patch(node, patches);
-            tree = newTree;
-            return node;
+            var newTree = vdt.template.call(vdt.data, vdt.data, Vdt);
+            vdt.patches = virtualDom.diff(vdt.tree, newTree);
+            vdt.node = virtualDom.patch(vdt.node, vdt.patches);
+            vdt.tree = newTree;
+            return vdt.node;
         },
 
         /**
          * Restore the data, so you can modify it directly.
          */
         data: {},
+        tree: {},
+        patches: {},
+        node: null,
+        template: compile(source, options),
 
         getTree: function() {
-            return tree;
+            return vdt.tree;
         },
 
-        setTree: function(_tree) {
-            tree = _tree;
+        setTree: function(tree) {
+            vdt.tree = tree;
         },
 
         getNode: function() {
-            return node;
+            return vdt.node;
         },
 
-        setNode: function(_node) {
-            node = _node;
+        setNode: function(node) {
+            vdt.node = node;
         }
     };
+
+    return vdt;
 };
 
 function compile(source, options) {
