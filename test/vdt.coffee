@@ -10,7 +10,7 @@ describe 'Vdt', ->
         function(obj, _Vdt, blocks) {
         _Vdt || (_Vdt = Vdt);
         blocks || (blocks = {});
-        var h = _Vdt.virtualDom.h, widgets = this.widgets || {}, _blocks = {}, __blocks = {},
+        var h = _Vdt.virtualDom.h, widgets = this.widgets || (this.widgets = {}), _blocks = {}, __blocks = {},
         extend = _Vdt.utils.extend;
         with (obj || {}) {
         return h('div',null, [test])
@@ -29,7 +29,7 @@ describe 'Vdt', ->
         function(obj, _Vdt, blocks) {
         _Vdt || (_Vdt = Vdt);
         blocks || (blocks = {});
-        var h = _Vdt.virtualDom.h, widgets = this.widgets || {}, _blocks = {}, __blocks = {},
+        var h = _Vdt.virtualDom.h, widgets = this.widgets || (this.widgets = {}), _blocks = {}, __blocks = {},
         extend = _Vdt.utils.extend;
         with (obj || {}) {
         h('div',null, [test])

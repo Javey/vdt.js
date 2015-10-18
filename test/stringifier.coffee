@@ -19,6 +19,13 @@ describe 'Stringifier', ->
 
         stringifier.stringify(parser.parse(source)).should.eql("return h('div',{'className': 'aaa'}, [])")
 
+    it 'Stringify text with quotes', ->
+        source = """
+        <input placeholder="a'a" />
+        """
+
+        stringifier.stringify(parser.parse(source)).should.eql("return h('input',{'placeholder': 'a\\'a'}, [])")
+
     it 'Stringify without return', ->
         source = """
         <input type="checkbox" checked>

@@ -277,7 +277,7 @@ Delegator.transformHandle = DOMDelegator.transformHandle;
  * Safe for element IDs and server-side lookups.
  *
  * Extracted from CLCTR
- * 
+ *
  * Copyright (c) Eric Elliott 2012
  * MIT License
  */
@@ -343,7 +343,7 @@ Delegator.transformHandle = DOMDelegator.transformHandle;
 
       counter = safeCounter().toString(36).slice(-4);
 
-    return date.slice(-2) + 
+    return date.slice(-2) +
       counter + print + random;
   };
 
@@ -469,7 +469,7 @@ if (typeof document !== 'undefined') {
 }
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"min-document":53}],9:[function(require,module,exports){
+},{"min-document":54}],9:[function(require,module,exports){
 (function (global){
 var root = typeof window !== 'undefined' ?
     window : typeof global !== 'undefined' ?
@@ -804,7 +804,7 @@ arguments[4][6][0].apply(exports,arguments)
 arguments[4][7][0].apply(exports,arguments)
 },{"./index.js":21,"dup":7}],23:[function(require,module,exports){
 arguments[4][8][0].apply(exports,arguments)
-},{"dup":8,"min-document":53}],24:[function(require,module,exports){
+},{"dup":8,"min-document":54}],24:[function(require,module,exports){
 "use strict";
 
 module.exports = function isObject(x) {
@@ -1066,7 +1066,6 @@ var applyProperties = require("./apply-properties")
 var isWidget = require("../vnode/is-widget.js")
 var VPatch = require("../vnode/vpatch.js")
 
-var render = require("./create-element")
 var updateWidget = require("./update-widget")
 
 module.exports = applyPatch
@@ -1114,7 +1113,7 @@ function removeNode(domNode, vNode) {
 }
 
 function insertNode(parentNode, vNode, renderOptions) {
-    var newNode = render(vNode, renderOptions)
+    var newNode = renderOptions.render(vNode, renderOptions)
 
     if (parentNode) {
         parentNode.appendChild(newNode)
@@ -1131,7 +1130,7 @@ function stringPatch(domNode, leftVNode, vText, renderOptions) {
         newNode = domNode
     } else {
         var parentNode = domNode.parentNode
-        newNode = render(vText, renderOptions)
+        newNode = renderOptions.render(vText, renderOptions)
 
         if (parentNode && newNode !== domNode) {
             parentNode.replaceChild(newNode, domNode)
@@ -1148,7 +1147,7 @@ function widgetPatch(domNode, leftVNode, widget, renderOptions) {
     if (updating) {
         newNode = widget.update(leftVNode, domNode) || domNode
     } else {
-        newNode = render(widget, renderOptions)
+        newNode = renderOptions.render(widget, renderOptions)
     }
 
     var parentNode = domNode.parentNode
@@ -1166,7 +1165,7 @@ function widgetPatch(domNode, leftVNode, widget, renderOptions) {
 
 function vNodePatch(domNode, leftVNode, vNode, renderOptions) {
     var parentNode = domNode.parentNode
-    var newNode = render(vNode, renderOptions)
+    var newNode = renderOptions.render(vNode, renderOptions)
 
     if (parentNode && newNode !== domNode) {
         parentNode.replaceChild(newNode, domNode)
@@ -1214,16 +1213,23 @@ function replaceRoot(oldRoot, newRoot) {
     return newRoot;
 }
 
-},{"../vnode/is-widget.js":42,"../vnode/vpatch.js":45,"./apply-properties":27,"./create-element":28,"./update-widget":32}],31:[function(require,module,exports){
+},{"../vnode/is-widget.js":42,"../vnode/vpatch.js":45,"./apply-properties":27,"./update-widget":32}],31:[function(require,module,exports){
 var document = require("global/document")
 var isArray = require("x-is-array")
 
+var render = require("./create-element")
 var domIndex = require("./dom-index")
 var patchOp = require("./patch-op")
 module.exports = patch
 
-function patch(rootNode, patches) {
-    return patchRecursive(rootNode, patches)
+function patch(rootNode, patches, renderOptions) {
+    renderOptions = renderOptions || {}
+    renderOptions.patch = renderOptions.patch && renderOptions.patch !== patch
+        ? renderOptions.patch
+        : patchRecursive
+    renderOptions.render = renderOptions.render || render
+
+    return renderOptions.patch(rootNode, patches, renderOptions)
 }
 
 function patchRecursive(rootNode, patches, renderOptions) {
@@ -1236,11 +1242,8 @@ function patchRecursive(rootNode, patches, renderOptions) {
     var index = domIndex(rootNode, patches.a, indices)
     var ownerDocument = rootNode.ownerDocument
 
-    if (!renderOptions) {
-        renderOptions = { patch: patchRecursive }
-        if (ownerDocument !== document) {
-            renderOptions.document = ownerDocument
-        }
+    if (!renderOptions.document && ownerDocument !== document) {
+        renderOptions.document = ownerDocument
     }
 
     for (var i = 0; i < indices.length; i++) {
@@ -1292,7 +1295,7 @@ function patchIndices(patches) {
     return indices
 }
 
-},{"./dom-index":29,"./patch-op":30,"global/document":23,"x-is-array":25}],32:[function(require,module,exports){
+},{"./create-element":28,"./dom-index":29,"./patch-op":30,"global/document":23,"x-is-array":25}],32:[function(require,module,exports){
 var isWidget = require("../vnode/is-widget.js")
 
 module.exports = updateWidget
@@ -1421,8 +1424,10 @@ function h(tagName, properties, children) {
 }
 
 function addChild(c, childNodes, tag, props) {
-    if (typeof c === 'string' || typeof c === 'number') {
+    if (typeof c === 'string') {
         childNodes.push(new VText(c));
+    } else if (typeof c === 'number') {
+        childNodes.push(new VText(String(c)));
     } else if (isChild(c)) {
         childNodes.push(c);
     } else if (isArray(c)) {
@@ -1499,7 +1504,7 @@ function errorString(obj) {
 
 var split = require('browser-split');
 
-var classIdSplit = /([\.#]?[a-zA-Z0-9_:-]+)/;
+var classIdSplit = /([\.#]?[a-zA-Z0-9\u007F-\uFFFF_:-]+)/;
 var notClassId = /^\.|#/;
 
 module.exports = parseTag;
@@ -2217,7 +2222,7 @@ function keyIndex(children) {
 
     return {
         keys: keys,     // A hash of key name to index
-        free: free,     // An array of unkeyed item indices
+        free: free      // An array of unkeyed item indices
     }
 }
 
@@ -2236,6 +2241,8 @@ function appendPatch(apply, patch) {
 }
 
 },{"../vnode/handle-thunk":37,"../vnode/is-thunk":38,"../vnode/is-vnode":40,"../vnode/is-vtext":41,"../vnode/is-widget":42,"../vnode/vpatch":45,"./diff-props":47,"x-is-array":25}],49:[function(require,module,exports){
+module.exports = require('./lib/vdt');
+},{"./lib/vdt":53}],50:[function(require,module,exports){
 /**
  * @fileoverview parse jsx to ast
  * @author javey
@@ -2594,7 +2601,7 @@ Parser.prototype = {
 
 module.exports = Parser;
 
-},{"./utils":51}],50:[function(require,module,exports){
+},{"./utils":52}],51:[function(require,module,exports){
 /**
  * @fileoverview stringify ast of jsx to js
  * @author javey
@@ -2692,7 +2699,7 @@ Stringifier.prototype = {
     },
 
     _visitJSXText: function(element) {
-        return "'" + element.value.replace(/[\r\n]/g, ' ') + "'";
+        return "'" + element.value.replace(/[\r\n]/g, ' ').replace(/([\'\"])/g, '\\$1') + "'";
     },
 
     _visitJSXWidget: function(element) {
@@ -2731,7 +2738,7 @@ Stringifier.prototype = {
 };
 
 module.exports = Stringifier;
-},{"./utils":51}],51:[function(require,module,exports){
+},{"./utils":52}],52:[function(require,module,exports){
 /**
  * @fileoverview utility methods
  * @author javey
@@ -2827,7 +2834,7 @@ var Utils = {
 };
 
 module.exports = Utils;
-},{}],52:[function(require,module,exports){
+},{}],53:[function(require,module,exports){
 var parser = new (require('./parser')),
     stringifier = new (require('./stringifier')),
     virtualDom = require('virtual-dom'),
@@ -2907,7 +2914,7 @@ function compile(source, options) {
             hscript = [
                 '_Vdt || (_Vdt = Vdt);',
                 'blocks || (blocks = {});',
-                'var h = _Vdt.virtualDom.h, widgets = this.widgets || {}, _blocks = {}, __blocks = {},',
+                'var h = _Vdt.virtualDom.h, widgets = this.widgets || (this.widgets = {}), _blocks = {}, __blocks = {},',
                     'extend = _Vdt.utils.extend;',
                 'with (obj || {}) {',
                     hscript,
@@ -2934,9 +2941,7 @@ Vdt.delegator = delegator;
 Vdt.utils = utils;
 
 module.exports = Vdt;
-},{"./parser":49,"./stringifier":50,"./utils":51,"dom-delegator":3,"virtual-dom":18}],53:[function(require,module,exports){
+},{"./parser":50,"./stringifier":51,"./utils":52,"dom-delegator":3,"virtual-dom":18}],54:[function(require,module,exports){
 
-},{}],54:[function(require,module,exports){
-module.exports = require('./lib/vdt');
-},{"./lib/vdt":52}]},{},[54])(54)
+},{}]},{},[49])(49)
 });
