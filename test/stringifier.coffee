@@ -36,7 +36,7 @@ describe 'Stringifier', ->
         source = """
         <Page title="test" />
         """
-        stringifier.stringify(parser.parse(source)).should.eql("return new Page({'title': 'test', 'children': []}, typeof widgets === \"undefined\" ? {} : widgets)")
+        stringifier.stringify(parser.parse(source)).should.eql("return new Page({'title': 'test', 'children': []}, widgets)")
 
     it 'Stringify widget with event', ->
         source = """
@@ -45,7 +45,7 @@ describe 'Stringifier', ->
             <div>2</div>
         </Page>
         """
-        stringifier.stringify(parser.parse(source)).should.eql("return new Page({'title': 'test', 'ev-change:size': function() {console.log(1)}, 'children': ['     ', h('div',null, ['1']), '     ', h('div',null, ['2']), ' ']}, typeof widgets === \"undefined\" ? {} : widgets)")
+        stringifier.stringify(parser.parse(source)).should.eql("return new Page({'title': 'test', 'ev-change:size': function() {console.log(1)}, 'children': ['     ', h('div',null, ['1']), '     ', h('div',null, ['2']), ' ']}, widgets)")
 
     it 'Stringify block directive', ->
         source = """

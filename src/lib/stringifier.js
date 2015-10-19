@@ -100,7 +100,7 @@ Stringifier.prototype = {
 
     _visitJSXWidget: function(element) {
         element.attributes.push({name: 'children', value: element.children});
-        return 'new ' + element.value + '(' + this._visitJSXAttribute(element.attributes) + ', typeof widgets === "undefined" ? {} : widgets)';
+        return 'new ' + element.value + '(' + this._visitJSXAttribute(element.attributes) + ', widgets)';
     },
 
     _visitJSXBlock: function(element, isAncestor) {
