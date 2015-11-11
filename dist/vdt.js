@@ -277,7 +277,7 @@ Delegator.transformHandle = DOMDelegator.transformHandle;
  * Safe for element IDs and server-side lookups.
  *
  * Extracted from CLCTR
- *
+ * 
  * Copyright (c) Eric Elliott 2012
  * MIT License
  */
@@ -343,7 +343,7 @@ Delegator.transformHandle = DOMDelegator.transformHandle;
 
       counter = safeCounter().toString(36).slice(-4);
 
-    return date.slice(-2) +
+    return date.slice(-2) + 
       counter + print + random;
   };
 
@@ -1066,6 +1066,7 @@ var applyProperties = require("./apply-properties")
 var isWidget = require("../vnode/is-widget.js")
 var VPatch = require("../vnode/vpatch.js")
 
+var render = require("./create-element")
 var updateWidget = require("./update-widget")
 
 module.exports = applyPatch
@@ -1113,7 +1114,7 @@ function removeNode(domNode, vNode) {
 }
 
 function insertNode(parentNode, vNode, renderOptions) {
-    var newNode = renderOptions.render(vNode, renderOptions)
+    var newNode = render(vNode, renderOptions)
 
     if (parentNode) {
         parentNode.appendChild(newNode)
@@ -1130,7 +1131,7 @@ function stringPatch(domNode, leftVNode, vText, renderOptions) {
         newNode = domNode
     } else {
         var parentNode = domNode.parentNode
-        newNode = renderOptions.render(vText, renderOptions)
+        newNode = render(vText, renderOptions)
 
         if (parentNode && newNode !== domNode) {
             parentNode.replaceChild(newNode, domNode)
@@ -1147,7 +1148,7 @@ function widgetPatch(domNode, leftVNode, widget, renderOptions) {
     if (updating) {
         newNode = widget.update(leftVNode, domNode) || domNode
     } else {
-        newNode = renderOptions.render(widget, renderOptions)
+        newNode = render(widget, renderOptions)
     }
 
     var parentNode = domNode.parentNode
@@ -1165,7 +1166,7 @@ function widgetPatch(domNode, leftVNode, widget, renderOptions) {
 
 function vNodePatch(domNode, leftVNode, vNode, renderOptions) {
     var parentNode = domNode.parentNode
-    var newNode = renderOptions.render(vNode, renderOptions)
+    var newNode = render(vNode, renderOptions)
 
     if (parentNode && newNode !== domNode) {
         parentNode.replaceChild(newNode, domNode)
@@ -1213,23 +1214,16 @@ function replaceRoot(oldRoot, newRoot) {
     return newRoot;
 }
 
-},{"../vnode/is-widget.js":42,"../vnode/vpatch.js":45,"./apply-properties":27,"./update-widget":32}],31:[function(require,module,exports){
+},{"../vnode/is-widget.js":42,"../vnode/vpatch.js":45,"./apply-properties":27,"./create-element":28,"./update-widget":32}],31:[function(require,module,exports){
 var document = require("global/document")
 var isArray = require("x-is-array")
 
-var render = require("./create-element")
 var domIndex = require("./dom-index")
 var patchOp = require("./patch-op")
 module.exports = patch
 
-function patch(rootNode, patches, renderOptions) {
-    renderOptions = renderOptions || {}
-    renderOptions.patch = renderOptions.patch && renderOptions.patch !== patch
-        ? renderOptions.patch
-        : patchRecursive
-    renderOptions.render = renderOptions.render || render
-
-    return renderOptions.patch(rootNode, patches, renderOptions)
+function patch(rootNode, patches) {
+    return patchRecursive(rootNode, patches)
 }
 
 function patchRecursive(rootNode, patches, renderOptions) {
@@ -1242,8 +1236,11 @@ function patchRecursive(rootNode, patches, renderOptions) {
     var index = domIndex(rootNode, patches.a, indices)
     var ownerDocument = rootNode.ownerDocument
 
-    if (!renderOptions.document && ownerDocument !== document) {
-        renderOptions.document = ownerDocument
+    if (!renderOptions) {
+        renderOptions = { patch: patchRecursive }
+        if (ownerDocument !== document) {
+            renderOptions.document = ownerDocument
+        }
     }
 
     for (var i = 0; i < indices.length; i++) {
@@ -1295,7 +1292,7 @@ function patchIndices(patches) {
     return indices
 }
 
-},{"./create-element":28,"./dom-index":29,"./patch-op":30,"global/document":23,"x-is-array":25}],32:[function(require,module,exports){
+},{"./dom-index":29,"./patch-op":30,"global/document":23,"x-is-array":25}],32:[function(require,module,exports){
 var isWidget = require("../vnode/is-widget.js")
 
 module.exports = updateWidget
@@ -1424,10 +1421,8 @@ function h(tagName, properties, children) {
 }
 
 function addChild(c, childNodes, tag, props) {
-    if (typeof c === 'string') {
+    if (typeof c === 'string' || typeof c === 'number') {
         childNodes.push(new VText(c));
-    } else if (typeof c === 'number') {
-        childNodes.push(new VText(String(c)));
     } else if (isChild(c)) {
         childNodes.push(c);
     } else if (isArray(c)) {
@@ -1504,7 +1499,7 @@ function errorString(obj) {
 
 var split = require('browser-split');
 
-var classIdSplit = /([\.#]?[a-zA-Z0-9\u007F-\uFFFF_:-]+)/;
+var classIdSplit = /([\.#]?[a-zA-Z0-9_:-]+)/;
 var notClassId = /^\.|#/;
 
 module.exports = parseTag;
@@ -2222,7 +2217,7 @@ function keyIndex(children) {
 
     return {
         keys: keys,     // A hash of key name to index
-        free: free      // An array of unkeyed item indices
+        free: free,     // An array of unkeyed item indices
     }
 }
 
@@ -2704,7 +2699,7 @@ Stringifier.prototype = {
 
     _visitJSXWidget: function(element) {
         element.attributes.push({name: 'children', value: element.children});
-        return 'new ' + element.value + '(' + this._visitJSXAttribute(element.attributes) + ', typeof widgets === "undefined" ? {} : widgets)';
+        return 'new ' + element.value + '(' + this._visitJSXAttribute(element.attributes) + ', widgets)';
     },
 
     _visitJSXBlock: function(element, isAncestor) {
@@ -2849,6 +2844,7 @@ var Vdt = function(source, options) {
             if (arguments.length) {
                 vdt.data = data;
             }
+            vdt.data.vdt = vdt;
             vdt.tree = vdt.template.call(vdt.data, vdt.data, Vdt);
             vdt.node = virtualDom.create(vdt.tree);
             return vdt.node;
@@ -2858,6 +2854,7 @@ var Vdt = function(source, options) {
             if (arguments.length) {
                 vdt.data = data;
             }
+            vdt.data.vdt = vdt;
             var newTree = vdt.template.call(vdt.data, vdt.data, Vdt);
             vdt.patches = virtualDom.diff(vdt.tree, newTree);
             vdt.node = virtualDom.patch(vdt.node, vdt.patches);
@@ -2890,6 +2887,9 @@ var Vdt = function(source, options) {
             vdt.node = node;
         }
     };
+
+    // reference cycle vdt
+    vdt.data.vdt = vdt;
 
     return vdt;
 };
@@ -2941,6 +2941,7 @@ Vdt.delegator = delegator;
 Vdt.utils = utils;
 
 module.exports = Vdt;
+
 },{"./parser":50,"./stringifier":51,"./utils":52,"dom-delegator":3,"virtual-dom":18}],54:[function(require,module,exports){
 
 },{}]},{},[49])(49)
