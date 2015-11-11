@@ -5,7 +5,8 @@
   "main": "src/index",
   "scripts": {
     "build": "browserify src/browserify.js -o dist/vdt.js -s Vdt && uglifyjs dist/vdt.js -o dist/vdt.min.js -m",
-    "test": "node_modules/.bin/mocha --compilers coffee:coffee-script/register test/*.coffee; node_modules/.bin/mocha-phantomjs test/browser/index.html"
+    "test": "node_modules/.bin/mocha --compilers coffee:coffee-script/register test/*.coffee; node_modules/.bin/mocha-phantomjs test/browser/index.html",
+    "publish": "node publish.js"
   },
   "dependencies": {
     "dom-delegator": "^13.1.0",
