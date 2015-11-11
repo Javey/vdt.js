@@ -38,3 +38,13 @@ describe 'Vdt', ->
         """
 
         Vdt.compile(source, {autoReturn: false}).source.should.be.eql(output)
+
+    it 'vdt.data.vdt === vdt', ->
+        vdt = Vdt('<div></div>')
+        vdt.data.vdt.should.equal(vdt)
+        vdt.render()
+        vdt.data.vdt.should.equal(vdt)
+        vdt.render({})
+        vdt.data.vdt.should.equal(vdt)
+        vdt.update({})
+        vdt.data.vdt.should.equal(vdt)

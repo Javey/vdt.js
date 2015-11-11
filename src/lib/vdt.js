@@ -12,6 +12,7 @@ var Vdt = function(source, options) {
             if (arguments.length) {
                 vdt.data = data;
             }
+            vdt.data.vdt = vdt;
             vdt.tree = vdt.template.call(vdt.data, vdt.data, Vdt);
             vdt.node = virtualDom.create(vdt.tree);
             return vdt.node;
@@ -21,6 +22,7 @@ var Vdt = function(source, options) {
             if (arguments.length) {
                 vdt.data = data;
             }
+            vdt.data.vdt = vdt;
             var newTree = vdt.template.call(vdt.data, vdt.data, Vdt);
             vdt.patches = virtualDom.diff(vdt.tree, newTree);
             vdt.node = virtualDom.patch(vdt.node, vdt.patches);
@@ -53,6 +55,9 @@ var Vdt = function(source, options) {
             vdt.node = node;
         }
     };
+
+    // reference cycle vdt
+    vdt.data.vdt = vdt;
 
     return vdt;
 };
