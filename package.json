@@ -10,7 +10,7 @@
   },
   "dependencies": {
     "dom-delegator": "^13.1.0",
-    "virtual-dom": "^2.0.1"
+    "virtual-dom": "git://github.com/Javey/virtual-dom.git#master"
   },
   "devDependencies": {
     "benchmark": "^1.0.0",
