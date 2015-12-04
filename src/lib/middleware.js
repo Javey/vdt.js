@@ -10,13 +10,14 @@ module.exports = function(options) {
     if (typeof options === 'string') {
         options = {
             src: options
-        }
+        };
     }
 
     options = Utils.extend({
         amd: true,
         force: false,
-        autoReturn: true
+        autoReturn: true,
+        onlySource: true
     }, options);
 
     var cache = {};
