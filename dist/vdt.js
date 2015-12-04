@@ -2908,7 +2908,8 @@ function compile(source, options) {
         options = {autoReturn: options};
     } else {
         options = utils.extend({
-            autoReturn: true
+            autoReturn: true,
+            onlySource: false
         }, options);
     }
 
@@ -2926,7 +2927,7 @@ function compile(source, options) {
                     hscript,
                 '}'
             ].join('\n');
-            templateFn = new Function('obj', '_Vdt', 'blocks', hscript);
+            templateFn = options.onlySource ? function() {} : new Function('obj', '_Vdt', 'blocks', hscript);
             templateFn.source = 'function(obj, _Vdt, blocks) {\n' + hscript + '\n}';
             break;
         case 'function':
