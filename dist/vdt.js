@@ -2610,7 +2610,7 @@ var Utils = require('./utils'),
         };
         return function(name) {
             return map[name] || name;
-        }
+        };
     })();
 
 var Stringifier = function() {};
@@ -2713,6 +2713,7 @@ Stringifier.prototype = {
     _visitJSXVdt: function(element, isRoot) {
         var ret = ['(function(blocks) {',
                 'var _blocks = {}, __blocks = extend({}, blocks), _obj = ' + this._visitJSXAttribute(element.attributes) + ' || {};',
+                'if (_obj.hasOwnProperty("arguments")) { _obj = extend({}, _obj.arguments === null ? obj : _obj.arguments, _obj); delete _obj.arguments;}',
                 'return ' + element.value + '.call(this, _obj, _Vdt, '
             ].join('\n'),
             blocks = [];
@@ -2811,10 +2812,16 @@ var Utils = {
     },
 
     extend: function(dest, source) {
-        if (source) {
-            for (var key in source) {
-                if (hasOwn.call(source, key)) {
-                    dest[key] = source[key];
+        var length = arguments.length;
+        if (length > 1) {
+            for (var i = 1; i < length; i++) {
+                source = arguments[i];
+                if (source) {
+                    for (var key in source) {
+                        if (hasOwn.call(source, key)) {
+                            dest[key] = source[key];
+                        }
+                    }
                 }
             }
         }
@@ -2827,6 +2834,7 @@ var Utils = {
 };
 
 module.exports = Utils;
+
 },{}],49:[function(require,module,exports){
 var parser = new (require('./parser')),
     stringifier = new (require('./stringifier')),

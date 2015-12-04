@@ -77,10 +77,16 @@ var Utils = {
     },
 
     extend: function(dest, source) {
-        if (source) {
-            for (var key in source) {
-                if (hasOwn.call(source, key)) {
-                    dest[key] = source[key];
+        var length = arguments.length;
+        if (length > 1) {
+            for (var i = 1; i < length; i++) {
+                source = arguments[i];
+                if (source) {
+                    for (var key in source) {
+                        if (hasOwn.call(source, key)) {
+                            dest[key] = source[key];
+                        }
+                    }
                 }
             }
         }
