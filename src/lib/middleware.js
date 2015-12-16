@@ -14,6 +14,7 @@ module.exports = function(options) {
     }
 
     options = Utils.extend({
+        src: process.cwd(),
         amd: true,
         force: false,
         autoReturn: true,

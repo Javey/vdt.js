@@ -8,6 +8,8 @@ and uses [JSX](https://facebook.github.io/react/docs/jsx-in-depth.html) as templ
 
 See [TodoMVC](http://javey.github.io/vdt-todomvc/) implemented by `Vdt`
 
+See [Documents](http://javey.github.io/vdt.html) for more information.
+
 # Features
 
 * Just the ui. Just the template further more. But more powerful than common template.
