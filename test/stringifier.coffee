@@ -45,7 +45,7 @@ describe 'Stringifier', ->
             <div>2</div>
         </Page>
         """
-        stringifier.stringify(parser.parse(source)).should.eql("return Page({'title': 'test', 'ev-change:size': function() {console.log(1)}, 'children': ['     ', h('div',null, ['1']), '     ', h('div',null, ['2']), ' ']}, widgets)")
+        stringifier.stringify(parser.parse(source)).should.eql("return Page({'title': 'test', 'ev-change:size': function() {console.log(1)}, 'children': ['\\n    ', h('div',null, ['1']), '\\n    ', h('div',null, ['2']), '\\n']}, widgets)")
 
     it 'Stringify block directive', ->
         source = """
@@ -57,12 +57,12 @@ describe 'Stringifier', ->
         """
 
         stringifier.stringify(parser.parse(source)).should.eql("""
-            return h('div',null, ['     ', (_blocks.content = function(parent) {return ['         ', h('div',null, ['aaa']), '     '];}) && (__blocks.content = function(parent) {
+            return h('div',null, ['\\n    ', (_blocks.content = function(parent) {return ['\\n        ', h('div',null, ['aaa']), '\\n    '];}) && (__blocks.content = function(parent) {
             var self = this;
             return blocks.content ? blocks.content.call(this, function() {
             return _blocks.content.call(self, parent);
             }) : _blocks.content.call(this, parent);
-            }) && __blocks.content.call(this), ' '])
+            }) && __blocks.content.call(this), '\\n'])
             """)
 
     it 'Stringify vdt template directive', ->
@@ -82,12 +82,12 @@ describe 'Stringifier', ->
             return (function(blocks) {
             var _blocks = {}, __blocks = extend({}, blocks), _obj = null || {};
             if (_obj.hasOwnProperty("arguments")) { _obj = extend({}, _obj.arguments === null ? obj : _obj.arguments, _obj); delete _obj.arguments; }
-            return parent.call(this, _obj, _Vdt, (_blocks.head = function(parent) {return ['         child head     '];}) && (__blocks.head = function(parent) {
+            return parent.call(this, _obj, _Vdt, (_blocks.head = function(parent) {return ['\\n        child head\\n    '];}) && (__blocks.head = function(parent) {
             var self = this;
             return blocks.head ? blocks.head.call(this, function() {
             return _blocks.head.call(self, parent);
             }) : _blocks.head.call(this, parent);
-            }) && (_blocks.body = function(parent) {return ['         ', parent(), '         ', h('div',null, ['child body']), '     '];}) && (__blocks.body = function(parent) {
+            }) && (_blocks.body = function(parent) {return ['\\n        ', parent(), '\\n        ', h('div',null, ['child body']), '\\n    '];}) && (__blocks.body = function(parent) {
             var self = this;
             return blocks.body ? blocks.body.call(this, function() {
             return _blocks.body.call(self, parent);
@@ -143,7 +143,7 @@ describe 'Stringifier', ->
             return (function(blocks) {
             var _blocks = {}, __blocks = extend({}, blocks), _obj = null || {};
             if (_obj.hasOwnProperty("arguments")) { _obj = extend({}, _obj.arguments === null ? obj : _obj.arguments, _obj); delete _obj.arguments; }
-            return base1.call(this, _obj, _Vdt, (_blocks.body = function(parent) {return ['         ', (function(blocks) {
+            return base1.call(this, _obj, _Vdt, (_blocks.body = function(parent) {return ['\\n        ', (function(blocks) {
             var _blocks = {}, __blocks = extend({}, blocks), _obj = null || {};
             if (_obj.hasOwnProperty("arguments")) { _obj = extend({}, _obj.arguments === null ? obj : _obj.arguments, _obj); delete _obj.arguments; }
             return base2.call(this, _obj, _Vdt, (_blocks.body = function(parent) {return ['base2 body'];}) && (__blocks.body = function(parent) {
@@ -151,7 +151,7 @@ describe 'Stringifier', ->
             return blocks.body ? blocks.body.call(this, function() {
             return _blocks.body.call(self, parent);
             }) : _blocks.body.call(this, parent);
-            }) && __blocks)}).call(this, {}), '     '];}) && (__blocks.body = function(parent) {
+            }) && __blocks)}).call(this, {}), '\\n    '];}) && (__blocks.body = function(parent) {
             var self = this;
             return blocks.body ? blocks.body.call(this, function() {
             return _blocks.body.call(self, parent);

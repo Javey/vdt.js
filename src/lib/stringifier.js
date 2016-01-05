@@ -95,7 +95,7 @@ Stringifier.prototype = {
     },
 
     _visitJSXText: function(element) {
-        return "'" + element.value.replace(/[\r\n]/g, ' ').replace(/([\'\"])/g, '\\$1') + "'";
+        return "'" + element.value.replace(/[\r\n]/g, '\\n').replace(/([\'\"])/g, '\\$1') + "'";
     },
 
     _visitJSXWidget: function(element) {
