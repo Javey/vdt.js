@@ -1130,7 +1130,8 @@ function reorderChildren(domNode, moves) {
     var remove
     var insert
 
-    for (var i = 0; i < moves.removes.length; i++) {
+    // remove child from back to front
+    for (var i = moves.removes.length - 1; i >= 0; i--) {
         remove = moves.removes[i]
         node = childNodes[remove.from]
         if (remove.key) {
@@ -2062,7 +2063,6 @@ function reorder(aChildren, bChildren) {
         }
     }
 
-    var simulate = newChildren.slice()
     var simulateIndex = 0
     var removes = []
     var inserts = []
@@ -2070,12 +2070,12 @@ function reorder(aChildren, bChildren) {
 
     for (var k = 0; k < bChildren.length;) {
         var wantedItem = bChildren[k]
-        simulateItem = simulate[simulateIndex]
+        simulateItem = newChildren[simulateIndex]
 
         // remove items
-        while (simulateItem === null && simulate.length) {
-            removes.push(remove(simulate, simulateIndex, null))
-            simulateItem = simulate[simulateIndex]
+        while (simulateItem === null && simulateIndex < newChildren.length) {
+            removes.push({from: simulateIndex++, key: null})
+            simulateItem = newChildren[simulateIndex]
         }
 
         if (!simulateItem || simulateItem.key !== wantedItem.key) {
@@ -2084,8 +2084,8 @@ function reorder(aChildren, bChildren) {
                 if (simulateItem && simulateItem.key) {
                     // if an insert doesn't put this key in place, it needs to move
                     if (bKeys[simulateItem.key] !== k + 1) {
-                        removes.push(remove(simulate, simulateIndex, simulateItem.key))
-                        simulateItem = simulate[simulateIndex]
+                        removes.push({from: simulateIndex++, key: simulateItem.key})
+                        simulateItem = newChildren[simulateIndex]
                         // if the remove didn't put the wanted item in place, we need to insert it
                         if (!simulateItem || simulateItem.key !== wantedItem.key) {
                             inserts.push({key: wantedItem.key, to: k})
@@ -2106,7 +2106,7 @@ function reorder(aChildren, bChildren) {
             }
             // a key in simulate has no matching wanted key, remove it
             else if (simulateItem && simulateItem.key) {
-                removes.push(remove(simulate, simulateIndex, simulateItem.key))
+                removes.push({from: simulateIndex++, key: simulateItem.key})
             }
         }
         else {
@@ -2116,9 +2116,9 @@ function reorder(aChildren, bChildren) {
     }
 
     // remove all the remaining nodes from simulate
-    while(simulateIndex < simulate.length) {
-        simulateItem = simulate[simulateIndex]
-        removes.push(remove(simulate, simulateIndex, simulateItem && simulateItem.key))
+    while(simulateIndex < newChildren.length) {
+        simulateItem = newChildren[simulateIndex]
+        removes.push({from: simulateIndex++, key: simulateItem && simulateItem.key})
     }
 
     // If the only moves we have are deletes then we can just
@@ -2830,7 +2830,9 @@ var Utils = {
 
     isArray: Array.isArray || function(arr) {
         return Object.prototype.toString.call(arr) === '[object Array]';
-    }
+    },
+
+    noop: function() {}
 };
 
 module.exports = Utils;
@@ -2838,7 +2840,7 @@ module.exports = Utils;
 },{}],49:[function(require,module,exports){
 var parser = new (require('./parser')),
     stringifier = new (require('./stringifier')),
-    virtualDom = require('virtual-dom'),
+    virtualDom = require('virtual-domx'),
     utils = require('./utils'),
     Delegator = require('dom-delegator');
 
@@ -2847,24 +2849,30 @@ var delegator = new Delegator();
 var Vdt = function(source, options) {
     var vdt = {
         render: function(data) {
+            vdt.renderTree.apply(vdt, arguments); 
+            vdt.node = virtualDom.create(vdt.tree);
+            return vdt.node;
+        },
+
+        renderTree: function(data) {
             if (arguments.length) {
                 vdt.data = data;
             }
             vdt.data.vdt = vdt;
             vdt.tree = vdt.template.call(vdt.data, vdt.data, Vdt);
-            vdt.node = virtualDom.create(vdt.tree);
-            return vdt.node;
+            return vdt.tree;
+        },
+
+        renderString: function(data) {
+            var node = vdt.render.apply(vdt, arguments);
+            return node.outerHTML || node.toString();
         },
 
         update: function(data) {
-            if (arguments.length) {
-                vdt.data = data;
-            }
-            vdt.data.vdt = vdt;
-            var newTree = vdt.template.call(vdt.data, vdt.data, Vdt);
-            vdt.patches = virtualDom.diff(vdt.tree, newTree);
+            var oldTree = vdt.tree;
+            vdt.renderTree.apply(vdt, arguments);
+            vdt.patches = virtualDom.diff(oldTree, vdt.tree);
             vdt.node = virtualDom.patch(vdt.node, vdt.patches);
-            vdt.tree = newTree;
             return vdt.node;
         },
 
@@ -2927,7 +2935,7 @@ function compile(source, options) {
                     hscript,
                 '}'
             ].join('\n');
-            templateFn = options.onlySource ? function() {} : new Function('obj', '_Vdt', 'blocks', hscript);
+            templateFn = options.onlySource ? utils.noop : new Function('obj', '_Vdt', 'blocks', hscript);
             templateFn.source = 'function(obj, _Vdt, blocks) {\n' + hscript + '\n}';
             break;
         case 'function':
@@ -2949,7 +2957,7 @@ Vdt.utils = utils;
 
 module.exports = Vdt;
 
-},{"./parser":46,"./stringifier":47,"./utils":48,"dom-delegator":5,"virtual-dom":18}],50:[function(require,module,exports){
+},{"./parser":46,"./stringifier":47,"./utils":48,"dom-delegator":5,"virtual-domx":18}],50:[function(require,module,exports){
 
 },{}]},{},[45])(45)
 });

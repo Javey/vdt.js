@@ -95,7 +95,9 @@ var Utils = {
 
     isArray: Array.isArray || function(arr) {
         return Object.prototype.toString.call(arr) === '[object Array]';
-    }
+    },
+
+    noop: function() {}
 };
 
 module.exports = Utils;

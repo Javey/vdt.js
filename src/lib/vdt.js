@@ -1,6 +1,6 @@
 var parser = new (require('./parser')),
     stringifier = new (require('./stringifier')),
-    virtualDom = require('virtual-dom'),
+    virtualDom = require('virtual-domx'),
     utils = require('./utils'),
     Delegator = require('dom-delegator');
 
@@ -9,24 +9,30 @@ var delegator = new Delegator();
 var Vdt = function(source, options) {
     var vdt = {
         render: function(data) {
+            vdt.renderTree.apply(vdt, arguments); 
+            vdt.node = virtualDom.create(vdt.tree);
+            return vdt.node;
+        },
+
+        renderTree: function(data) {
             if (arguments.length) {
                 vdt.data = data;
             }
             vdt.data.vdt = vdt;
             vdt.tree = vdt.template.call(vdt.data, vdt.data, Vdt);
-            vdt.node = virtualDom.create(vdt.tree);
-            return vdt.node;
+            return vdt.tree;
+        },
+
+        renderString: function(data) {
+            var node = vdt.render.apply(vdt, arguments);
+            return node.outerHTML || node.toString();
         },
 
         update: function(data) {
-            if (arguments.length) {
-                vdt.data = data;
-            }
-            vdt.data.vdt = vdt;
-            var newTree = vdt.template.call(vdt.data, vdt.data, Vdt);
-            vdt.patches = virtualDom.diff(vdt.tree, newTree);
+            var oldTree = vdt.tree;
+            vdt.renderTree.apply(vdt, arguments);
+            vdt.patches = virtualDom.diff(oldTree, vdt.tree);
             vdt.node = virtualDom.patch(vdt.node, vdt.patches);
-            vdt.tree = newTree;
             return vdt.node;
         },
 
@@ -89,7 +95,7 @@ function compile(source, options) {
                     hscript,
                 '}'
             ].join('\n');
-            templateFn = options.onlySource ? function() {} : new Function('obj', '_Vdt', 'blocks', hscript);
+            templateFn = options.onlySource ? utils.noop : new Function('obj', '_Vdt', 'blocks', hscript);
             templateFn.source = 'function(obj, _Vdt, blocks) {\n' + hscript + '\n}';
             break;
         case 'function':

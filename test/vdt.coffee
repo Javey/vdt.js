@@ -1,4 +1,5 @@
 Vdt = require('../src/lib/vdt')
+should = require('should')
 
 describe 'Vdt', ->
     it 'Compile JSX to template function', ->
@@ -48,3 +49,8 @@ describe 'Vdt', ->
         vdt.data.vdt.should.equal(vdt)
         vdt.update({})
         vdt.data.vdt.should.equal(vdt)
+
+    it 'Render to string', ->
+        vdt = Vdt('<div>{test}</div>')
+        vdt.renderString({test: 'test'}).should.be.eql('<div>test</div>')
+        vdt.renderString({test: 'aaa'}).should.be.eql('<div>aaa</div>')

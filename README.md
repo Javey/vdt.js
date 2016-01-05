@@ -242,6 +242,13 @@ Handle data and return a dom.
 * ~~@param `thisArg` {Object} the binding of this in template.~~ `this` is `data` in template.
 * @return {Dom} html dom
 
+### vdt.renderString(data)
+
+Handle data and return a html string.
+
+* @param `data` {Object} data passed to template
+* @return {String} html string
+
 ### vdt.update([data])
 
 Update the dom using the new data.
