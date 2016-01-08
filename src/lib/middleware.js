@@ -42,7 +42,7 @@ module.exports = function(options) {
             fs.readFile(vdtFile, 'utf-8', function(err, contents) {
                 if (err) return error(err);
                 try {
-                    obj.source = Vdt.compile(contents, options.autoReturn).source;
+                    obj = Vdt.compile(contents, options);
                     if (options.amd) {
                         obj.source = 'define(function(require) {\n return ' + obj.source + '\n})';
                     }
@@ -75,5 +75,5 @@ module.exports = function(options) {
                 }
             });
         }
-    }
+    };
 };

@@ -79,6 +79,7 @@ Parser.prototype = {
             typeName: TypeName[Type.JS],
             value: this.source.slice(start, braces.count < 0 ? this.index - 1 : this.index)
         };
+
     },
 
     _scanStringLiteral: function() {
@@ -248,7 +249,7 @@ Parser.prototype = {
 
     _parseJSXAttributeValue: function() {
         var value;
-        if (this._char() === '{') {
+        if (this._char() === '{' && this._char(this.index + 1) === '{') {
             value = this._parseJSXExpressionContainer();
         } else {
             value = this._scanJSXStringLiteral();
@@ -258,13 +259,13 @@ Parser.prototype = {
 
     _parseJSXExpressionContainer: function() {
         var expression;
-        this._expect('{');
-        if (this._char() === '}') {
+        this._expect('{{');
+        if (this._char() === '}' && this._char(this.index + 1) === '}') {
             expression = this._parseJSXEmptyExpression();
         } else {
             expression = this._parseExpression();
         }
-        this._expect('}');
+        this._expect('}}');
         return {
             type: Type.JSXExpressionContainer,
             typeName: TypeName[Type.JSXExpressionContainer],
@@ -301,7 +302,7 @@ Parser.prototype = {
     _parseJSXChild: function() {
         var token,
             ch = this._char();
-        if (ch === '{') {
+        if (ch === '{' && this._char(this.index + 1) === '{') {
             token = this._parseJSXExpressionContainer();
         } else if (ch === '<') {
             token = this._parseJSXElement();

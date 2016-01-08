@@ -54,3 +54,7 @@ describe 'Vdt', ->
         vdt = Vdt('<div>{test}</div>')
         vdt.renderString({test: 'test'}).should.be.eql('<div>test</div>')
         vdt.renderString({test: 'aaa'}).should.be.eql('<div>aaa</div>')
+
+    it 'Render to string with style', ->
+        vdt = Vdt('<div style={{width: "100px", fontSize: "24px"}} index="1"></div>')
+        console.log vdt.renderString()

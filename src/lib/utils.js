@@ -97,7 +97,22 @@ var Utils = {
         return Object.prototype.toString.call(arr) === '[object Array]';
     },
 
-    noop: function() {}
+    noop: function() {},
+
+    require: (function() {
+        var isNode = new Function("try { return this === global; } catch (e) { return false; }"); 
+        if (isNode) {
+            return require('./compile');
+        } else {
+            if (typeof require !== 'undefined') {
+                return require;
+            } else {
+                return function() {
+                    throw new Error('Vdt.js depends Require.js to load tempate over ajax');
+                };
+            }
+        }
+    })()
 };
 
 module.exports = Utils;
