@@ -36,7 +36,9 @@ var i = 0,
         'source': true,
         'track': true,
         'wbr': true
-    };
+    },
+
+    Delimiters = ['{', '}'];
 
 var hasOwn = Object.prototype.hasOwnProperty;
 
@@ -72,6 +74,17 @@ var Utils = {
     Type: Type,
     TypeName: TypeName,
 
+    setDelimiters: function(delimiters) {
+        if (!Utils.isArray(delimiters)) {
+            throw new Error('The parameter must be an array like ["{{", "}}"]');
+        }
+        Delimiters = delimiters;
+    },
+
+    getDelimiters: function() {
+        return Delimiters;
+    },
+
     isSelfClosingTag: function(tag) {
         return SelfClosingTags[tag];
     },
@@ -101,16 +114,10 @@ var Utils = {
 
     require: (function() {
         var isNode = new Function("try { return this === global; } catch (e) { return false; }"); 
-        if (isNode) {
+        if (isNode()) {
             return require('./compile');
         } else {
-            if (typeof require !== 'undefined') {
-                return require;
-            } else {
-                return function() {
-                    throw new Error('Vdt.js depends Require.js to load tempate over ajax');
-                };
-            }
+            // use amd require
         }
     })()
 };

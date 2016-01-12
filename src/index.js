@@ -8,7 +8,8 @@ var defaultOptions = {
     force: false,
     autoReturn: true,
     extname: 'vdt',
-    views: 'views'
+    views: 'views',
+    delimiters: ['{', '}']
 };
 
 function setDefaults(key, value) {
@@ -17,6 +18,9 @@ function setDefaults(key, value) {
         options[key] = value;
     } else {
         options = key;
+    }
+    if (options.hasOwnProperty('delimiters')) {
+        utils.setDelimiters(options['delimiters']);
     }
     return utils.extend(defaultOptions, options);
 }
@@ -29,16 +33,22 @@ function getDefaults(key) {
     }
 }
 
-function renderFile(file, options, callback) {
-    setDefaults({
+function renderFile(file, options) {
+    options || (options = {});
+    utils.extend(defaultOptions, options.settings);
+    var template = compile(file),
+        vdt = Vdt(template);
+    return defaultOptions.doctype + '\n' + vdt.renderString(options);
+}
+
+function __express(file, options, callback) {
+    utils.extend(options.settings, {
         extname: options.settings['view engine'],
         views: options.settings['views'],
         force: !options.settings['view cache']
     });
     try {
-        var template = compile(file),
-            vdt = Vdt(template);
-        return callback(null, defaultOptions.doctype + '\n' + vdt.renderString(options));
+        return callback(null, renderFile(file, options));
     } catch (e) {
         return callback(e);
     }
@@ -47,5 +57,6 @@ function renderFile(file, options, callback) {
 module.exports = Vdt;
 module.exports.middleware = require('./lib/middleware');
 module.exports.renderFile = renderFile;
+module.exports.__express = __express;
 module.exports.setDefaults = setDefaults;
 module.exports.getDefaults = getDefaults;

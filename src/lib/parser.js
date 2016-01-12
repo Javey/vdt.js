@@ -8,6 +8,8 @@ var Utils = require('./utils'),
     Type = Utils.Type,
     TypeName = Utils.TypeName;
 
+var elementNameRegexp = /^<\w+:?\s*[\w>]/;
+
 function isJSXIdentifierPart(ch) {
     return (ch === 58) || (ch === 95) || (ch === 45) ||  // : and _ (underscore) and -
         (ch >= 65 && ch <= 90) ||         // A..Z
@@ -52,19 +54,20 @@ Parser.prototype = {
     },
 
     _scanJS: function(braces) {
-        var start = this.index;
+        var start = this.index,
+            Delimiters = Utils.getDelimiters();
 
         while (this.index < this.length) {
             var ch = this._char();
             if (ch === '\'' || ch === '"') {
                 // skip element(<div>) in quotes
                 this._scanStringLiteral();
-            } else if (this._char() === '<' && /^<\w+:?\s*[\w>]/.test(this.source.slice(this.index))) {
+            } else if (this._isElementStart()) {
                 break;
             } else {
-                if (ch === '{') {
+                if (this._isExpect(Delimiters[0])) {
                     braces.count++;
-                } else if (ch === '}') {
+                } else if (this._isExpect(Delimiters[1])) {
                     braces.count--;
                     if (braces.count < 0) {
                         this.index++;
@@ -116,11 +119,15 @@ Parser.prototype = {
     },
 
     _scanJSXText: function(stopChars) {
-        var start = this.index;
+        var start = this.index,
+            l = stopChars.length,
+            i;
+        loop:
         while (this.index < this.length) {
-            var ch = this._char();
-            if (~stopChars.indexOf(ch)) {
-                break;
+            for (i = 0; i < l; i++) {
+                if (typeof stopChars[i] === 'function' && stopChars[i].call(this) || this._isExpect(stopChars[i])) {
+                    break loop;
+                }
             }
             this.index++;
         }
@@ -147,7 +154,7 @@ Parser.prototype = {
         var start = this.index,
             ret = {},
             flag = this._charCode();
-        if (flag >= 65 && flag <= 90) {
+        if (flag >= 65 && flag <= 90/* upper case */) {
             // is a widget
             ret.type = Type.JSXWidget;
             ret.typeName = TypeName[Type.JSXWidget];
@@ -248,8 +255,9 @@ Parser.prototype = {
     },
 
     _parseJSXAttributeValue: function() {
-        var value;
-        if (this._char() === '{' && this._char(this.index + 1) === '{') {
+        var value,
+            Delimiters = Utils.getDelimiters();
+        if (this._isExpect(Delimiters[0])) {
             value = this._parseJSXExpressionContainer();
         } else {
             value = this._scanJSXStringLiteral();
@@ -258,14 +266,15 @@ Parser.prototype = {
     },
 
     _parseJSXExpressionContainer: function() {
-        var expression;
-        this._expect('{{');
-        if (this._char() === '}' && this._char(this.index + 1) === '}') {
+        var expression,
+            Delimiters = Utils.getDelimiters();
+        this._expect(Delimiters[0]);
+        if (this._isExpect(Delimiters[1])) {
             expression = this._parseJSXEmptyExpression();
         } else {
             expression = this._parseExpression();
         }
-        this._expect('}}');
+        this._expect(Delimiters[1]);
         return {
             type: Type.JSXExpressionContainer,
             typeName: TypeName[Type.JSXExpressionContainer],
@@ -301,13 +310,15 @@ Parser.prototype = {
 
     _parseJSXChild: function() {
         var token,
-            ch = this._char();
-        if (ch === '{' && this._char(this.index + 1) === '{') {
+            Delimiters = Utils.getDelimiters();
+        if (this._isExpect(Delimiters[0])) {
             token = this._parseJSXExpressionContainer();
-        } else if (ch === '<') {
+        } else if (this._isElementStart()) {
             token = this._parseJSXElement();
         } else {
-            token = this._scanJSXText(['<', '{']);
+            token = this._scanJSXText([function() {
+                return this._isExpect('</') || this._isElementStart()
+            }, Delimiters[0]]);
         }
 
         return token;
@@ -348,10 +359,18 @@ Parser.prototype = {
     },
 
     _expect: function(str) {
-        if (this.source.slice(this.index, this.index + str.length) !== str) {
+        if (!this._isExpect(str)) {
             throw new Error('expect string ' + str);
         }
         this.index += str.length;
+    },
+
+    _isExpect: function(str) {
+        return this.source.slice(this.index, this.index + str.length) === str;
+    },
+
+    _isElementStart: function() {
+        return this._char() === '<' && elementNameRegexp.test(this.source.slice(this.index));
     }
 };
 

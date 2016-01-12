@@ -206,6 +206,16 @@ Use `parent()` to get parent content.
 </script>
 ```
 
+# Custom template delimiters
+
+The default delimiter is `['{', '}']`. You can set it by `Vdt.setDelimiters(delimiters)` method. For example
+
+* @param `delimiters` {Array}
+
+```js
+Vdt.setDelimiters(['{{', '}}']);
+```
+
 # Api
 
 ## Vdt(source, [options])

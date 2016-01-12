@@ -90,7 +90,7 @@ function compile(source, options) {
                 '_Vdt || (_Vdt = Vdt);',
                 'blocks || (blocks = {});',
                 'var h = _Vdt.virtualDom.h, widgets = this.widgets || (this.widgets = {}), _blocks = {}, __blocks = {},',
-                    'extend = _Vdt.utils.extend, require = _Vdt.utils.require;',
+                    'extend = _Vdt.utils.extend, require = _Vdt.utils.require || require;',
                 'with (obj || {}) {',
                     hscript,
                 '}'
@@ -114,5 +114,7 @@ Vdt.virtualDom = virtualDom;
 Vdt.compile = compile;
 Vdt.delegator = delegator;
 Vdt.utils = utils;
+Vdt.setDelimiters = utils.setDelimiters;
+Vdt.getDelimiters = utils.getDelimiters;
 
 module.exports = Vdt;

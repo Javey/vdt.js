@@ -1,4 +1,5 @@
 Parser = require('../src/lib/parser')
+Utils = require('../src/lib/utils')
 Stringifier = require('../src/lib/stringifier')
 should = require('should')
 
@@ -20,11 +21,15 @@ describe 'Stringifier', ->
         stringifier.stringify(parser.parse(source)).should.eql("return h('div',{'className': 'aaa'}, [])")
 
     it 'Stringify text with quotes', ->
-        source = """
+        source1 = """
         <input placeholder="a'a" />
         """
+        source2 = """
+        <div>{'a\\'a'}</div>
+        """
 
-        stringifier.stringify(parser.parse(source)).should.eql("return h('input',{'placeholder': 'a\\'a'}, [])")
+        stringifier.stringify(parser.parse(source1)).should.eql("return h('input',{'placeholder': 'a\\'a'}, [])")
+        stringifier.stringify(parser.parse(source2)).should.eql("return h('div',null, ['a\\'a'])")
 
     it 'Stringify without return', ->
         source = """
@@ -158,3 +163,44 @@ describe 'Stringifier', ->
             }) : _blocks.body.call(this, parent);
             }) && __blocks)}).call(this, blocks)
             """)
+
+    it 'Set delimiters to ["{{", "}}"]', ->
+        source = """
+        <div class={{ className }} style={{ {width: '100px'} }}>
+            {test} {{ test ? "test" : '{test}' }}
+        </div>
+        """
+        Utils.setDelimiters(['{{', '}}'])
+
+        stringifier.stringify(parser.parse(source)).should.eql("""return h('div',{'className':  className , 'style':  {width: '100px'} }, ['\\n    {test} ',  test ? "test" : '{test}' , '\\n'])""")
+        Utils.setDelimiters(['{', '}'])
+    it 'Set Delimiters to ["{%", "%}"]', ->
+        source = """
+        <div class={% className %} style={% {width: '100px'} %}>
+            {test} {% test ? "test" : '{test}' %}
+        </div>
+        """
+        Utils.setDelimiters(['{%', '%}'])
+
+        stringifier.stringify(parser.parse(source)).should.eql("""return h('div',{'className':  className , 'style':  {width: '100px'} }, ['\\n    {test} ',  test ? "test" : '{test}' , '\\n'])""")
+        Utils.setDelimiters(['{', '}'])
+
+    it '< in textNode', ->
+        source = """
+        <div>a < b ? a : b; a <2? a : b</div>
+        """
+        stringifier.stringify(parser.parse(source)).should.eql("return h('div',null, ['a < b ? a : b; a <2? a : b'])")
+
+    it 'Stringify script content', ->
+        source = """
+        <script type="text/javascript">
+            var a = 1;
+            console.log(a);
+            if (a < 2) {
+                console.log('less than {{ a < 2 'a' : 'b' }}');
+            }
+        </script>
+        """
+        Utils.setDelimiters(['{{', '}}'])
+        stringifier.stringify(parser.parse(source)).should.eql("""return h('script',{'type': 'text/javascript', 'innerHTML': '\\n    var a = 1;\\n    console.log(a);\\n    if (a < 2) {\\n        console.log(\\'less than '+( a < 2 'a' : 'b' )+'\\');\\n    }\\n'}, [])""")
+        Utils.setDelimiters(['{', '}'])

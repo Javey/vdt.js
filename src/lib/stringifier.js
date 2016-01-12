@@ -6,6 +6,7 @@
 
 var Utils = require('./utils'),
     Type = Utils.Type,
+    TypeName = Utils.TypeName,
 
     attrMap = (function() {
         var map = {
@@ -27,6 +28,7 @@ Stringifier.prototype = {
             autoReturn = true;
         }
         this.autoReturn = !!autoReturn;
+        this.enterStringExpression = false;
         return this._visitJSXExpressionContainer(ast, true);
     },
 
@@ -67,10 +69,25 @@ Stringifier.prototype = {
     },
 
     _visitJS: function(element) {
-        return element.value;
+        return this.enterStringExpression ? '(' + element.value + ')' : element.value;
     },
 
     _visitJSX: function(element) {
+        if (element.value === 'script' || element.value === 'style') {
+            if (element.children.length) {
+                element.attributes.push({
+                    type: Type.JSXAttribute,
+                    typeName: TypeName[Type.JSXAttribute],
+                    name: 'innerHTML',
+                    value: {
+                        type: Type.JS,
+                        typeName: TypeName[Type.JS],
+                        value: this._visitJSXChildrenAsString(element.children)
+                    }
+                });
+                element.children = [];
+            }
+        }
         var str = "h('" + element.value + "'," + this._visitJSXAttribute(element.attributes) + ", ";
 
         return str + this._visitJSXChildren(element.children) + ')';
@@ -83,6 +100,16 @@ Stringifier.prototype = {
         }, this);
 
         return '[' + ret.join(', ') + ']';
+    },
+
+    _visitJSXChildrenAsString: function(children) {
+        var ret = [];
+        this.enterStringExpression = true;
+        Utils.each(children, function(child) {
+            ret.push(this._visit(child));
+        }, this);
+        this.enterStringExpression = false;
+        return ret.join('+');
     },
 
     _visitJSXAttribute: function(attributes) {
