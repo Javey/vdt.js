@@ -570,7 +570,7 @@ if (typeof document !== 'undefined') {
 }
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"min-document":54}],11:[function(require,module,exports){
+},{"min-document":56}],11:[function(require,module,exports){
 (function (global){
 var root = typeof window !== 'undefined' ?
     window : typeof global !== 'undefined' ?
@@ -738,12 +738,8 @@ Parser.prototype = {
                 this.index++;
             }
         }
-        return {
-            type: Type.JS,
-            typeName: TypeName[Type.JS],
-            value: this.source.slice(start, braces.count < 0 ? this.index - 1 : this.index)
-        };
 
+        return this._type(Type.JS, {value: this.source.slice(start, braces.count < 0 ? this.index - 1 : this.index)});
     },
 
     _scanStringLiteral: function() {
@@ -768,11 +764,8 @@ Parser.prototype = {
         if (quote !== '') {
             throw new Error('Unclosed quote');
         }
-        return {
-            type: Type.StringLiteral,
-            typeName: TypeName[Type.StringLiteral],
-            value: this.source.slice(start, this.index)
-        }
+
+        return this._type(Type.StringLiteral, {value: this.source.slice(start, this.index)});
     },
 
     _scanJSX: function() {
@@ -792,17 +785,14 @@ Parser.prototype = {
             }
             this.index++;
         }
-        return {
-            type: Type.JSXText,
-            typeName: TypeName[Type.JSXText],
-            value: this.source.slice(start, this.index)
-        }
+
+        return this._type(Type.JSXText, {value: this.source.slice(start, this.index)});
     },
 
     _scanJSXStringLiteral: function() {
         var quote = this._char();
         if (quote !== '\'' && quote !== '"') {
-            throw new Error('String literal must starts with a qoute')
+            throw new Error('String literal must starts with a qoute');
         }
         this.index++;
         var token = this._scanJSXText([quote]);
@@ -817,19 +807,19 @@ Parser.prototype = {
             flag = this._charCode();
         if (flag >= 65 && flag <= 90/* upper case */) {
             // is a widget
-            ret.type = Type.JSXWidget;
-            ret.typeName = TypeName[Type.JSXWidget];
+            this._type(Type.JSXWidget, ret);
+        } else if (this._isExpect('!--')) {
+            // is html comment
+            return this._parseJSXComment();
         } else if (this._charCode(this.index + 1) === 58/* : */){
             // is a directive
             start += 2;
             switch (flag) {
                 case 116: // t
-                    ret.type = Type.JSXVdt;
-                    ret.typeName = TypeName[Type.JSXVdt];
+                    this._type(Type.JSXVdt, ret);
                     break;
                 case 98: // b
-                    ret.type = Type.JSXBlock;
-                    ret.typeName = TypeName[Type.JSXBlock];
+                    this._type(Type.JSXBlock, ret);
                     break;
                 default:
                     throw new Error('Unknown directive ' + String.fromCharCode(flag) + ':');
@@ -837,8 +827,7 @@ Parser.prototype = {
             this.index += 2;
         } else {
             // is an element
-            ret.type = Type.JSXElement;
-            ret.typeName = TypeName[Type.JSXElement];
+            this._type(Type.JSXElement, ret);
         }
 
         while (this.index < this.length) {
@@ -868,7 +857,7 @@ Parser.prototype = {
         } else if (this._char() === '/') {
             // unknown self closing tag
             this.index++;
-            this._expect('>')
+            this._expect('>');
         } else {
             this._expect('>');
             ret.children = this._parseJSXChildren();
@@ -908,11 +897,8 @@ Parser.prototype = {
             }
             this.index++;
         }
-        return {
-            type: Type.JSXAttribute,
-            typeName: TypeName[Type.JSXAttribute],
-            name: this.source.slice(start, this.index)
-        }
+
+        return this._type(Type.JSXAttribute, {name: this.source.slice(start, this.index)});
     },
 
     _parseJSXAttributeValue: function() {
@@ -936,19 +922,12 @@ Parser.prototype = {
             expression = this._parseExpression();
         }
         this._expect(Delimiters[1]);
-        return {
-            type: Type.JSXExpressionContainer,
-            typeName: TypeName[Type.JSXExpressionContainer],
-            value: expression
-        }
+
+        return this._type(Type.JSXExpressionContainer, {value: expression});
     },
 
     _parseJSXEmptyExpression: function() {
-        return {
-            type: Type.JSXEmptyExpression,
-            typeName: TypeName[Type.JSXEmptyExpression],
-            value: null
-        }
+        return this._type(Type.JSXEmptyExpression, {value: null});
     },
 
     _parseExpression: function() {
@@ -978,7 +957,7 @@ Parser.prototype = {
             token = this._parseJSXElement();
         } else {
             token = this._scanJSXText([function() {
-                return this._isExpect('</') || this._isElementStart()
+                return this._isExpect('</') || this._isElementStart();
             }, Delimiters[0]]);
         }
 
@@ -999,6 +978,21 @@ Parser.prototype = {
         this._expect('>');
     },
 
+    _parseJSXComment: function() {
+        this._expect('!--');
+        var start = this.index;
+        while (this.index < this.length) {
+            if (this._isExpect('-->')) {
+                break;
+            }
+            this.index++;
+        }
+        var ret = this._type(Type.JSXComment, {value: this.source.slice(start, this.index)});
+        this._expect('-->');
+
+        return ret;
+    },
+
     _char: function(index) {
         arguments.length === 0 && (index = this.index);
         return this.source.charAt(index);
@@ -1011,11 +1005,10 @@ Parser.prototype = {
 
     _skipWhitespace: function() {
         while (this.index < this.length) {
-            if (Utils.isWhiteSpace(this._charCode())) {
-                this.index++;
-            } else {
+            if (!Utils.isWhiteSpace(this._charCode())) {
                 break;
             }
+            this.index++;
         }
     },
 
@@ -1031,7 +1024,14 @@ Parser.prototype = {
     },
 
     _isElementStart: function() {
-        return this._char() === '<' && elementNameRegexp.test(this.source.slice(this.index));
+        return this._char() === '<' && (this._isExpect('<!--') || elementNameRegexp.test(this.source.slice(this.index)));
+    },
+
+    _type: function(type, ret) {
+        ret || (ret = {});
+        ret.type = type;
+        ret.typeName = TypeName[type];
+        return ret;
     }
 };
 
@@ -1103,6 +1103,8 @@ Stringifier.prototype = {
                 return this._visitJSXBlock(element);
             case Type.JSXVdt:
                 return this._visitJSXVdt(element, isRoot);
+            case Type.JSXComment:
+                return this._visitJSXComment(element);
             default:
                 return 'null';
         }
@@ -1198,6 +1200,10 @@ Stringifier.prototype = {
         ret += (blocks.length ? blocks.join(' && ') + ' && __blocks)' : '__blocks)') + ('}).call(this, ') + (isRoot ? 'blocks)' : '{})');
 
         return ret;
+    },
+
+    _visitJSXComment: function(element) {
+        return 'h.c(' + this._visitJSXText(element) + ')';
     }
 };
 
@@ -1221,7 +1227,8 @@ var i = 0,
 
         JSXWidget: i++,
         JSXVdt: i++,
-        JSXBlock: i++
+        JSXBlock: i++,
+        JSXComment: i++
     },
     TypeName = [],
 
@@ -1462,7 +1469,7 @@ var diff = require("./vtree/diff.js")
 
 module.exports = diff
 
-},{"./vtree/diff.js":53}],22:[function(require,module,exports){
+},{"./vtree/diff.js":55}],22:[function(require,module,exports){
 var h = require("./virtual-hyperscript/index.js")
 
 module.exports = h
@@ -1484,7 +1491,7 @@ module.exports = {
     VText: VText
 }
 
-},{"./create-element.js":20,"./diff.js":21,"./h.js":22,"./patch.js":31,"./vnode/vnode.js":49,"./vnode/vtext.js":51}],24:[function(require,module,exports){
+},{"./create-element.js":20,"./diff.js":21,"./h.js":22,"./patch.js":31,"./vnode/vnode.js":51,"./vnode/vtext.js":53}],24:[function(require,module,exports){
 /*!
  * Cross-Browser Split 1.1.1
  * Copyright 2007-2012 Steven Levithan <stevenlevithan.com>
@@ -1613,7 +1620,7 @@ if (typeof document !== 'undefined') {
 }
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"min-documentx":54}],27:[function(require,module,exports){
+},{"min-documentx":56}],27:[function(require,module,exports){
 arguments[4][8][0].apply(exports,arguments)
 },{"dup":8}],28:[function(require,module,exports){
 arguments[4][9][0].apply(exports,arguments)
@@ -1738,7 +1745,7 @@ function getPrototype(value) {
     }
 }
 
-},{"../vnode/is-vhook.js":44,"is-object":29}],33:[function(require,module,exports){
+},{"../vnode/is-vhook.js":45,"is-object":29}],33:[function(require,module,exports){
 var document = require("globalx/document")
 
 var applyProperties = require("./apply-properties")
@@ -1746,6 +1753,7 @@ var applyProperties = require("./apply-properties")
 var isVNode = require("../vnode/is-vnode.js")
 var isVText = require("../vnode/is-vtext.js")
 var isWidget = require("../vnode/is-widget.js")
+var isVComment = require("../vnode/is-vcomment.js")
 var handleThunk = require("../vnode/handle-thunk.js")
 
 module.exports = createElement
@@ -1760,6 +1768,8 @@ function createElement(vnode, opts) {
         return vnode.init()
     } else if (isVText(vnode)) {
         return doc.createTextNode(vnode.text)
+    } else if (isVComment(vnode)) {
+        return doc.createComment(vnode.comment)
     } else if (!isVNode(vnode)) {
         if (warn) {
             warn("Item is not a valid virtual dom node", vnode)
@@ -1791,7 +1801,7 @@ function createElement(vnode, opts) {
     return node
 }
 
-},{"../vnode/handle-thunk.js":42,"../vnode/is-vnode.js":45,"../vnode/is-vtext.js":46,"../vnode/is-widget.js":47,"./apply-properties":32,"globalx/document":26}],34:[function(require,module,exports){
+},{"../vnode/handle-thunk.js":42,"../vnode/is-vcomment.js":44,"../vnode/is-vnode.js":46,"../vnode/is-vtext.js":47,"../vnode/is-widget.js":48,"./apply-properties":32,"globalx/document":26}],34:[function(require,module,exports){
 // Maps a virtual DOM tree onto a real DOM tree in an efficient manner.
 // We don't want to read all of the DOM nodes in the tree so we use
 // the in-order tree indexing to eliminate recursion down certain branches.
@@ -1900,6 +1910,8 @@ function applyPatch(vpatch, domNode, renderOptions) {
             return insertNode(domNode, patch, renderOptions)
         case VPatch.VTEXT:
             return stringPatch(domNode, vNode, patch, renderOptions)
+        case VPatch.VCOMMENT:
+            return commentPatch(domNode, vNode, patch, renderOptions)
         case VPatch.WIDGET:
             return widgetPatch(domNode, vNode, patch, renderOptions)
         case VPatch.VNODE:
@@ -1949,6 +1961,25 @@ function stringPatch(domNode, leftVNode, vText, renderOptions) {
     } else {
         var parentNode = domNode.parentNode
         newNode = renderOptions.render(vText, renderOptions)
+
+        if (parentNode && newNode !== domNode) {
+            parentNode.replaceChild(newNode, domNode)
+        }
+    }
+
+    return newNode
+}
+
+function commentPatch(domNode, leftNode, vComment, renderOptions) {
+    var newNode
+
+    if (domNode.nodeType === 8) {
+        // todo: need min-document to support replaceData method to update nodeValue and length
+        domNode.data = vComment.comment
+        newNode = domNode
+    } else {
+        var parentNode = domNode.parentNode
+        newNode = renderOptions.render(vComment, renderOptions)
 
         if (parentNode && newNode !== domNode) {
             parentNode.replaceChild(newNode, domNode)
@@ -2032,7 +2063,7 @@ function replaceRoot(oldRoot, newRoot) {
     return newRoot;
 }
 
-},{"../vnode/is-widget.js":47,"../vnode/vpatch.js":50,"./apply-properties":32,"./update-widget":37}],36:[function(require,module,exports){
+},{"../vnode/is-widget.js":48,"../vnode/vpatch.js":52,"./apply-properties":32,"./update-widget":37}],36:[function(require,module,exports){
 var document = require("globalx/document")
 var isArray = require("x-is-array")
 
@@ -2131,7 +2162,7 @@ function updateWidget(a, b) {
     return false
 }
 
-},{"../vnode/is-widget.js":47}],38:[function(require,module,exports){
+},{"../vnode/is-widget.js":48}],38:[function(require,module,exports){
 'use strict';
 
 var EvStore = require('ev-store');
@@ -2186,8 +2217,10 @@ var isArray = require('x-is-array');
 
 var VNode = require('../vnode/vnode.js');
 var VText = require('../vnode/vtext.js');
+var VComment = require('../vnode/vcomment.js');
 var isVNode = require('../vnode/is-vnode');
 var isVText = require('../vnode/is-vtext');
+var isVComment = require('../vnode/is-vcomment');
 var isWidget = require('../vnode/is-widget');
 var isHook = require('../vnode/is-vhook');
 var isVThunk = require('../vnode/is-thunk');
@@ -2242,8 +2275,12 @@ function h(tagName, properties, children) {
     return new VNode(tag, props, childNodes, key, namespace);
 }
 
+h.c = function(comment) {
+    return new VComment(comment) 
+}
+
 function addChild(c, childNodes, tag, props) {
-    if (typeof c === 'string' || typeof c === 'number') {
+    if (typeof c === 'string') {
         childNodes.push(new VText(c));
     } else if (typeof c === 'number') {
         childNodes.push(new VText(String(c)));
@@ -2284,7 +2321,7 @@ function transformProperties(props) {
 }
 
 function isChild(x) {
-    return isVNode(x) || isVText(x) || isWidget(x) || isVThunk(x);
+    return isVNode(x) || isVText(x) || isWidget(x) || isVThunk(x) || isVComment(x);
 }
 
 function isChildren(x) {
@@ -2318,7 +2355,7 @@ function errorString(obj) {
     }
 }
 
-},{"../vnode/is-thunk":43,"../vnode/is-vhook":44,"../vnode/is-vnode":45,"../vnode/is-vtext":46,"../vnode/is-widget":47,"../vnode/vnode.js":49,"../vnode/vtext.js":51,"./hooks/ev-hook.js":38,"./hooks/soft-set-hook.js":39,"./parse-tag.js":41,"x-is-array":30}],41:[function(require,module,exports){
+},{"../vnode/is-thunk":43,"../vnode/is-vcomment":44,"../vnode/is-vhook":45,"../vnode/is-vnode":46,"../vnode/is-vtext":47,"../vnode/is-widget":48,"../vnode/vcomment.js":49,"../vnode/vnode.js":51,"../vnode/vtext.js":53,"./hooks/ev-hook.js":38,"./hooks/soft-set-hook.js":39,"./parse-tag.js":41,"x-is-array":30}],41:[function(require,module,exports){
 'use strict';
 
 var split = require('browser-split');
@@ -2416,7 +2453,7 @@ function renderThunk(thunk, previous) {
     return renderedThunk
 }
 
-},{"./is-thunk":43,"./is-vnode":45,"./is-vtext":46,"./is-widget":47}],43:[function(require,module,exports){
+},{"./is-thunk":43,"./is-vnode":46,"./is-vtext":47,"./is-widget":48}],43:[function(require,module,exports){
 module.exports = isThunk
 
 function isThunk(t) {
@@ -2424,6 +2461,15 @@ function isThunk(t) {
 }
 
 },{}],44:[function(require,module,exports){
+var version = require("./version")
+
+module.exports = isVirtualComment
+
+function isVirtualComment(x) {
+    return x && x.type === "VirtualComment" && x.version === version 
+}
+
+},{"./version":50}],45:[function(require,module,exports){
 module.exports = isHook
 
 function isHook(hook) {
@@ -2432,7 +2478,7 @@ function isHook(hook) {
        typeof hook.unhook === "function" && !hook.hasOwnProperty("unhook"))
 }
 
-},{}],45:[function(require,module,exports){
+},{}],46:[function(require,module,exports){
 var version = require("./version")
 
 module.exports = isVirtualNode
@@ -2441,7 +2487,7 @@ function isVirtualNode(x) {
     return x && x.type === "VirtualNode" && x.version === version
 }
 
-},{"./version":48}],46:[function(require,module,exports){
+},{"./version":50}],47:[function(require,module,exports){
 var version = require("./version")
 
 module.exports = isVirtualText
@@ -2450,17 +2496,29 @@ function isVirtualText(x) {
     return x && x.type === "VirtualText" && x.version === version
 }
 
-},{"./version":48}],47:[function(require,module,exports){
+},{"./version":50}],48:[function(require,module,exports){
 module.exports = isWidget
 
 function isWidget(w) {
     return w && w.type === "Widget"
 }
 
-},{}],48:[function(require,module,exports){
+},{}],49:[function(require,module,exports){
+var version = require("./version")
+
+module.exports = VirtualComment
+
+function VirtualComment(comment) {
+    this.comment = String(comment)
+}
+
+VirtualComment.prototype.version = version
+VirtualComment.prototype.type = "VirtualComment"
+
+},{"./version":50}],50:[function(require,module,exports){
 module.exports = "2"
 
-},{}],49:[function(require,module,exports){
+},{}],51:[function(require,module,exports){
 var version = require("./version")
 var isVNode = require("./is-vnode")
 var isWidget = require("./is-widget")
@@ -2534,7 +2592,7 @@ function VirtualNode(tagName, properties, children, key, namespace) {
 VirtualNode.prototype.version = version
 VirtualNode.prototype.type = "VirtualNode"
 
-},{"./is-thunk":43,"./is-vhook":44,"./is-vnode":45,"./is-widget":47,"./version":48}],50:[function(require,module,exports){
+},{"./is-thunk":43,"./is-vhook":45,"./is-vnode":46,"./is-widget":48,"./version":50}],52:[function(require,module,exports){
 var version = require("./version")
 
 VirtualPatch.NONE = 0
@@ -2546,6 +2604,7 @@ VirtualPatch.ORDER = 5
 VirtualPatch.INSERT = 6
 VirtualPatch.REMOVE = 7
 VirtualPatch.THUNK = 8
+VirtualPatch.VCOMMENT = 9
 
 module.exports = VirtualPatch
 
@@ -2558,7 +2617,7 @@ function VirtualPatch(type, vNode, patch) {
 VirtualPatch.prototype.version = version
 VirtualPatch.prototype.type = "VirtualPatch"
 
-},{"./version":48}],51:[function(require,module,exports){
+},{"./version":50}],53:[function(require,module,exports){
 var version = require("./version")
 
 module.exports = VirtualText
@@ -2570,7 +2629,7 @@ function VirtualText(text) {
 VirtualText.prototype.version = version
 VirtualText.prototype.type = "VirtualText"
 
-},{"./version":48}],52:[function(require,module,exports){
+},{"./version":50}],54:[function(require,module,exports){
 var isObject = require("is-object")
 var isHook = require("../vnode/is-vhook")
 
@@ -2630,12 +2689,13 @@ function getPrototype(value) {
   }
 }
 
-},{"../vnode/is-vhook":44,"is-object":29}],53:[function(require,module,exports){
+},{"../vnode/is-vhook":45,"is-object":29}],55:[function(require,module,exports){
 var isArray = require("x-is-array")
 
 var VPatch = require("../vnode/vpatch")
 var isVNode = require("../vnode/is-vnode")
 var isVText = require("../vnode/is-vtext")
+var isVComment = require("../vnode/is-vcomment")
 var isWidget = require("../vnode/is-widget")
 var isThunk = require("../vnode/is-thunk")
 var handleThunk = require("../vnode/handle-thunk")
@@ -2696,6 +2756,13 @@ function walk(a, b, patch, index) {
             applyClear = true
         } else if (a.text !== b.text) {
             apply = appendPatch(apply, new VPatch(VPatch.VTEXT, a, b))
+        }
+    } else if (isVComment(b)) {
+        if (!isVComment(a)) {
+            apply = appendPatch(apply, new VPatch(VPatch.VCOMMENT, a, b))
+            applyClear = true
+        } else if (a.comment !== b.comment) {
+            apply = appendPatch(apply, new VPatch(VPatch.VCOMMENT, a, b))
         }
     } else if (isWidget(b)) {
         if (!isWidget(a)) {
@@ -3058,7 +3125,7 @@ function appendPatch(apply, patch) {
     }
 }
 
-},{"../vnode/handle-thunk":42,"../vnode/is-thunk":43,"../vnode/is-vnode":45,"../vnode/is-vtext":46,"../vnode/is-widget":47,"../vnode/vpatch":50,"./diff-props":52,"x-is-array":30}],54:[function(require,module,exports){
+},{"../vnode/handle-thunk":42,"../vnode/is-thunk":43,"../vnode/is-vcomment":44,"../vnode/is-vnode":46,"../vnode/is-vtext":47,"../vnode/is-widget":48,"../vnode/vpatch":52,"./diff-props":54,"x-is-array":30}],56:[function(require,module,exports){
 
 },{}]},{},[15])(15)
 });
