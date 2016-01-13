@@ -204,3 +204,13 @@ describe 'Stringifier', ->
         Utils.setDelimiters(['{{', '}}'])
         stringifier.stringify(parser.parse(source)).should.eql("""return h('script',{'type': 'text/javascript', 'innerHTML': '\\n    var a = 1;\\n    console.log(a);\\n    if (a < 2) {\\n        console.log(\\'less than '+( a < 2 'a' : 'b' )+'\\');\\n    }\\n'}, [])""")
         Utils.setDelimiters(['{', '}'])
+
+    it 'Stringify html comment', ->
+        source = """
+        <div>
+            <!-- this is a html comment -->
+            test
+        </div>
+        """
+
+        stringifier.stringify(parser.parse(source)).should.eql """return h('div',null, ['\\n    ', h.c(' this is a html comment '), '\\n    test\\n'])"""

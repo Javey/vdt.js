@@ -15,7 +15,8 @@ var i = 0,
 
         JSXWidget: i++,
         JSXVdt: i++,
-        JSXBlock: i++
+        JSXBlock: i++,
+        JSXComment: i++
     },
     TypeName = [],
 

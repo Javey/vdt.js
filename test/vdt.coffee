@@ -65,3 +65,14 @@ describe 'Vdt', ->
             views: './test/tpl'
         })
         Vdt.renderFile('index', {test: 1}).should.eql("<!DOCTYPE html>\n<html>\n<head>\n    <meta charset=\"utf-8\" />\n    <title>advance-demo</title>\n    <link type=\"text/css\" rel=\"stylesheet\" href=\"/static/css/test.css\" />\n    </head>\n    <body>\n    <h1>index page powered by Advanced uses vdt template engine</h1>\n    <div>{test}</div>\n    <div>AAA</div>\n    <div>BBB</div>\n    <div>&lt;div&gt;{test}&lt;/div&gt;</div>\n    <p>Hello 1</p>\n    <script type=\"text/javascript\">\n        var a = 1\n    </script>\n    \n        test main\n        <div>&lt;div&gt;test&lt;/div&gt;</div>\n    \n    \n        \n        <script type=\"text/javascript\" src=\"/node_modules/vdt/dist/vdt.js\"></script>\n    \n        <script type=\"text/javascript\">\n            var a = 1;\n            console.log(a);\n            if (a < 2) {\n                console.log('less than a');\n            }\n        </script>\n    \n    </body>\n</html>")
+
+    it 'Render html comment', ->
+        source = """
+        <div>
+            <!-- this is a html comment -->
+            test
+        </div>
+        """
+        vdt = Vdt(source)
+
+        vdt.renderString().should.eql(source)

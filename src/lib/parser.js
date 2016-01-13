@@ -77,12 +77,8 @@ Parser.prototype = {
                 this.index++;
             }
         }
-        return {
-            type: Type.JS,
-            typeName: TypeName[Type.JS],
-            value: this.source.slice(start, braces.count < 0 ? this.index - 1 : this.index)
-        };
 
+        return this._type(Type.JS, {value: this.source.slice(start, braces.count < 0 ? this.index - 1 : this.index)});
     },
 
     _scanStringLiteral: function() {
@@ -107,11 +103,8 @@ Parser.prototype = {
         if (quote !== '') {
             throw new Error('Unclosed quote');
         }
-        return {
-            type: Type.StringLiteral,
-            typeName: TypeName[Type.StringLiteral],
-            value: this.source.slice(start, this.index)
-        }
+
+        return this._type(Type.StringLiteral, {value: this.source.slice(start, this.index)});
     },
 
     _scanJSX: function() {
@@ -131,17 +124,14 @@ Parser.prototype = {
             }
             this.index++;
         }
-        return {
-            type: Type.JSXText,
-            typeName: TypeName[Type.JSXText],
-            value: this.source.slice(start, this.index)
-        }
+
+        return this._type(Type.JSXText, {value: this.source.slice(start, this.index)});
     },
 
     _scanJSXStringLiteral: function() {
         var quote = this._char();
         if (quote !== '\'' && quote !== '"') {
-            throw new Error('String literal must starts with a qoute')
+            throw new Error('String literal must starts with a qoute');
         }
         this.index++;
         var token = this._scanJSXText([quote]);
@@ -156,19 +146,19 @@ Parser.prototype = {
             flag = this._charCode();
         if (flag >= 65 && flag <= 90/* upper case */) {
             // is a widget
-            ret.type = Type.JSXWidget;
-            ret.typeName = TypeName[Type.JSXWidget];
+            this._type(Type.JSXWidget, ret);
+        } else if (this._isExpect('!--')) {
+            // is html comment
+            return this._parseJSXComment();
         } else if (this._charCode(this.index + 1) === 58/* : */){
             // is a directive
             start += 2;
             switch (flag) {
                 case 116: // t
-                    ret.type = Type.JSXVdt;
-                    ret.typeName = TypeName[Type.JSXVdt];
+                    this._type(Type.JSXVdt, ret);
                     break;
                 case 98: // b
-                    ret.type = Type.JSXBlock;
-                    ret.typeName = TypeName[Type.JSXBlock];
+                    this._type(Type.JSXBlock, ret);
                     break;
                 default:
                     throw new Error('Unknown directive ' + String.fromCharCode(flag) + ':');
@@ -176,8 +166,7 @@ Parser.prototype = {
             this.index += 2;
         } else {
             // is an element
-            ret.type = Type.JSXElement;
-            ret.typeName = TypeName[Type.JSXElement];
+            this._type(Type.JSXElement, ret);
         }
 
         while (this.index < this.length) {
@@ -207,7 +196,7 @@ Parser.prototype = {
         } else if (this._char() === '/') {
             // unknown self closing tag
             this.index++;
-            this._expect('>')
+            this._expect('>');
         } else {
             this._expect('>');
             ret.children = this._parseJSXChildren();
@@ -247,11 +236,8 @@ Parser.prototype = {
             }
             this.index++;
         }
-        return {
-            type: Type.JSXAttribute,
-            typeName: TypeName[Type.JSXAttribute],
-            name: this.source.slice(start, this.index)
-        }
+
+        return this._type(Type.JSXAttribute, {name: this.source.slice(start, this.index)});
     },
 
     _parseJSXAttributeValue: function() {
@@ -275,19 +261,12 @@ Parser.prototype = {
             expression = this._parseExpression();
         }
         this._expect(Delimiters[1]);
-        return {
-            type: Type.JSXExpressionContainer,
-            typeName: TypeName[Type.JSXExpressionContainer],
-            value: expression
-        }
+
+        return this._type(Type.JSXExpressionContainer, {value: expression});
     },
 
     _parseJSXEmptyExpression: function() {
-        return {
-            type: Type.JSXEmptyExpression,
-            typeName: TypeName[Type.JSXEmptyExpression],
-            value: null
-        }
+        return this._type(Type.JSXEmptyExpression, {value: null});
     },
 
     _parseExpression: function() {
@@ -317,7 +296,7 @@ Parser.prototype = {
             token = this._parseJSXElement();
         } else {
             token = this._scanJSXText([function() {
-                return this._isExpect('</') || this._isElementStart()
+                return this._isExpect('</') || this._isElementStart();
             }, Delimiters[0]]);
         }
 
@@ -338,6 +317,21 @@ Parser.prototype = {
         this._expect('>');
     },
 
+    _parseJSXComment: function() {
+        this._expect('!--');
+        var start = this.index;
+        while (this.index < this.length) {
+            if (this._isExpect('-->')) {
+                break;
+            }
+            this.index++;
+        }
+        var ret = this._type(Type.JSXComment, {value: this.source.slice(start, this.index)});
+        this._expect('-->');
+
+        return ret;
+    },
+
     _char: function(index) {
         arguments.length === 0 && (index = this.index);
         return this.source.charAt(index);
@@ -350,11 +344,10 @@ Parser.prototype = {
 
     _skipWhitespace: function() {
         while (this.index < this.length) {
-            if (Utils.isWhiteSpace(this._charCode())) {
-                this.index++;
-            } else {
+            if (!Utils.isWhiteSpace(this._charCode())) {
                 break;
             }
+            this.index++;
         }
     },
 
@@ -370,7 +363,14 @@ Parser.prototype = {
     },
 
     _isElementStart: function() {
-        return this._char() === '<' && elementNameRegexp.test(this.source.slice(this.index));
+        return this._char() === '<' && (this._isExpect('<!--') || elementNameRegexp.test(this.source.slice(this.index)));
+    },
+
+    _type: function(type, ret) {
+        ret || (ret = {});
+        ret.type = type;
+        ret.typeName = TypeName[type];
+        return ret;
     }
 };
 

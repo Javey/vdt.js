@@ -232,3 +232,13 @@ describe 'Parser', ->
         """
 
         parser.parse(source).should.be.eql [{"type":7,"typeName":"JSXVdt","value":"base","attributes":[],"children":[{"type":1,"typeName":"JSXText","value":"\n    "},{"type":8,"typeName":"JSXBlock","value":"body","attributes":[],"children":[{"type":1,"typeName":"JSXText","value":"\n        home body\n    "}]},{"type":1,"typeName":"JSXText","value":"\n"}]}]
+
+    it 'Parse html comment', ->
+        source = """
+        <div>
+            <!-- this is html comment -->
+            test
+        </div>
+        """
+
+        parser.parse(source).should.be.eql [{"type":2,"typeName":"JSXElement","value":"div","attributes":[],"children":[{"value":"\n    ","type":1,"typeName":"JSXText"},{"value":" this is html comment ","type":9,"typeName":"JSXComment"},{"value":"\n    test\n","type":1,"typeName":"JSXText"}]}]

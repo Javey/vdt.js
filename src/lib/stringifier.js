@@ -63,6 +63,8 @@ Stringifier.prototype = {
                 return this._visitJSXBlock(element);
             case Type.JSXVdt:
                 return this._visitJSXVdt(element, isRoot);
+            case Type.JSXComment:
+                return this._visitJSXComment(element);
             default:
                 return 'null';
         }
@@ -158,6 +160,10 @@ Stringifier.prototype = {
         ret += (blocks.length ? blocks.join(' && ') + ' && __blocks)' : '__blocks)') + ('}).call(this, ') + (isRoot ? 'blocks)' : '{})');
 
         return ret;
+    },
+
+    _visitJSXComment: function(element) {
+        return 'h.c(' + this._visitJSXText(element) + ')';
     }
 };
 
