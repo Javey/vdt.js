@@ -15,10 +15,15 @@ module.exports = function(file) {
     return Vdt.getDefaults('force') ? compile(0) : stat();
 
     function compile(mtime) {
-        var contents = fs.readFileSync(file).toString();
-        cache[file] = Vdt.compile(contents);
-        cache[file].mtime = mtime;
-        return cache[file];
+        try {
+            var contents = fs.readFileSync(file).toString();
+            cache[file] = Vdt.compile(contents);
+            cache[file].mtime = mtime;
+            return cache[file];
+        } catch (e) {
+            e.message += ' in file: ' + file;
+            throw e;
+        }
     }
 
     function stat() {
