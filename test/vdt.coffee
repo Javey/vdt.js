@@ -7,38 +7,14 @@ describe 'Vdt', ->
         <div>{test}</div>
         """
 
-        output = """
-        function(obj, _Vdt, blocks) {
-        _Vdt || (_Vdt = Vdt);
-        blocks || (blocks = {});
-        var h = _Vdt.virtualDom.h, widgets = this.widgets || (this.widgets = {}), _blocks = {}, __blocks = {},
-        extend = _Vdt.utils.extend, require = _Vdt.utils.require || require;
-        with (obj || {}) {
-        return h('div',null, [test])
-        }
-        }
-        """
-
-        Vdt.compile(source).source.should.be.eql(output)
+        Vdt(source).renderString({test: 1}).should.eql("<div>1</div>")
 
     it 'Compile JSX set autoReturn to false', ->
         source = """
-        <div>{test}</div>
+        return <div>{test}</div>
         """
 
-        output = """
-        function(obj, _Vdt, blocks) {
-        _Vdt || (_Vdt = Vdt);
-        blocks || (blocks = {});
-        var h = _Vdt.virtualDom.h, widgets = this.widgets || (this.widgets = {}), _blocks = {}, __blocks = {},
-        extend = _Vdt.utils.extend, require = _Vdt.utils.require || require;
-        with (obj || {}) {
-        h('div',null, [test])
-        }
-        }
-        """
-
-        Vdt.compile(source, {autoReturn: false}).source.should.be.eql(output)
+        Vdt(source, {autoReturn: false}).renderString({test: 1}).should.eql("<div>1</div>")
 
     it 'vdt.data.vdt === vdt', ->
         vdt = Vdt('<div></div>')

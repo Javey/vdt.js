@@ -88,10 +88,12 @@ function compile(source, options) {
 
             hscript = [
                 '_Vdt || (_Vdt = Vdt);',
+                'obj || (obj = {});',
                 'blocks || (blocks = {});',
                 'var h = _Vdt.virtualDom.h, widgets = this.widgets || (this.widgets = {}), _blocks = {}, __blocks = {},',
-                    'extend = _Vdt.utils.extend, require = _Vdt.utils.require || require;',
-                'with (obj || {}) {',
+                    'extend = _Vdt.utils.extend;',
+                'obj.require = _Vdt.utils.require || (typeof require === "undefined" ? _Vdt.utils.noRequire : require);',
+                'with (obj) {',
                     hscript,
                 '}'
             ].join('\n');

@@ -120,7 +120,11 @@ var Utils = {
         } else {
             // use amd require
         }
-    })()
+    })(),
+
+    noRequire: function() {
+        throw new Error('Vdt depends RequireJs to require file over http.');
+    }
 };
 
 module.exports = Utils;

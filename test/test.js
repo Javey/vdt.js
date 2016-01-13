@@ -19,3 +19,15 @@ Utils.setDelimiters(['{{', '}}']);
 
 console.log(util.inspect(parser.parse(source), {showHidden: true, depth: null}));
 console.log(stringifier.stringify(parser.parse(source)))
+
+function a(obj, _Vdt, blocks) {
+    _Vdt || (_Vdt = Vdt);
+    obj || (obj = {});
+    blocks || (blocks = {});
+    var h = _Vdt.virtualDom.h, widgets = this.widgets || (this.widgets = {}), _blocks = {}, __blocks = {},
+        extend = _Vdt.utils.extend;
+    obj.require = _Vdt.utils.require || (typeof require === "undefined" ? _Vdt.utils.noRequire : require);
+    with (obj) {
+        return h('div',null, [test])
+    }
+}

@@ -7,7 +7,7 @@
 <body>
 <!doctype html>
 <textarea type="text/vdt" id="template">
-    <div>
+    return <div>
         <div class="aa"></div>
         <div class="users" style={{width: "100px", fontSize: "24px"}}>{time}</div>
         <script type="text/javascript">
@@ -19,7 +19,7 @@
 
 <script type="text/javascript" src="../../dist/vdt.js"></script>
 <script type="text/javascript">
-    var vdt = Vdt(document.getElementById('template').textContent),
+    var vdt = Vdt(document.getElementById('template').textContent, {autoReturn: false}),
         model = {
             users: [
                 {name: 'John', id: '1'},
