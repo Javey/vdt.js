@@ -687,10 +687,14 @@ var Parser = function() {
 Parser.prototype = {
     constructor: Parser,
 
-    parse: function(source) {
+    parse: function(source, options) {
         this.source = Utils.trimRight(source);
         this.index = 0;
         this.length = this.source.length;
+
+        this.options = Utils.extend({
+            delimiters: Utils.getDelimiters()
+        }, options);
 
         return this._parseTemplate();
     },
@@ -716,7 +720,7 @@ Parser.prototype = {
 
     _scanJS: function(braces) {
         var start = this.index,
-            Delimiters = Utils.getDelimiters();
+            Delimiters = this.options.delimiters;
 
         while (this.index < this.length) {
             var ch = this._char();
@@ -903,7 +907,7 @@ Parser.prototype = {
 
     _parseJSXAttributeValue: function() {
         var value,
-            Delimiters = Utils.getDelimiters();
+            Delimiters = this.options.delimiters;
         if (this._isExpect(Delimiters[0])) {
             value = this._parseJSXExpressionContainer();
         } else {
@@ -914,7 +918,7 @@ Parser.prototype = {
 
     _parseJSXExpressionContainer: function() {
         var expression,
-            Delimiters = Utils.getDelimiters();
+            Delimiters = this.options.delimiters;
         this._expect(Delimiters[0]);
         if (this._isExpect(Delimiters[1])) {
             expression = this._parseJSXEmptyExpression();
@@ -950,7 +954,7 @@ Parser.prototype = {
 
     _parseJSXChild: function() {
         var token,
-            Delimiters = Utils.getDelimiters();
+            Delimiters = this.options.delimiters;
         if (this._isExpect(Delimiters[0])) {
             token = this._parseJSXExpressionContainer();
         } else if (this._isElementStart()) {
@@ -1421,13 +1425,14 @@ function compile(source, options) {
     } else {
         options = utils.extend({
             autoReturn: true,
-            onlySource: false
+            onlySource: false,
+            delimiters: utils.getDelimiters()
         }, options);
     }
 
     switch (typeof source) {
         case 'string':
-            var ast = parser.parse(source),
+            var ast = parser.parse(source, {delimiters: options.delimiters}),
                 hscript = stringifier.stringify(ast, options.autoReturn);
 
             hscript = [

@@ -77,13 +77,14 @@ function compile(source, options) {
     } else {
         options = utils.extend({
             autoReturn: true,
-            onlySource: false
+            onlySource: false,
+            delimiters: utils.getDelimiters()
         }, options);
     }
 
     switch (typeof source) {
         case 'string':
-            var ast = parser.parse(source),
+            var ast = parser.parse(source, {delimiters: options.delimiters}),
                 hscript = stringifier.stringify(ast, options.autoReturn);
 
             hscript = [

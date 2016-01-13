@@ -9,7 +9,7 @@ var defaultOptions = {
     autoReturn: true,
     extname: 'vdt',
     views: 'views',
-    delimiters: ['{', '}']
+    delimiters: utils.getDelimiters() 
 };
 
 function setDefaults(key, value) {

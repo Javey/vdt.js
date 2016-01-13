@@ -18,7 +18,8 @@ module.exports = function(options) {
         amd: true,
         force: false,
         autoReturn: true,
-        onlySource: true
+        onlySource: true,
+        delimiters: Utils.getDelimiters()
     }, options);
 
     var cache = {};
