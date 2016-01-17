@@ -5,21 +5,24 @@
     <title>vdt template engine demo</title>
 </head>
 <body>
-<!doctype html>
-<textarea type="text/vdt" id="template">
+<script type="text/vdt" id="template">
     return <div>
-        <div class="aa"></div>
-        <div class="users" style={{width: "100px", fontSize: "24px"}}>{time}</div>
-        <script type="text/javascript">
-            var a = {input}
-            console.log(a)
-        </script>
+        <div class="card">
+            <div class="aa"></div>
+
+            {input != 1 ? <div class="users" style={{width: "100px", fontSize: "24px"}}>{time}</div> : null}
+
+            <div type="text/javascript">
+                var a = {input}
+                console.log(a)
+            </div>
+        </div>
     </div>
-</textarea>
+</script>
 
 <script type="text/javascript" src="../../dist/vdt.js"></script>
 <script type="text/javascript">
-    var vdt = Vdt(document.getElementById('template').textContent, {autoReturn: false}),
+    var vdt = Vdt(document.getElementById('template').innerHTML, {autoReturn: false}),
         model = {
             users: [
                 {name: 'John', id: '1'},
@@ -44,11 +47,10 @@
 
     document.body.appendChild(vdt.render(model));
 
-    setInterval(function() {
+    setTimeout(function() {
         vdt.data.time = new Date().toLocaleTimeString();
         vdt.data.input = Math.random();
         vdt.update();
-        console.log(a);
     }, 1000);
 </script>
 </body>

@@ -1422,13 +1422,13 @@ function compile(source, options) {
     // backward compatibility v0.2.2
     if (options === true || options === false) {
         options = {autoReturn: options};
-    } else {
-        options = utils.extend({
-            autoReturn: true,
-            onlySource: false,
-            delimiters: utils.getDelimiters()
-        }, options);
     }
+
+    options = utils.extend({
+        autoReturn: true,
+        onlySource: false,
+        delimiters: utils.getDelimiters()
+    }, options);
 
     switch (typeof source) {
         case 'string':

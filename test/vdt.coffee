@@ -41,6 +41,7 @@ describe 'Vdt', ->
             views: './test/tpl'
         })
         Vdt.renderFile('index', {test: 1}).should.eql("<!DOCTYPE html>\n<html>\n<head>\n    <meta charset=\"utf-8\" />\n    <title>advance-demo</title>\n    <link type=\"text/css\" rel=\"stylesheet\" href=\"/static/css/test.css\" />\n    </head>\n    <body>\n    <h1>index page powered by Advanced uses vdt template engine</h1>\n    <div>{test}</div>\n    <div>AAA</div>\n    <div>BBB</div>\n    <div>&lt;div&gt;{test}&lt;/div&gt;</div>\n    <p>Hello 1</p>\n    <script type=\"text/javascript\">\n        var a = 1\n    </script>\n    \n        test main\n        <div>&lt;div&gt;test&lt;/div&gt;</div>\n    \n    \n        \n        <script type=\"text/javascript\" src=\"/node_modules/vdt/dist/vdt.js\"></script>\n    \n        <script type=\"text/javascript\">\n            var a = 1;\n            console.log(a);\n            if (a < 2) {\n                console.log('less than a');\n            }\n        </script>\n    \n    </body>\n</html>")
+        Vdt.setDefaults('delimiters', ['{', '}'])
 
     it 'Render html comment', ->
         source = """
@@ -52,3 +53,19 @@ describe 'Vdt', ->
         vdt = Vdt(source)
 
         vdt.renderString().should.eql(source)
+
+    it 'Render attribute which is null or undefined', ->
+        vdt = Vdt("<div name={test} a={test} b={test1}></div>")
+
+        vdt.renderString({test: undefined, test1: null}).should.eql("<div></div>")
+
+    it 'Render attribute which is boolean', ->
+        vdt = Vdt("<option selected={test}></option>")
+
+        vdt.renderString({test: false}).should.eql("<option></option>")
+
+    it 'Render attribute which is number', ->
+        vdt = Vdt("<div name={test}></div>")
+
+        vdt.renderString({test: 1}).should.eql('<div name="1"></div>')
+
