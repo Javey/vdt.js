@@ -1442,6 +1442,7 @@ function compile(source, options) {
                 'var h = _Vdt.virtualDom.h, widgets = this.widgets || (this.widgets = {}), _blocks = {}, __blocks = {},',
                     'extend = _Vdt.utils.extend;',
                 'obj.require = _Vdt.utils.require || (typeof require === "undefined" ? _Vdt.utils.noRequire : require);',
+                'var self; if (this.type === "Widget") { self = this; } else { obj.get = function(name) { return obj[name]; }; self = obj; }',
                 'with (obj) {',
                     hscript,
                 '}'
