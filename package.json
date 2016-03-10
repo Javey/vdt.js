@@ -1,6 +1,6 @@
 {
   "name": "vdt",
-  "version": "0.8.2",
+  "version": "0.8.0",
   "description": "A template engine based on virtual-dom",
   "main": "src/index",
   "repository": {
@@ -12,9 +12,9 @@
     "build": "browserify src/browserify.js -o dist/vdt.js -s Vdt -u src/lib/compile.js && uglifyjs dist/vdt.js -o dist/vdt.min.js -m",
     "test": "node_modules/.bin/mocha --compilers coffee:coffee-script/register test/*.coffee; node_modules/.bin/mocha-phantomjs test/browser/index.html",
     "release": "npm run release-patch",
-    "release-patch": "git checkout master && npm version patch && bower version patch 2>null && git push origin master --tags && npm publish",
-    "release-minor": "git checkout master && npm version minor && bower version minor 2>null && git push origin master --tags && npm publish",
-    "release-major": "git checkout master && npm version major && bower version major 2>null && git push origin master --tags && npm publish"
+    "release-patch": "git checkout master && npm version patch && bower version patch 2>/dev/null; git push origin master --tags && npm publish",
+    "release-minor": "git checkout master && npm version minor && bower version minor 2>/dev/null; git push origin master --tags && npm publish",
+    "release-major": "git checkout master && npm version major && bower version major 2>/dev/null; git push origin master --tags && npm publish"
   },
   "dependencies": {
     "dom-delegator": "^13.1.0",
