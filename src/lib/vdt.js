@@ -1,10 +1,7 @@
 var parser = new (require('./parser')),
     stringifier = new (require('./stringifier')),
     virtualDom = require('virtual-domx'),
-    utils = require('./utils'),
-    Delegator = require('dom-delegator');
-
-var delegator = new Delegator();
+    utils = require('./utils');
 
 var Vdt = function(source, options) {
     var vdt = {
@@ -116,7 +113,6 @@ Vdt.parser = parser;
 Vdt.stringifier = stringifier;
 Vdt.virtualDom = virtualDom;
 Vdt.compile = compile;
-Vdt.delegator = delegator;
 Vdt.utils = utils;
 Vdt.setDelimiters = utils.setDelimiters;
 Vdt.getDelimiters = utils.getDelimiters;
