@@ -669,7 +669,7 @@ var Utils = require('./utils'),
     Type = Utils.Type,
     TypeName = Utils.TypeName;
 
-var elementNameRegexp = /^<\w+:?\s*[\w>]/;
+var elementNameRegexp = /^<\w+:?\s*[\w\/>]/;
 
 function isJSXIdentifierPart(ch) {
     return (ch === 58) || (ch === 95) || (ch === 45) ||  // : and _ (underscore) and -
