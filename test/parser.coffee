@@ -166,6 +166,13 @@ describe 'Parser', ->
 
         parser.parse(source).should.be.eql [{"type":6,"typeName":"JSXWidget","value":"Page","attributes":[{"type":4,"typeName":"JSXAttribute","name":"title","value":{"type":1,"typeName":"JSXText","value":"test"}}],"children":[{"type":1,"typeName":"JSXText","value":"\n    "},{"type":2,"typeName":"JSXElement","value":"div","attributes":[],"children":[{"type":1,"typeName":"JSXText","value":"1"}]},{"type":1,"typeName":"JSXText","value":"\n    "},{"type":2,"typeName":"JSXElement","value":"div","attributes":[],"children":[{"type":1,"typeName":"JSXText","value":"2"}]},{"type":1,"typeName":"JSXText","value":"\n"}]}]
 
+    it 'Parse widget which name with one char', ->
+        source = """
+        <div><A /></div>
+        """
+
+        parser.parse(source).should.be.eql [{"type":2,"typeName":"JSXElement","value":"div","attributes":[],"children":[{"type":6,"typeName":"JSXWidget","value":"A","attributes":[],"children":[]}]}]
+
     it 'Parse widget with event', ->
         source = """
         <Page title="test" ev-change:size={function() {console.log(1)}}>
