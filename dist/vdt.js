@@ -1699,7 +1699,11 @@ function removeProperty(node, propName, propValue, previous) {
             } else if (typeof previousValue === "string") {
                 node[propName] = ""
             } else {
-                node[propName] = null
+                try {
+                    node[propName] = null
+                } catch (e) {
+                    node.removeAttribute(propName.toLowerCase());
+                }
             }
         } else if (previousValue.unhook) {
             previousValue.unhook(node, propName, propValue)
