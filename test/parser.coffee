@@ -1,4 +1,5 @@
 Parser = require('../src/lib/parser')
+Utils = require('../src/lib/utils')
 should = require('should')
 
 parser = new Parser
@@ -10,7 +11,10 @@ describe 'Parser', ->
             {<li class="aa"><li>}
         </ul>
         """
-        parser.parse.bind(parser, source).should.throw('expect string </')
+        parser.parse.bind(parser, source).should.throw("""
+            expect string </ At: {line: 3, column: 3} Near: li>}
+            </ul>
+        """)
 
     it 'Redundant } in JSXElement should be parsed correctly', ->
         source = "<div>{a}}</div>"
@@ -49,11 +53,15 @@ describe 'Parser', ->
             })}
         </ul>
         """
-        parser.parse.bind(parser, source).should.throw('Unexpected identifier }')
+        parser.parse.bind(parser, source).should.throw("""
+            Unexpected identifier } At: {line: 3, column: 26} Near:  id={item}}>{item}</li>
+                })
+        """)
 
     it 'Redundant { in should throw a error', ->
         source = "<div>{{a}</div>"
-        parser.parse.bind(parser, source).should.throw('expect string }')
+
+        parser.parse.bind(parser, source).should.throw('expect string } At: {line: 1, column: 12} Near: >{{a}</div>')
 
     it 'Escaped quote in string', ->
         source = """
@@ -204,7 +212,11 @@ describe 'Parser', ->
         </div>
         """
 
-        parser.parse.bind(parser, source).should.throw('Unknown directive c:')
+        parser.parse.bind(parser, source).should.throw("""
+            Unknown directive c: At: {line: 2, column: 5} Near: div>
+                <c:content />
+            </div>
+        """)
 
     it 'Parse vdt template directive', ->
         source = """
@@ -249,3 +261,11 @@ describe 'Parser', ->
         """
 
         parser.parse(source).should.be.eql [{"type":2,"typeName":"JSXElement","value":"div","attributes":[],"children":[{"value":"\n    ","type":1,"typeName":"JSXText"},{"value":" this is html comment ","type":9,"typeName":"JSXComment"},{"value":"\n    test\n","type":1,"typeName":"JSXText"}]}]
+
+#    it 'Parse correctly when set delimiters to ["{{", "}}"]', ->
+#        source = """
+#        <div class={{ className }} style={{{width: '100px'}}}></div>
+#        """
+#
+#        parser.parse(source, {delimiters: ['{{', '}}']}).should.be.eql [{"type":2,"typeName":"JSXElement","value":"div","attributes":[{"name":"class","type":4,"typeName":"JSXAttribute","value":{"value":[{"value":" className ","type":0,"typeName":"JS"}],"type":3,"typeName":"JSXExpressionContainer"}},{"name":"style","type":4,"typeName":"JSXAttribute","value":{"value":[{"value":"{width: '100px'}","type":0,"typeName":"JS"}],"type":3,"typeName":"JSXExpressionContainer"}}],"children":[]}]
+
