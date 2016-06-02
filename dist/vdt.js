@@ -690,6 +690,8 @@ Parser.prototype = {
     parse: function(source, options) {
         this.source = Utils.trimRight(source);
         this.index = 0;
+        this.line = 1;
+        this.column = 1;
         this.length = this.source.length;
 
         this.options = Utils.extend({
@@ -735,11 +737,13 @@ Parser.prototype = {
                 } else if (this._isExpect(Delimiters[1])) {
                     braces.count--;
                     if (braces.count < 0) {
-                        this.index++;
+                        this._updateIndex();
                         break;
                     }
+                } else if (ch === '\n') {
+                    this._updateLine();
                 }
-                this.index++;
+                this._updateIndex();
             }
         }
 
@@ -750,23 +754,24 @@ Parser.prototype = {
         var quote = this._char(),
             start = this.index,
             str = '';
-        this.index++;
+        this._updateIndex();
+        
 
         while (this.index < this.length) {
             var ch = this._char();
-            this.index++;
+            this._updateIndex();
 
             if (ch === quote) {
                 quote = '';
                 break;
             } else if (ch === '\\') {
-                str += this._char(this.index++);
+                str += this._char(this._updateIndex());
             } else {
                 str += ch;
             }
         }
         if (quote !== '') {
-            throw new Error('Unclosed quote');
+            this._error('Unclosed quote');
         }
 
         return this._type(Type.StringLiteral, {value: this.source.slice(start, this.index)});
@@ -782,12 +787,15 @@ Parser.prototype = {
             i;
         loop:
         while (this.index < this.length) {
+            if (this._charCode() === 10) {
+                this._updateLine();
+            }
             for (i = 0; i < l; i++) {
                 if (typeof stopChars[i] === 'function' && stopChars[i].call(this) || this._isExpect(stopChars[i])) {
                     break loop;
                 }
             }
-            this.index++;
+            this._updateIndex();
         }
 
         return this._type(Type.JSXText, {value: this.source.slice(start, this.index)});
@@ -796,11 +804,11 @@ Parser.prototype = {
     _scanJSXStringLiteral: function() {
         var quote = this._char();
         if (quote !== '\'' && quote !== '"') {
-            throw new Error('String literal must starts with a qoute');
+            this._error('String literal must starts with a qoute');
         }
-        this.index++;
+        this._updateIndex();
         var token = this._scanJSXText([quote]);
-        this.index++;
+        this._updateIndex();
         return token;
     },
 
@@ -826,9 +834,9 @@ Parser.prototype = {
                     this._type(Type.JSXBlock, ret);
                     break;
                 default:
-                    throw new Error('Unknown directive ' + String.fromCharCode(flag) + ':');
+                    this._error('Unknown directive ' + String.fromCharCode(flag) + ':');
             }
-            this.index += 2;
+            this._updateIndex(2);
         } else {
             // is an element
             this._type(Type.JSXElement, ret);
@@ -838,7 +846,7 @@ Parser.prototype = {
             if (!isJSXIdentifierPart(this._charCode())) {
                 break;
             }
-            this.index++;
+            this._updateIndex();
         }
 
         ret.value = this.source.slice(start, this.index);
@@ -855,12 +863,12 @@ Parser.prototype = {
         if (ret.type === Type.JSXElement && Utils.isSelfClosingTag(ret.value)) {
             // self closing tag
             if (this._char() === '/') {
-                this.index++;
+                this._updateIndex();
             }
             this._expect('>');
         } else if (this._char() === '/') {
             // unknown self closing tag
-            this.index++;
+            this._updateIndex();
             this._expect('>');
         } else {
             this._expect('>');
@@ -879,7 +887,7 @@ Parser.prototype = {
             } else {
                 var attr = this._parseJSXAttributeName();
                 if (this._char() === '=') {
-                    this.index++;
+                    this._updateIndex();
                     attr.value = this._parseJSXAttributeValue();
                 }
                 ret.push(attr);
@@ -892,14 +900,14 @@ Parser.prototype = {
     _parseJSXAttributeName: function() {
         var start = this.index;
         if (!isJSXIdentifierPart(this._charCode())) {
-            throw new Error('Unexpected identifier ' + this._char());
+            this._error('Unexpected identifier ' + this._char());
         }
         while (this.index < this.length) {
             var ch = this._charCode();
             if (!isJSXIdentifierPart(ch)) {
                 break;
             }
-            this.index++;
+            this._updateIndex();
         }
 
         return this._type(Type.JSXAttribute, {name: this.source.slice(start, this.index)});
@@ -936,7 +944,7 @@ Parser.prototype = {
 
     _parseExpression: function() {
         var ret = this._parseTemplate();
-        this.index--;
+        this._updateIndex(-1);
         return ret;
     },
 
@@ -975,7 +983,7 @@ Parser.prototype = {
             if (!isJSXIdentifierPart(this._charCode())) {
                 break;
             }
-            this.index++;
+            this._updateIndex();;
         }
 
         this._skipWhitespace();
@@ -988,8 +996,10 @@ Parser.prototype = {
         while (this.index < this.length) {
             if (this._isExpect('-->')) {
                 break;
+            } else if (this._charCode() === 10) {
+                this._updateLine();
             }
-            this.index++;
+            this._updateIndex();
         }
         var ret = this._type(Type.JSXComment, {value: this.source.slice(start, this.index)});
         this._expect('-->');
@@ -1003,22 +1013,26 @@ Parser.prototype = {
     },
 
     _charCode: function(index) {
-        arguments.length === 0 && (index = this.index);
-        return this.source.charCodeAt(index);
+         arguments.length === 0 && (index = this.index);
+         return this.source.charCodeAt(index);
     },
 
     _skipWhitespace: function() {
         while (this.index < this.length) {
-            if (!Utils.isWhiteSpace(this._charCode())) {
+            var code = this._charCode();
+            if (!Utils.isWhiteSpace(code)) {
                 break;
+            } else if (code === 10) {
+                // is \n
+                this._updateLine();
             }
-            this.index++;
+            this._updateIndex();
         }
     },
 
     _expect: function(str) {
         if (!this._isExpect(str)) {
-            throw new Error('expect string ' + str);
+            this._error('expect string ' + str);
         }
         this.index += str.length;
     },
@@ -1036,6 +1050,26 @@ Parser.prototype = {
         ret.type = type;
         ret.typeName = TypeName[type];
         return ret;
+    },
+
+    _updateLine: function() {
+        this.line++;
+        this.column = 0;
+    },
+
+    _updateIndex: function(value) {
+        value === undefined && (value = 1);
+        var index = this.index;
+        this.index = this.index + value;
+        this.column = this.column + value;
+        return index;
+    },
+
+    _error: function(msg) {
+        throw new Error(
+            msg + ' At: {line: ' + this.line + ', column: ' + this.column +
+            '} Near: "' + this.source.slice(this.index - 10, this.index + 20) + '"'
+        );
     }
 };
 
