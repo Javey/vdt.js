@@ -12,8 +12,8 @@ describe 'Parser', ->
         </ul>
         """
         parser.parse.bind(parser, source).should.throw("""
-            expect string </ At: {line: 3, column: 3} Near: li>}
-            </ul>
+            expect string </ At: {line: 3, column: 3} Near: "li>}
+            </ul>"
         """)
 
     it 'Redundant } in JSXElement should be parsed correctly', ->
@@ -54,14 +54,14 @@ describe 'Parser', ->
         </ul>
         """
         parser.parse.bind(parser, source).should.throw("""
-            Unexpected identifier } At: {line: 3, column: 26} Near:  id={item}}>{item}</li>
-                })
+            Unexpected identifier } At: {line: 3, column: 26} Near: " id={item}}>{item}</li>
+                })"
         """)
 
     it 'Redundant { in should throw a error', ->
         source = "<div>{{a}</div>"
 
-        parser.parse.bind(parser, source).should.throw('expect string } At: {line: 1, column: 12} Near: >{{a}</div>')
+        parser.parse.bind(parser, source).should.throw('expect string } At: {line: 1, column: 12} Near: ">{{a}</div>"')
 
     it 'Escaped quote in string', ->
         source = """
@@ -213,9 +213,9 @@ describe 'Parser', ->
         """
 
         parser.parse.bind(parser, source).should.throw("""
-            Unknown directive c: At: {line: 2, column: 5} Near: div>
+            Unknown directive c: At: {line: 2, column: 5} Near: "div>
                 <c:content />
-            </div>
+            </div>"
         """)
 
     it 'Parse vdt template directive', ->

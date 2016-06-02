@@ -407,7 +407,7 @@ Parser.prototype = {
     _error: function(msg) {
         throw new Error(
             msg + ' At: {line: ' + this.line + ', column: ' + this.column +
-            '} Near: ' + this.source.slice(this.index - 10, this.index + 20)
+            '} Near: "' + this.source.slice(this.index - 10, this.index + 20) + '"'
         );
     }
 };
