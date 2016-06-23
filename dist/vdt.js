@@ -1379,7 +1379,7 @@ var Utils = {
 
 module.exports = Utils;
 
-},{"./compile":undefined}],19:[function(require,module,exports){
+},{"./compile":19}],19:[function(require,module,exports){
 var parser = new (require('./parser')),
     stringifier = new (require('./stringifier')),
     virtualDom = require('virtual-domx'),

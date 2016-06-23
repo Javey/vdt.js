@@ -3,7 +3,10 @@
   "version": "0.8.8",
   "description": "A template engine based on virtual-dom",
   "main": "src/index",
-  "browser": "src/browserify.js",
+  "browser": {
+      "./src/lib/index": "./src/lib/vdt.js",
+      "./src/lib/compile.js": "./src/lib/vdt.js"
+  },
   "repository": {
     "type": "git",
     "url": "git://github.com/Javey/vdt.js.vdt"
