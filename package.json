@@ -4,7 +4,7 @@
   "description": "A template engine based on virtual-dom",
   "main": "src/index",
   "browser": {
-    "./src/lib/index": "./src/lib/vdt.js",
+    "./src/lib/index.js": "./src/lib/vdt.js",
     "./src/lib/compile.js": "./src/lib/vdt.js"
   },
   "repository": {
