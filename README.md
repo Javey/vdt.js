@@ -49,7 +49,7 @@ npm install vdt --save
                 return <li className="user" id={user.id} ev-click={
                     // use es5's bind or underscore's bind to pass arguments
                     showInfo.bind(null, index, user.name)
-                    // or closure
+                    // or function 
                     /*function() {
                         showInfo(index, user.name);
                     }*/
