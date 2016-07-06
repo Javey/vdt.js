@@ -119,6 +119,7 @@ var Utils = {
             return require('./compile');
         } else {
             // use amd require
+            return typeof require !== 'undefined' ? require : Utils.noRequire;
         }
     })(),
 

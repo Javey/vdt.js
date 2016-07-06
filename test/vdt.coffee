@@ -16,15 +16,15 @@ describe 'Vdt', ->
 
         Vdt(source, {autoReturn: false}).renderString({test: 1}).should.eql("<div>1</div>")
 
-    it 'vdt.data.vdt === vdt', ->
-        vdt = Vdt('<div></div>')
-        vdt.data.vdt.should.equal(vdt)
-        vdt.render()
-        vdt.data.vdt.should.equal(vdt)
-        vdt.render({})
-        vdt.data.vdt.should.equal(vdt)
-        vdt.update({})
-        vdt.data.vdt.should.equal(vdt)
+    # it 'vdt.data.vdt === vdt', ->
+        # vdt = Vdt('<div></div>')
+        # vdt.data.vdt.should.equal(vdt)
+        # vdt.render()
+        # vdt.data.vdt.should.equal(vdt)
+        # vdt.render({})
+        # vdt.data.vdt.should.equal(vdt)
+        # vdt.update({})
+        # vdt.data.vdt.should.equal(vdt)
 
     it 'Render to string', ->
         vdt = Vdt('<div>{test}</div>')

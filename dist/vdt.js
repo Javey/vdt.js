@@ -1369,6 +1369,7 @@ var Utils = {
             return require('./compile');
         } else {
             // use amd require
+            return typeof require !== 'undefined' ? require : Utils.noRequire;
         }
     })(),
 
@@ -1398,7 +1399,8 @@ var Vdt = function(source, options) {
                 vdt.data = data;
             }
             vdt.data.vdt = vdt;
-            vdt.tree = vdt.template.call(vdt.data, vdt.data, Vdt);
+            // pass vdt as `this`, does not dirty data.
+            vdt.tree = vdt.template.call(vdt, vdt.data, Vdt);
             return vdt.tree;
         },
 
@@ -1421,6 +1423,7 @@ var Vdt = function(source, options) {
         data: {},
         tree: {},
         patches: {},
+        widgets: {},
         node: null,
         template: compile(source, options),
 
@@ -1442,7 +1445,7 @@ var Vdt = function(source, options) {
     };
 
     // reference cycle vdt
-    vdt.data.vdt = vdt;
+    // vdt.data.vdt = vdt;
 
     return vdt;
 };
@@ -1458,7 +1461,9 @@ function compile(source, options) {
     options = utils.extend({
         autoReturn: true,
         onlySource: false,
-        delimiters: utils.getDelimiters()
+        delimiters: utils.getDelimiters(),
+        // remove `with` statement, then you can get data by `set.get(name)` method.
+        noWith: false
     }, options);
 
     switch (typeof source) {
@@ -1470,13 +1475,14 @@ function compile(source, options) {
                 '_Vdt || (_Vdt = Vdt);',
                 'obj || (obj = {});',
                 'blocks || (blocks = {});',
-                'var h = _Vdt.virtualDom.h, widgets = this.widgets || (this.widgets = {}), _blocks = {}, __blocks = {},',
-                    'extend = _Vdt.utils.extend;',
-                'obj.require = _Vdt.utils.require || (typeof require === "undefined" ? _Vdt.utils.noRequire : require);',
-                'var self; if (obj.type === "Widget") { self = this; } else { obj.get = function(name) { return obj[name]; }; self = obj; }',
-                'with (obj) {',
-                    hscript,
-                '}'
+                'var h = _Vdt.virtualDom.h, widgets = this && this.widgets || {}, _blocks = {}, __blocks = {},',
+                    'extend = _Vdt.utils.extend, require = _Vdt.utils.require;',
+                'var self = {}; if (obj.type === "Widget") { self = obj; } else { self.get = function(name) { return obj[name]; } }',
+                options.noWith ? hscript : [
+                    'with (obj) {',
+                        hscript,
+                    '}'
+                ].join('\n')
             ].join('\n');
             templateFn = options.onlySource ? utils.noop : new Function('obj', '_Vdt', 'blocks', hscript);
             templateFn.source = 'function(obj, _Vdt, blocks) {\n' + hscript + '\n}';
