@@ -90,9 +90,13 @@ Stringifier.prototype = {
                 element.children = [];
             }
         }
-        var str = "h('" + element.value + "'," + this._visitJSXAttribute(element.attributes) + ", ";
 
-        return str + this._visitJSXChildren(element.children) + ')';
+        return this._visitJSXDiretive(element.directives, this._visitJSXElement(element));
+    },
+
+    _visitJSXElement: function(element) {
+        return "h('" + element.value + "'," + this._visitJSXAttribute(element.attributes) + ", " + 
+            this._visitJSXChildren(element.children) + ')';
     },
 
     _visitJSXChildren: function(children) {
@@ -102,6 +106,48 @@ Stringifier.prototype = {
         }, this);
 
         return '[' + ret.join(', ') + ']';
+    },
+
+    _visitJSXDiretive: function(directives, ret) {
+        var directiveFor = {
+            data: null,
+            value: 'value',
+            key: 'key'
+        };
+        Utils.each(directives, function(directive) {
+            switch (directive.name) {
+                case 'v-if':
+                    ret = this._visitJSXDiretiveIf(directive, ret);
+                    break;
+                case 'v-for':
+                    directiveFor.data = this._visitJSXAttributeValue(directive.value);
+                    break;
+                case 'v-for-value':
+                    directiveFor.value = this._visitJSXText(directive.value, true);
+                    break;
+                case 'v-for-key':
+                    directiveFor.key = this._visitJSXText(directive.value, true);
+                    break;
+                default:
+                    break;
+            }
+        }, this);
+        // if exists v-for
+        if (directiveFor.data) {
+            ret = this._visitJSXDiretiveFor(directiveFor, ret);
+        }
+
+        return ret;
+    },
+
+    _visitJSXDiretiveIf: function(directive, ret) {
+        return this._visitJSXAttributeValue(directive.value) + ' ? ' + ret + ' : undefined';
+    },
+
+    _visitJSXDiretiveFor: function(directive, ret) {
+        return '_Vdt.utils.map(' + directive.data + ', function(' + directive.value + ', ' + directive.key + ') {\n' +
+            'return ' + ret + ';\n' +
+        '}, this)';
     },
 
     _visitJSXChildrenAsString: function(children) {
@@ -117,14 +163,22 @@ Stringifier.prototype = {
     _visitJSXAttribute: function(attributes) {
         var ret = [];
         Utils.each(attributes, function(attr) {
-            ret.push("'" + attrMap(attr.name) + "': " + (Utils.isArray(attr.value) ? this._visitJSXChildren(attr.value) : this._visit(attr.value)));
+            ret.push("'" + attrMap(attr.name) + "': " + this._visitJSXAttributeValue(attr.value));
         }, this);
 
         return ret.length ? '{' + ret.join(', ') + '}' : 'null';
     },
 
-    _visitJSXText: function(element) {
-        return "'" + element.value.replace(/[\r\n]/g, '\\n').replace(/([\'\"])/g, '\\$1') + "'";
+    _visitJSXAttributeValue: function(value) {
+        return Utils.isArray(value) ? this._visitJSXChildren(value) : this._visit(value);
+    },
+
+    _visitJSXText: function(element, noQuotes) {
+        var ret = element.value.replace(/[\r\n]/g, '\\n').replace(/([\'\"])/g, '\\$1');
+        if (!noQuotes) {
+            ret = "'" + ret + "'";
+        }
+        return ret;
     },
 
     _visitJSXWidget: function(element) {
@@ -153,7 +207,7 @@ Stringifier.prototype = {
 
         Utils.each(element.children, function(child) {
             if (child.type === Type.JSXBlock) {
-                blocks.push(this._visitJSXBlock(child, false))
+                blocks.push(this._visitJSXBlock(child, false));
             }
         }, this);
 

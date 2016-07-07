@@ -51,4 +51,14 @@ describe('Template Inherit', function() {
         $children.eq(7).children().length.should.be.eql(6);
         $children.eq(7).children().eq(0).text().should.be.eql('nested template');
     });
+
+    it('should render directive correctly', function() {
+        var vdt = Vdt(document.getElementById('directive').innerHTML),
+            $dom = $(vdt.render({data: ['a', 'b', 'c']})),
+            $children = $dom.children();
+        
+        $children.length.should.be.eql(2);
+        $children.eq(0).text().should.be.eql('a');
+        $children.eq(1).text().should.be.eql('c');
+    });
 });

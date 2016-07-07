@@ -214,3 +214,15 @@ describe 'Stringifier', ->
         """
 
         stringifier.stringify(parser.parse(source)).should.eql """return h('div',null, ['\\n    ', h.c(' this is a html comment '), '\\n    test\\n'])"""
+
+    it 'Stringify directive', ->
+        source = """
+        <div v-if={true} class="test" v-for={data} v-for-key="index">show</div>
+        """
+
+        stringifier.stringify(parser.parse(source)).should.eql """
+        return _Vdt.utils.map(data, function(value, index) {
+        return true ? h('div',{'className': 'test'}, ['show']) : undefined;
+        }, this)
+        """
+

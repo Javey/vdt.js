@@ -194,10 +194,13 @@ Parser.prototype = {
     },
 
     _parseAttributeAndChildren: function(ret) {
+        var attrs = this._parseJSXAttribute();
         Utils.extend(ret, {
-            attributes: this._parseJSXAttribute(),
+            attributes: attrs.attributes,
+            directives: attrs.directives,
             children: []
         });
+        if (!ret.directives.length) delete ret.directives;
 
         if (ret.type === Type.JSXElement && Utils.isSelfClosingTag(ret.value)) {
             // self closing tag
@@ -218,7 +221,10 @@ Parser.prototype = {
     },
 
     _parseJSXAttribute: function() {
-        var ret = [];
+        var ret = {
+            attributes: [],
+            directives: []
+        };
         while (this.index < this.length) {
             this._skipWhitespace();
             if (this._char() === '/' || this._char() === '>') {
@@ -229,7 +235,7 @@ Parser.prototype = {
                     this._updateIndex();
                     attr.value = this._parseJSXAttributeValue();
                 }
-                ret.push(attr);
+                ret[attr.type === Type.JSXAttribute ? 'attributes' : 'directives'].push(attr);
             }
         }
 
@@ -248,8 +254,13 @@ Parser.prototype = {
             }
             this._updateIndex();
         }
+        
+        var name = this.source.slice(start, this.index);
+        if (Utils.isDirective(name)) {
+            return this._type(Type.JSXDirective, {name: name});
+        }
 
-        return this._type(Type.JSXAttribute, {name: this.source.slice(start, this.index)});
+        return this._type(Type.JSXAttribute, {name: name});
     },
 
     _parseJSXAttributeValue: function() {

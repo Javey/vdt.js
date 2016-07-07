@@ -71,6 +71,12 @@
     </t:_parent>
 </script>
 
+<script type="text/vdt" id="directive">
+    <ul>
+        <li v-for={data} v-if={key % 2 === 0}>{value}</li>
+    </ul>
+</script>
+
 <script src="mocha.js"></script>
 <script src="should.js"></script>
 <script src="../../dist/vdt.js"></script>

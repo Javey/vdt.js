@@ -855,10 +855,13 @@ Parser.prototype = {
     },
 
     _parseAttributeAndChildren: function(ret) {
+        var attrs = this._parseJSXAttribute();
         Utils.extend(ret, {
-            attributes: this._parseJSXAttribute(),
+            attributes: attrs.attributes,
+            directives: attrs.directives,
             children: []
         });
+        if (!ret.directives.length) delete ret.directives;
 
         if (ret.type === Type.JSXElement && Utils.isSelfClosingTag(ret.value)) {
             // self closing tag
@@ -879,7 +882,10 @@ Parser.prototype = {
     },
 
     _parseJSXAttribute: function() {
-        var ret = [];
+        var ret = {
+            attributes: [],
+            directives: []
+        };
         while (this.index < this.length) {
             this._skipWhitespace();
             if (this._char() === '/' || this._char() === '>') {
@@ -890,7 +896,7 @@ Parser.prototype = {
                     this._updateIndex();
                     attr.value = this._parseJSXAttributeValue();
                 }
-                ret.push(attr);
+                ret[attr.type === Type.JSXAttribute ? 'attributes' : 'directives'].push(attr);
             }
         }
 
@@ -909,8 +915,13 @@ Parser.prototype = {
             }
             this._updateIndex();
         }
+        
+        var name = this.source.slice(start, this.index);
+        if (Utils.isDirective(name)) {
+            return this._type(Type.JSXDirective, {name: name});
+        }
 
-        return this._type(Type.JSXAttribute, {name: this.source.slice(start, this.index)});
+        return this._type(Type.JSXAttribute, {name: name});
     },
 
     _parseJSXAttributeValue: function() {
@@ -1168,9 +1179,13 @@ Stringifier.prototype = {
                 element.children = [];
             }
         }
-        var str = "h('" + element.value + "'," + this._visitJSXAttribute(element.attributes) + ", ";
 
-        return str + this._visitJSXChildren(element.children) + ')';
+        return this._visitJSXDiretive(element.directives, this._visitJSXElement(element));
+    },
+
+    _visitJSXElement: function(element) {
+        return "h('" + element.value + "'," + this._visitJSXAttribute(element.attributes) + ", " + 
+            this._visitJSXChildren(element.children) + ')';
     },
 
     _visitJSXChildren: function(children) {
@@ -1180,6 +1195,48 @@ Stringifier.prototype = {
         }, this);
 
         return '[' + ret.join(', ') + ']';
+    },
+
+    _visitJSXDiretive: function(directives, ret) {
+        var directiveFor = {
+            data: null,
+            value: 'value',
+            key: 'key'
+        };
+        Utils.each(directives, function(directive) {
+            switch (directive.name) {
+                case 'v-if':
+                    ret = this._visitJSXDiretiveIf(directive, ret);
+                    break;
+                case 'v-for':
+                    directiveFor.data = this._visitJSXAttributeValue(directive.value);
+                    break;
+                case 'v-for-value':
+                    directiveFor.value = this._visitJSXText(directive.value, true);
+                    break;
+                case 'v-for-key':
+                    directiveFor.key = this._visitJSXText(directive.value, true);
+                    break;
+                default:
+                    break;
+            }
+        }, this);
+        // if exists v-for
+        if (directiveFor.data) {
+            ret = this._visitJSXDiretiveFor(directiveFor, ret);
+        }
+
+        return ret;
+    },
+
+    _visitJSXDiretiveIf: function(directive, ret) {
+        return this._visitJSXAttributeValue(directive.value) + ' ? ' + ret + ' : undefined';
+    },
+
+    _visitJSXDiretiveFor: function(directive, ret) {
+        return '_Vdt.utils.map(' + directive.data + ', function(' + directive.value + ', ' + directive.key + ') {\n' +
+            'return ' + ret + ';\n' +
+        '}, this)';
     },
 
     _visitJSXChildrenAsString: function(children) {
@@ -1195,14 +1252,22 @@ Stringifier.prototype = {
     _visitJSXAttribute: function(attributes) {
         var ret = [];
         Utils.each(attributes, function(attr) {
-            ret.push("'" + attrMap(attr.name) + "': " + (Utils.isArray(attr.value) ? this._visitJSXChildren(attr.value) : this._visit(attr.value)));
+            ret.push("'" + attrMap(attr.name) + "': " + this._visitJSXAttributeValue(attr.value));
         }, this);
 
         return ret.length ? '{' + ret.join(', ') + '}' : 'null';
     },
 
-    _visitJSXText: function(element) {
-        return "'" + element.value.replace(/[\r\n]/g, '\\n').replace(/([\'\"])/g, '\\$1') + "'";
+    _visitJSXAttributeValue: function(value) {
+        return Utils.isArray(value) ? this._visitJSXChildren(value) : this._visit(value);
+    },
+
+    _visitJSXText: function(element, noQuotes) {
+        var ret = element.value.replace(/[\r\n]/g, '\\n').replace(/([\'\"])/g, '\\$1');
+        if (!noQuotes) {
+            ret = "'" + ret + "'";
+        }
+        return ret;
     },
 
     _visitJSXWidget: function(element) {
@@ -1231,7 +1296,7 @@ Stringifier.prototype = {
 
         Utils.each(element.children, function(child) {
             if (child.type === Type.JSXBlock) {
-                blocks.push(this._visitJSXBlock(child, false))
+                blocks.push(this._visitJSXBlock(child, false));
             }
         }, this);
 
@@ -1266,7 +1331,9 @@ var i = 0,
         JSXWidget: i++,
         JSXVdt: i++,
         JSXBlock: i++,
-        JSXComment: i++
+        JSXComment: i++,
+
+        JSXDirective: i++
     },
     TypeName = [],
 
@@ -1289,6 +1356,13 @@ var i = 0,
         'wbr': true
     },
 
+    Directives = {
+        'v-if': true,
+        'v-for': true,
+        'v-for-value': true,
+        'v-for-key': true
+    },
+
     Delimiters = ['{', '}'];
 
 var hasOwn = Object.prototype.hasOwnProperty;
@@ -1301,13 +1375,44 @@ var hasOwn = Object.prototype.hasOwnProperty;
     }
 })();
 
-var Utils = {
-    each: function(collection, iterate, thisArgs) {
-        for (var i = 0, l = collection.length; i < l; i++) {
-            var item = collection[i];
-            iterate.call(thisArgs, item, i);
+function isArrayLike(value) {
+    if (value == null) return false;
+    var length = value.length;
+    return typeof length === 'number' && length > -1 && length % 1 === 0 && length <= 9007199254740991 && typeof value !== 'function';
+}
+
+function each(obj, iter, thisArg) {
+    if (isArrayLike(obj)) {
+        for (var i = 0, l = obj.length; i < l; i++) {
+            iter.call(thisArg, obj[i], i, obj);
+        } 
+    } else if (isObject(obj)) {
+        for (var key in obj) {
+            if (hasOwn.call(obj, key)) {
+                iter.call(thisArg, obj[key], key, obj);
+            }
         }
+    }
+}
+
+function isObject(obj) {
+    var type = typeof obj;
+    return type === 'function' || type === 'object' && !!obj; 
+}
+
+
+var Utils = {
+    each: each,
+
+    map: function(obj, iter, thisArgs) {
+        var ret = [];
+        each(obj, function(value, key, obj) {
+            ret.push(iter.call(thisArgs, value, key, obj));
+        });
+        return ret;
     },
+
+    isObject: isObject,
 
     isWhiteSpace: function(charCode) {
         return ((charCode <= 160 && (charCode >= 9 && charCode <= 13) || charCode == 32 || charCode == 160) || charCode == 5760 || charCode == 6158 ||
@@ -1337,7 +1442,11 @@ var Utils = {
     },
 
     isSelfClosingTag: function(tag) {
-        return SelfClosingTags[tag];
+        return hasOwn.call(SelfClosingTags, tag);
+    },
+
+    isDirective: function(name) {
+        return hasOwn.call(Directives, name);
     },
 
     extend: function(dest, source) {

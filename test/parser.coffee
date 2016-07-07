@@ -262,6 +262,12 @@ describe 'Parser', ->
 
         parser.parse(source).should.be.eql [{"type":2,"typeName":"JSXElement","value":"div","attributes":[],"children":[{"value":"\n    ","type":1,"typeName":"JSXText"},{"value":" this is html comment ","type":9,"typeName":"JSXComment"},{"value":"\n    test\n","type":1,"typeName":"JSXText"}]}]
 
+    it 'Parse directive', ->
+        source = """
+        <div v-if={true} class="test" v-for={data} v-for-value="item" v-for-key="index">show</div>
+        """
+
+        parser.parse(source).should.be.eql [{"type":2,"typeName":"JSXElement","value":"div","attributes":[{"name":"class","type":4,"typeName":"JSXAttribute","value":{"value":"test","type":1,"typeName":"JSXText"}}],"directives":[{"name":"v-if","type":10,"typeName":"JSXDirective","value":{"value":[{"value":"true","type":0,"typeName":"JS"}],"type":3,"typeName":"JSXExpressionContainer"}},{"name":"v-for","type":10,"typeName":"JSXDirective","value":{"value":[{"value":"data","type":0,"typeName":"JS"}],"type":3,"typeName":"JSXExpressionContainer"}},{"name":"v-for-value","type":10,"typeName":"JSXDirective","value":{"value":"item","type":1,"typeName":"JSXText"}},{"name":"v-for-key","type":10,"typeName":"JSXDirective","value":{"value":"index","type":1,"typeName":"JSXText"}}],"children":[{"value":"show","type":1,"typeName":"JSXText"}]}]
 #    it 'Parse correctly when set delimiters to ["{{", "}}"]', ->
 #        source = """
 #        <div class={{ className }} style={{{width: '100px'}}}></div>

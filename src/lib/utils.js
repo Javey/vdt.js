@@ -16,7 +16,9 @@ var i = 0,
         JSXWidget: i++,
         JSXVdt: i++,
         JSXBlock: i++,
-        JSXComment: i++
+        JSXComment: i++,
+
+        JSXDirective: i++
     },
     TypeName = [],
 
@@ -39,6 +41,13 @@ var i = 0,
         'wbr': true
     },
 
+    Directives = {
+        'v-if': true,
+        'v-for': true,
+        'v-for-value': true,
+        'v-for-key': true
+    },
+
     Delimiters = ['{', '}'];
 
 var hasOwn = Object.prototype.hasOwnProperty;
@@ -51,13 +60,44 @@ var hasOwn = Object.prototype.hasOwnProperty;
     }
 })();
 
-var Utils = {
-    each: function(collection, iterate, thisArgs) {
-        for (var i = 0, l = collection.length; i < l; i++) {
-            var item = collection[i];
-            iterate.call(thisArgs, item, i);
+function isArrayLike(value) {
+    if (value == null) return false;
+    var length = value.length;
+    return typeof length === 'number' && length > -1 && length % 1 === 0 && length <= 9007199254740991 && typeof value !== 'function';
+}
+
+function each(obj, iter, thisArg) {
+    if (isArrayLike(obj)) {
+        for (var i = 0, l = obj.length; i < l; i++) {
+            iter.call(thisArg, obj[i], i, obj);
+        } 
+    } else if (isObject(obj)) {
+        for (var key in obj) {
+            if (hasOwn.call(obj, key)) {
+                iter.call(thisArg, obj[key], key, obj);
+            }
         }
+    }
+}
+
+function isObject(obj) {
+    var type = typeof obj;
+    return type === 'function' || type === 'object' && !!obj; 
+}
+
+
+var Utils = {
+    each: each,
+
+    map: function(obj, iter, thisArgs) {
+        var ret = [];
+        each(obj, function(value, key, obj) {
+            ret.push(iter.call(thisArgs, value, key, obj));
+        });
+        return ret;
     },
+
+    isObject: isObject,
 
     isWhiteSpace: function(charCode) {
         return ((charCode <= 160 && (charCode >= 9 && charCode <= 13) || charCode == 32 || charCode == 160) || charCode == 5760 || charCode == 6158 ||
@@ -87,7 +127,11 @@ var Utils = {
     },
 
     isSelfClosingTag: function(tag) {
-        return SelfClosingTags[tag];
+        return hasOwn.call(SelfClosingTags, tag);
+    },
+
+    isDirective: function(name) {
+        return hasOwn.call(Directives, name);
     },
 
     extend: function(dest, source) {
