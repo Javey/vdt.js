@@ -19,7 +19,14 @@ module.exports = function(file) {
             var contents = fs.readFileSync(file).toString();
             cache[file] = Vdt.compile(contents);
             cache[file].mtime = mtime;
-            return cache[file];
+            return function() {
+                try {
+                    return cache[file].apply(this, arguments);
+                } catch (e) {
+                    e.source || (e.source = '/* file: ' + file + ' */\n' + cache[file].source);
+                    throw e;
+                }
+            };
         } catch (e) {
             e.message += ' in file: ' + file;
             throw e;
