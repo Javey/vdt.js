@@ -174,6 +174,7 @@ describe 'Stringifier', ->
 
         stringifier.stringify(parser.parse(source)).should.eql("""return h('div',{'className':  className , 'style':  {width: '100px'} }, ['\\n    {test} ',  test ? "test" : '{test}' , '\\n'])""")
         Utils.setDelimiters(['{', '}'])
+
     it 'Set Delimiters to ["{%", "%}"]', ->
         source = """
         <div class={% className %} style={% {width: '100px'} %}>
@@ -225,4 +226,11 @@ describe 'Stringifier', ->
         return true ? h('div',{'className': 'test'}, ['show']) : undefined;
         }, this)
         """
+
+    it 'Stringify object className', ->
+        source = """
+        <div class={{a: true, 'b c': 1}}><i class="{a: 1}"></i></div>
+        """
+
+        stringifier.stringify(parser.parse(source)).should.eql "return h('div',{'className': _Vdt.utils.className({a: true, 'b c': 1})}, [h('i',{'className': '{a: 1}'}, [])])"
 

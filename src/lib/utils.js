@@ -97,6 +97,16 @@ var Utils = {
         return ret;
     },
 
+    className: function(obj) {
+        var ret = [];
+        for (var key in obj) {
+            if (hasOwn.call(obj, key) && obj[key]) {
+                ret.push(key);
+            }
+        }
+        return ret.join(' ');
+    },
+
     isObject: isObject,
 
     isWhiteSpace: function(charCode) {
@@ -110,6 +120,14 @@ var Utils = {
         while (index-- && Utils.isWhiteSpace(str.charCodeAt(index))) {}
 
         return str.slice(0, index + 1);
+    },
+
+    trimLeft: function(str) {
+        var length = str.length, index = -1;
+
+        while (index++ < length && Utils.isWhiteSpace(str.charCodeAt(index))) {}
+
+        return str.slice(index);
     },
 
     Type: Type,

@@ -61,4 +61,11 @@ describe('Template Inherit', function() {
         $children.eq(0).text().should.be.eql('a');
         $children.eq(1).text().should.be.eql('c');
     });
+
+    it('should render object className correctly', function() {
+        var vdt = Vdt('<div class={{a: true, "b c": 1}}><div class="{a: 1}"></div></div>'),
+            $dom = $(vdt.render());
+        $dom.attr('class').should.be.eql('a b c');
+        $dom.children().eq(0).attr('class').should.be.eql('{a: 1}');
+    });
 });

@@ -163,7 +163,13 @@ Stringifier.prototype = {
     _visitJSXAttribute: function(attributes) {
         var ret = [];
         Utils.each(attributes, function(attr) {
-            ret.push("'" + attrMap(attr.name) + "': " + this._visitJSXAttributeValue(attr.value));
+            var name = attrMap(attr.name),
+                value = this._visitJSXAttributeValue(attr.value);
+            if (name === 'className' && attr.value.type === Type.JSXExpressionContainer && Utils.trimLeft(value)[0] === '{') {
+                // for class={ {active: true} }
+                value = '_Vdt.utils.className(' + value + ')';
+            }
+            ret.push("'" + name + "': " + value);
         }, this);
 
         return ret.length ? '{' + ret.join(', ') + '}' : 'null';
