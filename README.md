@@ -262,7 +262,7 @@ To simplify writing template, vdt provides some directives as syntax sugar.
 </ul>
 ```
 
-The default `key/value` argument's name is 'key/value'. You can change it by using `v-for-value/v-for-key` direcitve.
+The default `key/value` argument's name is 'key/value'. You can change it by using `v-for-value/v-for-key` directive.
 
 ```jsx
 <ul>
