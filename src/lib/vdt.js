@@ -93,8 +93,7 @@ function compile(source, options) {
                 'obj || (obj = {});',
                 'blocks || (blocks = {});',
                 'var h = _Vdt.virtualDom.h, widgets = this && this.widgets || {}, _blocks = {}, __blocks = {},',
-                    'extend = _Vdt.utils.extend, require = _Vdt.utils.require;',
-                'var self = {}; if (obj.type === "Widget") { self = obj; } else { self.get = function(name) { return obj[name]; } }',
+                    'extend = _Vdt.utils.extend, require = _Vdt.utils.require, self = obj;',
                 options.noWith ? hscript : [
                     'with (obj) {',
                         hscript,
