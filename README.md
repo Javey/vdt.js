@@ -216,6 +216,60 @@ The default delimiter is `['{', '}']`. You can set it by `Vdt.setDelimiters(deli
 Vdt.setDelimiters(['{{', '}}']);
 ```
 
+# Remove `with` statement
+
+Vdt use `with` statement to simplify getting data. But it's slow. You can remove it like below.
+
+```js
+Vdt.compile(templateString, {noWith: true});
+// or
+Vdt(templateString, {noWith: true});
+```
+
+Then you can get data like below. use `self`, it points to the data that rendered to template.
+
+```jsx
+<div>{self.name}</div>
+```
+
+# Directives
+
+To simplify writing template, vdt provides some directives as syntax sugar.
+
+## v-if
+
+```jsx
+{show ? <div>show</div> : undefined}
+
+=>
+
+<div v-if={show}>show</div>
+```
+
+## v-for v-for-value v-for-key
+
+```jsx
+<ul>
+    {_.map(data, function(value, key) {
+        return <li>{value}</li>
+    })}
+</ul>
+
+=>
+
+<ul>
+    <li v-for={data}>{value}</li>
+</ul>
+```
+
+The default `key/value` argument's name is 'key/value'. You can change it by using `v-for-value/v-for-key` direcitve.
+
+```jsx
+<ul>
+    <li v-for{data} v-for-value="item" v-for-key="index">{index}: {item}</li>
+</ul>
+```
+
 # Api
 
 ## Vdt(source, [options])
