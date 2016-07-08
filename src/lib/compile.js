@@ -23,7 +23,8 @@ module.exports = function(file) {
                 try {
                     return cache[file].apply(this, arguments);
                 } catch (e) {
-                    e.source || (e.source = '/* file: ' + file + ' */\n' + cache[file].source);
+                    e.source || (e.source = []);
+                    e.source.push('/* file: ' + file + ' */\n' + cache[file].source);
                     throw e;
                 }
             };
