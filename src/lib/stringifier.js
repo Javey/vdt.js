@@ -189,7 +189,7 @@ Stringifier.prototype = {
 
     _visitJSXWidget: function(element) {
         element.attributes.push({name: 'children', value: element.children});
-        return element.value + '(' + this._visitJSXAttribute(element.attributes) + ', widgets)';
+        return this._visitJSXDiretive(element.directives, element.value + '(' + this._visitJSXAttribute(element.attributes) + ', widgets)');
     },
 
     _visitJSXBlock: function(element, isAncestor) {

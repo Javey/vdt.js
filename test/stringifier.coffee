@@ -227,6 +227,16 @@ describe 'Stringifier', ->
         }, this)
         """
 
+    it 'Stringify directive in Widget', ->
+        source = """
+        <Div v-if={true} class="test" v-for={data} v-for-key="index">show</Div>
+        """
+        stringifier.stringify(parser.parse(source)).should.eql """
+        return _Vdt.utils.map(data, function(value, index) {
+        return true ? Div({'className': 'test', 'children': ['show']}, widgets) : undefined;
+        }, this)
+        """
+
     it 'Stringify object className', ->
         source = """
         <div class={{a: true, 'b c': 1}}><i class="{a: 1}"></i></div>
