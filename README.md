@@ -246,7 +246,7 @@ To simplify writing template, vdt provides some directives as syntax sugar.
 <div v-if={show}>show</div>
 ```
 
-## v-for v-for-value v-for-key
+## v-for & v-for-value & v-for-key
 
 ```jsx
 <ul>
@@ -266,7 +266,7 @@ The default `key/value` argument's name is 'key/value'. You can change it by usi
 
 ```jsx
 <ul>
-    <li v-for{data} v-for-value="item" v-for-key="index">{index}: {item}</li>
+    <li v-for={data} v-for-value="item" v-for-key="index">{index}: {item}</li>
 </ul>
 ```
 
