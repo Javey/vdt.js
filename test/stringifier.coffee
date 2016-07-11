@@ -172,7 +172,7 @@ describe 'Stringifier', ->
         """
         Utils.setDelimiters(['{{', '}}'])
 
-        stringifier.stringify(parser.parse(source)).should.eql("""return h('div',{'className':  className , 'style':  {width: '100px'} }, ['\\n    {test} ',  test ? "test" : '{test}' , '\\n'])""")
+        stringifier.stringify(parser.parse(source)).should.eql("""return h('div',{'className': _Vdt.utils.className( className ), 'style':  {width: '100px'} }, ['\\n    {test} ',  test ? "test" : '{test}' , '\\n'])""")
         Utils.setDelimiters(['{', '}'])
 
     it 'Set Delimiters to ["{%", "%}"]', ->
@@ -183,7 +183,7 @@ describe 'Stringifier', ->
         """
         Utils.setDelimiters(['{%', '%}'])
 
-        stringifier.stringify(parser.parse(source)).should.eql("""return h('div',{'className':  className , 'style':  {width: '100px'} }, ['\\n    {test} ',  test ? "test" : '{test}' , '\\n'])""")
+        stringifier.stringify(parser.parse(source)).should.eql("""return h('div',{'className': _Vdt.utils.className( className ), 'style':  {width: '100px'} }, ['\\n    {test} ',  test ? "test" : '{test}' , '\\n'])""")
         Utils.setDelimiters(['{', '}'])
 
     it '< in textNode', ->

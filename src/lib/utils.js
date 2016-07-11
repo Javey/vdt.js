@@ -98,6 +98,8 @@ var Utils = {
     },
 
     className: function(obj) {
+        if (obj == null) return;
+        if (typeof obj === 'string') return obj;
         var ret = [];
         for (var key in obj) {
             if (hasOwn.call(obj, key) && obj[key]) {

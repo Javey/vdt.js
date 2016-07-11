@@ -67,5 +67,15 @@ describe('Template Inherit', function() {
             $dom = $(vdt.render());
         $dom.attr('class').should.be.eql('a b c');
         $dom.children().eq(0).attr('class').should.be.eql('{a: 1}');
+
+        vdt = Vdt('var className = {a: true, "b c": 1}; <div class={className}></div>');
+        $dom = $(vdt.render());
+        $dom.attr('class').should.be.eql('a b c');
+        vdt = Vdt('var className = null; <div class={className}></div>');
+        $dom = $(vdt.render());
+        ($dom.attr('class') === undefined).should.be.true;
+        vdt = Vdt('var className = undefined; <div class={className}></div>');
+        $dom = $(vdt.render());
+        ($dom.attr('class') === undefined).should.be.true;
     });
 });
