@@ -177,19 +177,7 @@ var Utils = {
 
     noop: function() {},
 
-    require: (function() {
-        var isNode = new Function("try { return this === global; } catch (e) { return false; }"); 
-        if (isNode()) {
-            return require('./compile');
-        } else {
-            // use amd require
-            return typeof require !== 'undefined' ? require : Utils.noRequire;
-        }
-    })(),
-
-    noRequire: function() {
-        throw new Error('Vdt depends RequireJs to require file over http.');
-    }
+    require: require('./compile')
 };
 
 module.exports = Utils;

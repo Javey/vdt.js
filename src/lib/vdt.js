@@ -80,7 +80,9 @@ function compile(source, options) {
         onlySource: false,
         delimiters: utils.getDelimiters(),
         // remove `with` statement, then you can get data by `set.get(name)` method.
-        noWith: false
+        noWith: false,
+        // whether to render on server or not
+        server: false
     }, options);
 
     switch (typeof source) {
@@ -93,7 +95,9 @@ function compile(source, options) {
                 'obj || (obj = {});',
                 'blocks || (blocks = {});',
                 'var h = _Vdt.virtualDom.h, widgets = this && this.widgets || {}, _blocks = {}, __blocks = {},',
-                    'extend = _Vdt.utils.extend, require = _Vdt.utils.require, self = this.data, scope = obj;',
+                    'extend = _Vdt.utils.extend, ' +
+                    (options.server ? 'require = _Vdt.utils.require, ' : '') +
+                    'self = this.data, scope = obj;',
                 options.noWith ? hscript : [
                     'with (obj) {',
                         hscript,

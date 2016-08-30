@@ -17,7 +17,9 @@ module.exports = function(file) {
     function compile(mtime) {
         try {
             var contents = fs.readFileSync(file).toString();
-            cache[file] = Vdt.compile(contents);
+            cache[file] = Vdt.compile(contents, {
+                server: true
+            });
             cache[file].mtime = mtime;
             return function() {
                 try {
