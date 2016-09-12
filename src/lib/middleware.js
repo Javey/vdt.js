@@ -19,7 +19,10 @@ module.exports = function(options) {
         force: false,
         autoReturn: true,
         onlySource: true,
-        delimiters: Utils.getDelimiters()
+        delimiters: Utils.getDelimiters(),
+        filterSource: function(source) {
+            return source;
+        }
     }, options);
 
     var cache = {};
@@ -39,18 +42,18 @@ module.exports = function(options) {
         }
 
         function compile(mtime) {
-            var obj = cache[vdtFile] = {};
             fs.readFile(vdtFile, 'utf-8', function(err, contents) {
                 if (err) return error(err);
                 try {
-                    obj = Vdt.compile(contents, options);
+                    var obj = cache[vdtFile] =  Vdt.compile(contents, options);
                     if (options.amd) {
                         obj.source = 'define(function(require) {\n return ' + obj.source + '\n})';
                     }
                     obj.mtime = mtime;
+                    obj.source = options.filterSource(obj.source);
                     return send(obj.source);
-                } catch (err) {
-                    return error(err);
+                } catch (e) {
+                    return error(e);
                 }
             });
         }
@@ -62,6 +65,7 @@ module.exports = function(options) {
 
         function stat() {
             fs.stat(vdtFile, function(err, stats) {
+                console.log(vdtFile, err);
                 if (err) return error(err);
 
                 var obj = cache[vdtFile];
