@@ -1,6 +1,6 @@
 {
   "name": "vdt",
-  "version": "0.9.9",
+  "version": "0.9.10",
   "description": "A template engine based on virtual-dom",
   "main": "src/index",
   "browser": {
