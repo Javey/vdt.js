@@ -104,7 +104,7 @@ function compile(source, options) {
                     '}'
                 ].join('\n')
             ].join('\n');
-            templateFn = options.onlySource ? utils.noop : new Function('obj', '_Vdt', 'blocks', hscript);
+            templateFn = options.onlySource ? function() {} : new Function('obj', '_Vdt', 'blocks', hscript);
             templateFn.source = 'function(obj, _Vdt, blocks) {\n' + hscript + '\n}';
             break;
         case 'function':
