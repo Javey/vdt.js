@@ -12,7 +12,7 @@ describe 'Parser', ->
         </ul>
         """
         parser.parse.bind(parser, source).should.throw("""
-            expect string </ At: {line: 3, column: 3} Near: "li>}
+            expect string </ At: {line: 3, column: 6} Near: "li>}
             </ul>"
         """)
 
@@ -54,14 +54,14 @@ describe 'Parser', ->
         </ul>
         """
         parser.parse.bind(parser, source).should.throw("""
-            Unexpected identifier } At: {line: 3, column: 26} Near: " id={item}}>{item}</li>
+            Unexpected identifier } At: {line: 3, column: 29} Near: " id={item}}>{item}</li>
                 })"
         """)
 
     it 'Redundant { in should throw a error', ->
         source = "<div>{{a}</div>"
 
-        parser.parse.bind(parser, source).should.throw('expect string } At: {line: 1, column: 12} Near: ">{{a}</div>"')
+        parser.parse.bind(parser, source).should.throw('expect string } At: {line: 1, column: 16} Near: "{{a}</div>"')
 
     it 'Escaped quote in string', ->
         source = """
@@ -213,7 +213,7 @@ describe 'Parser', ->
         """
 
         parser.parse.bind(parser, source).should.throw("""
-            Unknown directive c: At: {line: 2, column: 5} Near: "div>
+            Unknown directive c: At: {line: 2, column: 6} Near: "div>
                 <c:content />
             </div>"
         """)
@@ -269,10 +269,10 @@ describe 'Parser', ->
 
         parser.parse(source).should.be.eql [{"type":2,"typeName":"JSXElement","value":"div","attributes":[{"name":"class","type":4,"typeName":"JSXAttribute","value":{"value":"test","type":1,"typeName":"JSXText"}}],"directives":[{"name":"v-if","type":10,"typeName":"JSXDirective","value":{"value":[{"value":"true","type":0,"typeName":"JS"}],"type":3,"typeName":"JSXExpressionContainer"}},{"name":"v-for","type":10,"typeName":"JSXDirective","value":{"value":[{"value":"data","type":0,"typeName":"JS"}],"type":3,"typeName":"JSXExpressionContainer"}},{"name":"v-for-value","type":10,"typeName":"JSXDirective","value":{"value":"item","type":1,"typeName":"JSXText"}},{"name":"v-for-key","type":10,"typeName":"JSXDirective","value":{"value":"index","type":1,"typeName":"JSXText"}}],"children":[{"value":"show","type":1,"typeName":"JSXText"}]}]
 
-#    it 'Parse correctly when set delimiters to ["{{", "}}"]', ->
-#        source = """
-#        <div class={{ className }} style={{{width: '100px'}}}></div>
-#        """
-#
-#        parser.parse(source, {delimiters: ['{{', '}}']}).should.be.eql [{"type":2,"typeName":"JSXElement","value":"div","attributes":[{"name":"class","type":4,"typeName":"JSXAttribute","value":{"value":[{"value":" className ","type":0,"typeName":"JS"}],"type":3,"typeName":"JSXExpressionContainer"}},{"name":"style","type":4,"typeName":"JSXAttribute","value":{"value":[{"value":"{width: '100px'}","type":0,"typeName":"JS"}],"type":3,"typeName":"JSXExpressionContainer"}}],"children":[]}]
+    it 'Parse correctly when set delimiters to ["{{", "}}"]', ->
+        source = """
+        <div class={{ className }} style={{{width: '100px'}}}></div>
+        """
+
+        parser.parse(source, {delimiters: ['{{', '}}']}).should.be.eql [{"type":2,"typeName":"JSXElement","value":"div","attributes":[{"name":"class","type":4,"typeName":"JSXAttribute","value":{"value":[{"value":" className ","type":0,"typeName":"JS"}],"type":3,"typeName":"JSXExpressionContainer"}},{"name":"style","type":4,"typeName":"JSXAttribute","value":{"value":[{"value":"{width: '100px'}","type":0,"typeName":"JS"}],"type":3,"typeName":"JSXExpressionContainer"}}],"children":[]}]
 

@@ -732,14 +732,14 @@ Parser.prototype = {
             } else if (this._isElementStart()) {
                 break;
             } else {
-                if (this._isExpect(Delimiters[0])) {
+                if (ch === '{') {
                     braces.count++;
-                } else if (this._isExpect(Delimiters[1])) {
+                } else if (braces.count > 0 && ch === '}') {
                     braces.count--;
-                    if (braces.count < 0) {
-                        this._updateIndex();
-                        break;
-                    }
+                } else if (this._isExpect(Delimiters[1])) {
+                    // for parseTemplate break
+                    braces.count--;
+                    break;
                 } else if (ch === '\n') {
                     this._updateLine();
                 }
@@ -747,7 +747,9 @@ Parser.prototype = {
             }
         }
 
-        return this._type(Type.JS, {value: this.source.slice(start, braces.count < 0 ? this.index - 1 : this.index)});
+        return this._type(Type.JS, {
+            value: this.source.slice(start, this.index)
+        });
     },
 
     _scanStringLiteral: function() {
@@ -774,7 +776,9 @@ Parser.prototype = {
             this._error('Unclosed quote');
         }
 
-        return this._type(Type.StringLiteral, {value: this.source.slice(start, this.index)});
+        return this._type(Type.StringLiteral, {
+            value: this.source.slice(start, this.index)
+        });
     },
 
     _scanJSX: function() {
@@ -791,14 +795,18 @@ Parser.prototype = {
                 this._updateLine();
             }
             for (i = 0; i < l; i++) {
-                if (typeof stopChars[i] === 'function' && stopChars[i].call(this) || this._isExpect(stopChars[i])) {
+                if (typeof stopChars[i] === 'function' && stopChars[i].call(this) || 
+                    this._isExpect(stopChars[i])
+                ) {
                     break loop;
                 }
             }
             this._updateIndex();
         }
 
-        return this._type(Type.JSXText, {value: this.source.slice(start, this.index)});
+        return this._type(Type.JSXText, {
+            value: this.source.slice(start, this.index)
+        });
     },
 
     _scanJSXStringLiteral: function() {
@@ -954,15 +962,15 @@ Parser.prototype = {
     },
 
     _parseExpression: function() {
-        var ret = this._parseTemplate();
-        this._updateIndex(-1);
-        return ret;
+        return this._parseTemplate();
     },
 
     _parseJSXChildren: function() {
         var children = [];
         while (this.index < this.length) {
-            if (this._char(this.index) === '<' && this._char(this.index + 1) === '/') {
+            if (this._char(this.index) === '<' && 
+                this._char(this.index + 1) === '/'
+            ) {
                 break;
             }
             children.push(this._parseJSXChild());
@@ -994,7 +1002,7 @@ Parser.prototype = {
             if (!isJSXIdentifierPart(this._charCode())) {
                 break;
             }
-            this._updateIndex();;
+            this._updateIndex();
         }
 
         this._skipWhitespace();
@@ -1012,7 +1020,9 @@ Parser.prototype = {
             }
             this._updateIndex();
         }
-        var ret = this._type(Type.JSXComment, {value: this.source.slice(start, this.index)});
+        var ret = this._type(Type.JSXComment, {
+            value: this.source.slice(start, this.index)
+        });
         this._expect('-->');
 
         return ret;
@@ -1045,7 +1055,7 @@ Parser.prototype = {
         if (!this._isExpect(str)) {
             this._error('expect string ' + str);
         }
-        this.index += str.length;
+        this._updateIndex(str.length);
     },
 
     _isExpect: function(str) {
@@ -1053,7 +1063,11 @@ Parser.prototype = {
     },
 
     _isElementStart: function() {
-        return this._char() === '<' && (this._isExpect('<!--') || elementNameRegexp.test(this.source.slice(this.index)));
+        return this._char() === '<' && 
+            (
+                this._isExpect('<!--') || 
+                elementNameRegexp.test(this.source.slice(this.index))
+            );
     },
 
     _type: function(type, ret) {

@@ -27,5 +27,7 @@ var stringifier = new Stringifier();
 //console.log(stringifier.stringify(parser.parse(source)))
 
 var source;
-source = "\n<ul \nclassName=\"list\">\n    {[list].map(function(item) {\n        return <li id={item}}>{item}</li>\n    })}\n</ul>";
+//source = "\n<ul \nclassName=\"list\">\n    {[list].map(function(item) {\n        return <li id={item}>{item}</li>\n    })}\n</ul>";
+//source = '<div>{a}</div>'
+source = '<div>{{a}</div>';
 console.log(util.inspect(parser.parse(source), {showHidden: true, depth: null}))
