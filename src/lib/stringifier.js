@@ -180,7 +180,7 @@ Stringifier.prototype = {
     },
 
     _visitJSXText: function(element, noQuotes) {
-        var ret = element.value.replace(/[\r\n]/g, '\\n').replace(/([\'\"])/g, '\\$1');
+        var ret = element.value.replace(/([\'\"\\])/g, '\\$1').replace(/[\r\n]/g, '\\n');
         if (!noQuotes) {
             ret = "'" + ret + "'";
         }
