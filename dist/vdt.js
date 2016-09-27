@@ -757,10 +757,12 @@ Parser.prototype = {
             start = this.index,
             str = '';
         this._updateIndex();
-        
 
         while (this.index < this.length) {
             var ch = this._char();
+            if (ch.charCodeAt(0) === 10) {
+                this._updateLine();
+            }
             this._updateIndex();
 
             if (ch === quote) {
@@ -883,7 +885,7 @@ Parser.prototype = {
             this._expect('>');
         } else {
             this._expect('>');
-            ret.children = this._parseJSXChildren();
+            ret.children = this._parseJSXChildren(ret);
         }
 
         return ret;
@@ -965,34 +967,50 @@ Parser.prototype = {
         return this._parseTemplate();
     },
 
-    _parseJSXChildren: function() {
-        var children = [];
+    _parseJSXChildren: function(element) {
+        var children = [],
+            endTag = element.value + '>';
+
+        switch (element.type) {
+            case Type.JSXBlock:
+                endTag = '</b:' + endTag;
+                break;
+            case Type.JSXVdt:
+                endTag = '</t:' + endTag;
+                break;
+            case Type.JSXElement:
+            default:
+                endTag = '</' + endTag;
+                break;
+        }
+
         while (this.index < this.length) {
-            if (this._char(this.index) === '<' && 
-                this._char(this.index + 1) === '/'
-            ) {
+            if (this._isExpect(endTag)) {
                 break;
             }
-            children.push(this._parseJSXChild());
+            children.push(this._parseJSXChild(element, endTag));
         }
         this._parseJSXClosingElement();
         return children;
     },
 
-    _parseJSXChild: function() {
-        var token,
+    _parseJSXChild: function(element, endTag) {
+        var ret,
             Delimiters = this.options.delimiters;
+
         if (this._isExpect(Delimiters[0])) {
-            token = this._parseJSXExpressionContainer();
+            ret = this._parseJSXExpressionContainer();
+        } else if (Utils.isTextTag(element.value)) {
+            ret = this._scanJSXText([endTag, Delimiters[0]]);
         } else if (this._isElementStart()) {
-            token = this._parseJSXElement();
+            ret = this._parseJSXElement();
         } else {
-            token = this._scanJSXText([function() {
-                return this._isExpect('</') || this._isElementStart();
+            ret = this._scanJSXText([function() {
+                return this._isExpect(endTag) || this._isElementStart();
             }, Delimiters[0]]);
         }
 
-        return token;
+        return ret;
     },
 
     _parseJSXClosingElement: function() {
@@ -1376,6 +1394,13 @@ var i = 0,
         'wbr': true
     },
 
+    // which children must be text
+    TextTags = {
+        style: true,
+        script: true,
+        textarea: true
+    },
+
     Directives = {
         'v-if': true,
         'v-for': true,
@@ -1482,7 +1507,11 @@ var Utils = {
     },
 
     isSelfClosingTag: function(tag) {
-        return hasOwn.call(SelfClosingTags, tag);
+        return SelfClosingTags[tag];
+    },
+
+    isTextTag: function(tag) {
+        return TextTags[tag];
     },
 
     isDirective: function(name) {

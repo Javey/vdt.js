@@ -65,9 +65,13 @@ describe 'Parser', ->
 
     it 'Escaped quote in string', ->
         source = """
-            <div name="name a\'b">{"a'b"}</div>
+            <div name="name a\'b">{"a'b"}{"a\\"b"}</div>
         """
-        parser.parse(source).should.be.eql([{"type":2,"typeName":"JSXElement","value":"div","attributes":[{"type":4,"typeName":"JSXAttribute","name":"name","value":{"type":1,"typeName":"JSXText","value":"name a'b"}}],"children":[{"type":3,"typeName":"JSXExpressionContainer","value":[{"type":0,"typeName":"JS","value":"\"a'b\""}]}]}])
+        parser.parse(source).should.be.eql([{"type":2,"typeName":"JSXElement","value":"div","attributes":[{"type":4,"typeName":"JSXAttribute","name":"name","value":{"type":1,"typeName":"JSXText","value":"name a'b"}}],"children":[{"type":3,"typeName":"JSXExpressionContainer","value":[{"type":0,"typeName":"JS","value":"\"a'b\""}]},{
+            type: 3,
+            typeName: 'JSXExpressionContainer',
+            value: [ { type: 0, typeName: 'JS', value: '"a\\"b"' } ]
+        }]}])
 
     it 'Parse source with comment', ->
         source = """

@@ -244,3 +244,24 @@ describe 'Stringifier', ->
 
         stringifier.stringify(parser.parse(source)).should.eql "return h('div',{'className': _Vdt.utils.className({a: true, 'b c': 1})}, [h('i',{'className': '{a: 1}'}, [])])"
 
+    it 'Stringify complex javascript code in <script></script>', ->
+        source = """
+        <script>
+            var a;
+
+            function aa() {
+                var msg;
+                msg = '<form onsubmit="return setPassword();"';
+                msg += '  style="margin-bottom: 0px">';
+                msg += '<input type=password size=10 id="password_input">';
+                msg += '</form>';
+            }
+
+            if (a<1) { console.log(a) }
+
+            var b = "{{ a }}";
+        </script>
+        """
+
+        stringifier.stringify(parser.parse(source, {delimiters: ['{{', '}}']})).should.eql "return h('script',{'innerHTML': '\\n    var a;\\n\\n    function aa() {\\n        var msg;\\n        msg = \\'<form onsubmit=\\\"return setPassword();\\\"\\';\\n        msg += \\'  style=\\\"margin-bottom: 0px\\\">\\';\\n        msg += \\'<input type=password size=10 id=\\\"password_input\\\">\\';\\n        msg += \\'</form>\\';\\n    }\\n\\n    if (a<1) { console.log(a) }\\n\\n    var b = \\\"'+( a )+'\\\";\\n'}, [])"
+

@@ -41,6 +41,13 @@ var i = 0,
         'wbr': true
     },
 
+    // which children must be text
+    TextTags = {
+        style: true,
+        script: true,
+        textarea: true
+    },
+
     Directives = {
         'v-if': true,
         'v-for': true,
@@ -147,7 +154,11 @@ var Utils = {
     },
 
     isSelfClosingTag: function(tag) {
-        return hasOwn.call(SelfClosingTags, tag);
+        return SelfClosingTags[tag];
+    },
+
+    isTextTag: function(tag) {
+        return TextTags[tag];
     },
 
     isDirective: function(name) {
