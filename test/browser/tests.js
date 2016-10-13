@@ -34,6 +34,14 @@ describe('Template Inherit', function() {
         $dom.find('.head').text().should.be.eql('child title');
     });
 
+    it('should pass data to parent template correctly', function() {
+        var child = Vdt(document.getElementById('pass_arguments').innerHTML),
+            $dom = $(child.render({title: 'child'}));
+
+        $dom.find('.head').text().should.be.eql('child');
+    });
+
+
     it('should render grandson template correctly', function() {
         var grandson = Vdt(document.getElementById('grandson').innerHTML),
             $dom = $(grandson.render()),

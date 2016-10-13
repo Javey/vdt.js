@@ -206,7 +206,7 @@ Stringifier.prototype = {
     _visitJSXVdt: function(element, isRoot) {
         var ret = ['(function(blocks) {',
                 'var _blocks = {}, __blocks = extend({}, blocks), _obj = ' + this._visitJSXAttribute(element.attributes) + ' || {};',
-                'if (_obj.hasOwnProperty("arguments")) { _obj = extend({}, _obj.arguments === null ? obj : _obj.arguments, _obj); delete _obj.arguments; }',
+                'if (_obj.hasOwnProperty("arguments")) { extend(_obj, _obj.arguments === null ? obj : _obj.arguments); delete _obj.arguments; }',
                 'return ' + element.value + '.call(this, _obj, _Vdt, '
             ].join('\n'),
             blocks = [];

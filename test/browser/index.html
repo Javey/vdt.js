@@ -40,6 +40,22 @@
     </t:parent>
 </script>
 
+<script type="text/vdt" id="pass_arguments">
+    var parent = Vdt.compile(document.getElementById('parent').innerHTML);
+    <t:parent arguments title="child title">
+        <b:body>
+            <div>child body</div>
+        </b:body>
+        <b:footer>
+            {parent()}
+            <div>child footer</div>
+            <b:child_nested>
+                <div>child nested footer</div>
+            </b:child_nested>
+        </b:footer>
+    </t:parent>
+</script>
+
 <script type="text/vdt" id="child_with_title">
     var parent = Vdt.compile(document.getElementById('parent').innerHTML);
     <t:parent title={typeof title !== 'undefined' ? title : "child title"}>
