@@ -622,13 +622,20 @@ Stringifier.prototype = {
     _visitJSXDiretiveIf: function(directive, ret, element) {
         var result = this._visitJSXAttributeValue(directive.value) + ' ? ' + ret + ' : ',
             hasElse = false,
-            next = element;
+            next = element,
+            emptyTextNodes = [], // persist empty text node, skip them if find v-else-if or v-else
+            skipNodes = function() {
+                Utils.each(emptyTextNodes, function(item) {
+                    item._skip = true;
+                });
+                emptyTextNodes = [];
+            };
         while (next = next.next) {
             if (next.type === Utils.Type.JSXText) {
                 if (!/^\s*$/.test(next.value)) break;
                 // is not the last text node, mark as handled
-                else if (next.next) next._skip = true;
-            } else if (next.type = Utils.Type.JSXElement) {
+                else emptyTextNodes.push(next);
+            } else if (next.type === Utils.Type.JSXElement) {
                 if (!next.directives || !next.directives.length) break;
                 var isContinue = false;
                 for (var i = 0, l = next.directives.length; i < l; i++) {
@@ -639,12 +646,16 @@ Stringifier.prototype = {
                         next._skip = true;
                         result += this._visitJSXAttributeValue(dire.value) + ' ? ' + this._visit(next) + ' : ';
                         isContinue = true;
+                        // mark text node before as handled
+                        skipNodes();
                         break;
                     } else if (name === 'v-else') {
                         // mark this element as handled
                         next._skip = true;
                         result += this._visit(next);
                         hasElse = true;
+                        // mark text node before as handled
+                        skipNodes();
                         break;
                     }
                 }

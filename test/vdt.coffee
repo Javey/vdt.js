@@ -236,7 +236,11 @@ describe 'Vdt', ->
                 <div>2</div>
             </div>
         """)
-        vdt.renderString({test: 3}).should.eql("<div>\n    \n</div>")
+        vdt.renderString({test: 3}).should.eql("""
+            <div>
+                
+            </div>
+        """)
 
         Vdt.bind(Vdt, """
             <div>
@@ -245,3 +249,17 @@ describe 'Vdt', ->
                 <div v-else-if={test === 2}>2</div>
             </div>
         """).should.throw('v-else-if (test === 2) must be led with v-if')
+
+        vdt = Vdt("""
+            <div>
+                <div v-if={test === 1}>1</div>
+                <div v-else-if={test === 2}>2</div>
+                <!--<div v-else>default</div>-->
+            </div>
+        """)
+        vdt.renderString({test: 2}).should.eql """
+            <div>
+                <div>2</div>
+                <!--<div v-else>default</div>-->
+            </div>
+        """
