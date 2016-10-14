@@ -107,7 +107,7 @@ describe 'Vdt', ->
         
         render(source).should.eql "<div title=\"test\">\n        \n    <div>1</div>\n    <div>2</div>\n\n    </div>"
 
-	it 'Parse widget which named with one char', ->
+    it 'Parse widget which named with one char', ->
         source = """
         var A = function() { return <a></a> }
         <div><A /></div>
@@ -136,7 +136,7 @@ describe 'Vdt', ->
         source = """
         <div class={{ className }} style={{{width: '100px'}}}></div>
         """
-        delimiters = Vdt.getDelimiters();
+        delimiters = Vdt.getDelimiters()
         Vdt.setDelimiters(['{{', '}}'])
         render(source, {className: 'a'}).should.eql """<div style="width:100px;" class="a"></div>"""
         Vdt.setDelimiters(delimiters)
