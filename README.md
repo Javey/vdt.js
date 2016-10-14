@@ -236,7 +236,7 @@ Then you can get data like below. use `self`, it points to the data that rendere
 
 To simplify writing template, vdt provides some directives as syntax sugar.
 
-## v-if
+## v-if & v-else-if & v-else
 
 ```jsx
 {show ? <div>show</div> : undefined}
@@ -244,6 +244,14 @@ To simplify writing template, vdt provides some directives as syntax sugar.
 =>
 
 <div v-if={show}>show</div>
+```
+
+```jsx
+<div>
+    <div v-if={test === 1}>1</div>
+    <div v-else-if={test === 2}>2</div>
+    <div v-else>other</div>
+</div>
 ```
 
 ## v-for & v-for-value & v-for-key

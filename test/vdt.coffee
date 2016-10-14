@@ -238,7 +238,7 @@ describe 'Vdt', ->
         """)
         vdt.renderString({test: 3}).should.eql("""
             <div>
-                
+
             </div>
         """)
 
