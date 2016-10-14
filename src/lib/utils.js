@@ -50,6 +50,8 @@ var i = 0,
 
     Directives = {
         'v-if': true,
+        'v-else-if': true,
+        'v-else': true,
         'v-for': true,
         'v-for-value': true,
         'v-for-key': true

@@ -35,8 +35,12 @@ var source;
 //source = "<t:card>\n    <b:body>\n        <div>test</div>\n    </b:body>\n</t:card>";
 //Utils.setDelimiters(['{{', '}}']);
 //source = "<script>\n    var a;\n\n    function aa() {\n        var msg;\n        msg = '<form onsubmit=\"return setPassword();\"';\n        msg += '  style=\"margin-bottom: 0px\">';\n        msg += '<input type=password size=10 id=\"password_input\">';\n        msg += '<\/form>';\n    }\n\n    if (a<1) { console.log(a) }\n\n    var b = \"{{ a }}\";\n</script>";
+//source = "<div>\n    <div v-if={test === 1}>1</div>\n   <div v-else-if={test === 2}>2</div>\n    <div v-else>default</div>\n</div>";
 //console.log(util.inspect(parser.parse(source), {showHidden: true, depth: null}))
-//console.log(stringifier.stringify(parser.parse(source)))
+source = "<Page />"
+console.log(stringifier.stringify(parser.parse(source)));
 
-var vdt = Vdt('<option selected={test}></option>');
-console.log(vdt.renderString({test: 0}));
+// var vdt = Vdt('<option selected={test}></option>');
+// console.log(vdt.renderString({test: 0}));
+
+

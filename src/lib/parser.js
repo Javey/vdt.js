@@ -308,7 +308,8 @@ Parser.prototype = {
 
     _parseJSXChildren: function(element) {
         var children = [],
-            endTag = element.value + '>';
+            endTag = element.value + '>',
+            current = null;
 
         switch (element.type) {
             case Type.JSXBlock:
@@ -327,13 +328,14 @@ Parser.prototype = {
             if (this._isExpect(endTag)) {
                 break;
             }
-            children.push(this._parseJSXChild(element, endTag));
+            current = this._parseJSXChild(element, endTag, current);
+            children.push(current);
         }
         this._parseJSXClosingElement();
         return children;
     },
 
-    _parseJSXChild: function(element, endTag) {
+    _parseJSXChild: function(element, endTag, prev) {
         var ret,
             Delimiters = this.options.delimiters;
 
@@ -347,6 +349,13 @@ Parser.prototype = {
             ret = this._scanJSXText([function() {
                 return this._isExpect(endTag) || this._isElementStart();
             }, Delimiters[0]]);
+        }
+
+        ret.prev = undefined;
+        ret.next = undefined;
+        if (prev) {
+            prev.next = ret;
+            ret.prev = prev;
         }
 
         return ret;
