@@ -3,10 +3,16 @@ var fs = require('fs'),
 
 var cache = {};
 
-module.exports = function(file) {
+module.exports = function(file, baseFile) {
     var Vdt = require('../index');
     if (!Path.isAbsolute(file)) {
-        file = Path.join(Vdt.getDefaults('views'), file);
+        if (file[0] === '.' && baseFile != undefined) {
+            file = Path.resolve(Path.dirname(baseFile), file);
+        } else if (Vdt.getDefaults('views') != null) {
+            file = Path.join(Vdt.getDefaults('views'), file);
+        } else {
+            file = Path.resolve(file);
+        }
     }
     if (Path.extname(file).substring(1) !== Vdt.getDefaults('extname')) {
         file += '.' + Vdt.getDefaults('extname');
@@ -18,7 +24,8 @@ module.exports = function(file) {
         try {
             var contents = fs.readFileSync(file).toString();
             cache[file] = Vdt.compile(contents, {
-                server: true
+                server: true,
+                filename: file
             });
             cache[file].mtime = mtime;
             return function() {
