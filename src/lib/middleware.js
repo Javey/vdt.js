@@ -65,7 +65,6 @@ module.exports = function(options) {
 
         function stat() {
             fs.stat(vdtFile, function(err, stats) {
-                console.log(vdtFile, err);
                 if (err) return error(err);
 
                 var obj = cache[vdtFile];
