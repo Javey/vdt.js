@@ -96,7 +96,12 @@ function compile(source, options) {
                 'blocks || (blocks = {});',
                 'var h = _Vdt.virtualDom.h, widgets = this && this.widgets || {}, _blocks = {}, __blocks = {},',
                     'extend = _Vdt.utils.extend, ' +
-                    (options.server ? 'require = function(file) { return _Vdt.utils.require(file, "' + options.filename + '") }, ' : '') +
+                    (options.server ? 
+                        'require = function(file) { return _Vdt.utils.require(file, "' + 
+                            options.filename.replace(/\\/g, '\\\\') + 
+                        '") }, ' : 
+                        ''
+                    ) +
                     'self = this.data, scope = obj;',
                 options.noWith ? hscript : [
                     'with (obj) {',
