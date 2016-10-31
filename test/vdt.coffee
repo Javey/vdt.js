@@ -134,7 +134,7 @@ describe 'Vdt', ->
 
     it 'Render correctly when set delimiters to ["{{", "}}"]', ->
         source = """
-        <div class={{ className }} style={{{width: '100px'}}}></div>
+        <div class={{ className }} style={{{width: '100px'}}} ev-click={{ function() {  }}}></div>
         """
         delimiters = Vdt.getDelimiters()
         Vdt.setDelimiters(['{{', '}}'])
