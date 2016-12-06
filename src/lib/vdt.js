@@ -79,9 +79,9 @@ function compile(source, options) {
         autoReturn: true,
         onlySource: false,
         delimiters: utils.getDelimiters(),
-        // remove `with` statement, then you can get data by `set.get(name)` method.
+        // remove `with` statement
         noWith: false,
-        // whether to render on server or not
+        // whether rendering on server or not
         server: false
     }, options);
 

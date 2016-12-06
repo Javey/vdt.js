@@ -8,7 +8,12 @@
 <script type="text/vdt" id="template">
     return <div>
         <div class="card">
-            <div class="aa"></div>
+            <div class="aa" style={ scope.hide ? undefined : "display: block" } 
+                ev-click={function() {
+                    scope.hide = true; 
+                    this.update()
+                }.bind(this)}
+            >aaa</div>
 
             {input != 1 ? <div class="users" style={{width: "100px", fontSize: "24px"}}>{time}</div> : null}
 

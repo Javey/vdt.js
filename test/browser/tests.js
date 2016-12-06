@@ -86,4 +86,18 @@ describe('Template Inherit', function() {
         $dom = $(vdt.render());
         ($dom.attr('class') === undefined).should.be.true;
     });
+
+    it('should render inline style correctly', function() {
+        var vdt = Vdt(document.getElementById('inline_style').innerHTML),
+            $dom = $(vdt.render({a: 1}));
+        $dom.children().each(function() {
+            $.trim($(this).attr('style')).should.eql('display: block;');
+        });
+        vdt.update({a: 2});
+        var style1 = $dom.children().eq(0).attr('style'),
+            style2 = $dom.children().eq(2).attr('style');
+        (style1 === undefined || style1 === '').should.be.true;
+        $.trim($dom.children().eq(1).attr('style')).should.eql('display: none;');
+        (style2 === undefined || style2 === '').should.be.true;
+    });
 });

@@ -93,6 +93,14 @@
     </ul>
 </script>
 
+<script type="text/vdt" id="inline_style">
+    <div>
+        <div style={a === 1 ? "display: block;" : undefined}></div>
+        <div style={a === 1 ? "display: block;" : "display: none;"}></div>
+        <div style={a === 1 ? {display: 'block'} : undefined}></div>
+    </div>
+</script>
+
 <script src="mocha.js"></script>
 <script src="should.js"></script>
 <script src="../../dist/vdt.js"></script>
