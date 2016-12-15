@@ -237,6 +237,20 @@ describe 'Stringifier', ->
         }, this)
         """
 
+    it 'Stringify v-if v-else in Widget', ->
+        source = """
+        <div>
+            <div v-if={test === 1}></div>
+            <Div v-else-if={test === 2}></Div>
+            <div v-else-if={test === 3}></div>
+            <Div v-else></Div>
+        </div>
+        """
+
+        stringifier.stringify(parser.parse(source)).should.eql """
+        return h('div',null, ['\\n    ', test === 1 ? h('div',null, []) : test === 2 ? Div({'children': []}, widgets) : test === 3 ? h('div',null, []) : Div({'children': []}, widgets), '\\n'])
+        """
+
     it 'Stringify object className', ->
         source = """
         <div class={{a: true, 'b c': 1}}><i class="{a: 1}"></i></div>
