@@ -18,6 +18,10 @@ See [Documents](http://javey.github.io/vdt.html) for more information.
 * Template can be extended. `<t:template>` `<b:block>`
 * Easy to use. You can use it with any other js library, such as jQuery. See [vdt-todomvc](https://github.com/Javey/vdt-todomvc)
 
+# Documents
+
+[Documents](http://javey.github.io/vdt.html)
+
 # Install
 
 ```shell
@@ -373,3 +377,7 @@ __Fastest is Underscore#render__
 * Mustache#update x 7,747 ops/sec ±2.40% (96 runs sampled)
 
 __Fastest is Vdt.js#update__
+
+# License
+
+MIT
