@@ -1,5 +1,56 @@
 # Vdt.js
 
+一个基于虚拟DOM的模板引擎，详情请访问：[Documents](http://javey.github.io/vdt.html)
+
+# 功能特性
+
+* 基于virtual-dom，DOM更新速度快
+* 能实现前后端模板继承，包含，宏定义等
+* 文件大小在gzip压缩后大概13KB（包含浏览器实时编译模块）
+* 支持前后端渲染
+
+# 安装
+
+## 通过script标签引入
+
+Vdt会暴露全局变量`Vdt`，请到[github](https://github.com/Javey/vdt.js/tree/master/dist)下载对应的文件，
+或者通过bower安装，然后script标签引入
+
+```bash
+bower install vdt --save
+```
+
+```html
+<script type="text/javascript" src="path/to/vdt.js"></script>
+```
+
+## 与webpack & browserify结合使用
+
+使用npm方式安装依赖
+
+```bash
+npm install vdt --save
+```
+
+```js
+var Vdt = require('vdt');
+```
+
+## 与requireJs等模块加载器结合使用
+
+Vdt打包的文件支持通过UMD方式加载
+
+```js
+define(['path/to/vdt'], function(Vdt) { });
+```
+
+# 许可
+
+MIT
+
+
+# Vdt.js
+
 > vdt is short for virtual-dom template
 
 `Vdt` is a template engine based on virtual-dom technology.
