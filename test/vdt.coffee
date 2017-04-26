@@ -6,6 +6,38 @@ render = (source, data) ->
     vdt.renderString(data || {})
 
 describe 'Vdt', ->
+    it 'Attribute without value should not be rendered', ->
+        source = """
+        <input type="checkbox" checked />
+        """
+        render(source).should.be.eql('<input type="checkbox" />')
+
+    it 'Render class and className', ->
+        source = """
+        <div class="aaa"><div className="bbb"></div></div>
+        """
+        render(source).should.be.eql '<div class="aaa"><div class="bbb"></div></div>'
+
+    it 'Render string with quotes', ->
+        source = """
+        <div>
+            <input placeholder="a'a" />
+            <div>{'a\\'a'}</div>
+        </div>
+        """
+        render(source).should.eql """
+        <div>
+            <input type="text" placeholder="a'a" />
+            <div>a'a</div>
+        </div>
+        """
+
+    it 'Render without return', ->
+        source = """
+        return <div></div>
+        """
+        Vdt(source, {autoReturn: false}).renderString().should.eql '<div></div>'
+
     it 'Unclosed tag should throw a error', ->
         source = """
         <ul class="todo-list">
@@ -114,6 +146,113 @@ describe 'Vdt', ->
         """
         render(source).should.eql "<div><a></a></div>"
 
+    it 'Render block', ->
+        source = """
+        <div>
+            <b:content>
+                <div>aaa</div>
+            </b:content>
+        </div>
+        """
+        render(source).should.eql """
+        <div>
+            
+                <div>aaa</div>
+            
+        </div>
+        """
+
+    it 'Render template inherit', ->
+        parent = """
+        <div>
+            <b:head>head</b:head>
+            <b:body>body</b:body>
+        </div>
+        """
+        source = """
+        var a = 1;
+        <t:parent>
+            <b:head>
+                child head
+            </b:head>
+            <b:body>
+                {parent()}
+                <div>child body {a}</div>
+            </b:body>
+        </t:parent>
+        """
+        parentTemplate = Vdt.compile(parent)
+        render(source, {parent: parentTemplate}).should.eql """
+        <div>
+            
+                child head
+            
+            
+                body
+                <div>child body 1</div>
+            
+        </div>
+        """
+
+    it 'Render template include', ->
+        parent = """
+        <div>
+            <b:head>head</b:head>
+            <b:body>body</b:body>
+        </div>
+        """
+        source = """
+        <t:parent />
+        """
+        parentTemplate = Vdt.compile(parent)
+        render(source, {parent: parentTemplate}).should.eql """
+        <div>
+            head
+            body
+        </div>
+        """
+
+    it 'Render template nested', ->
+        parent = """
+        <div>
+            <b:body>parent body</b:body>
+        </div>
+        """
+        include = """
+        <div>
+            <b:body>include body</b:body>
+        </div>
+        """
+        source = """
+        <t:parent>
+            <b:body>
+                {parent()}
+                <t:include>
+                    <b:body>
+                        {parent()}
+                        child body
+                    </b:body>
+                </t:include>
+            </b:body>
+        </t:parent>
+        """
+        render(source, {
+            parent: Vdt.compile(parent),
+            include: Vdt.compile(include)
+        }).should.eql """
+        <div>
+            
+                parent body
+                <div>
+            
+                        include body
+                        child body
+                    
+        </div>
+            
+        </div>
+        """
+
     it 'Parse attribute whose value is element', ->
         source = """
         var A = function(attrs) {
@@ -141,6 +280,89 @@ describe 'Vdt', ->
         render(source, {className: 'a'}).should.eql """<div style="width:100px;" class="a"></div>"""
         Vdt.setDelimiters(delimiters)
 
+    it 'Render correctly when set delimiters to ["{%", "%}"]', ->
+        source = """
+        <div class={% className %} style={% {width: '100px'} %}>
+            {test} {% test ? "test" : '{test}' %}
+        </div>
+        """
+        delimiters = Vdt.getDelimiters()
+        Vdt.setDelimiters(['{%', '%}'])
+        render(source, {className: 'a', test: 0}).should.eql """
+        <div style="width:100px;" class="a">
+            {test} {test}
+        </div>
+        """
+        Vdt.setDelimiters(delimiters)
+
+    it '< in textNode', ->
+        source = """
+        <div>a < b ? a : b; a <2? a : b</div>
+        """
+        render(source).should.eql '<div>a &lt; b ? a : b; a &lt;2? a : b</div>'
+
+    it 'Render script content', ->
+        source = """
+        <script type="text/javascript">
+            var a = 1;
+            console.log(a);
+            if (a < 2) {
+                console.log('less than {{ a < 2 ? 'a' : 'b' }}');
+            }
+        </script>
+        """
+        delimiters = Vdt.getDelimiters()
+        Vdt.setDelimiters(['{{', '}}'])
+        render(source, {a: 2}).should.eql """
+        <script type="text/javascript">
+            var a = 1;
+            console.log(a);
+            if (a < 2) {
+                console.log('less than b');
+            }
+        </script>
+        """
+        Vdt.setDelimiters(delimiters)
+
+    it 'Render script content with html string', ->
+        source = """
+        <script>
+            var a;
+
+            function aa() {
+                var msg;
+                msg = '<form onsubmit="return setPassword();"';
+                msg += '  style="margin-bottom: 0px">';
+                msg += '<input type=password size=10 id="password_input">';
+                msg += '</form>';
+            }
+
+            if (a<1) { console.log(a) }
+
+            var b = "{{ a }}";
+        </script>
+        """
+
+        delimiters = Vdt.getDelimiters()
+        Vdt.setDelimiters(['{{', '}}'])
+        render(source, {a: 2}).should.eql """
+        <script>
+            var a;
+
+            function aa() {
+                var msg;
+                msg = '<form onsubmit="return setPassword();"';
+                msg += '  style="margin-bottom: 0px">';
+                msg += '<input type=password size=10 id="password_input">';
+                msg += '</form>';
+            }
+
+            if (a<1) { console.log(a) }
+
+            var b = "2";
+        </script>
+        """
+        Vdt.setDelimiters(delimiters)
 
     it 'Render simple JSX', ->
         source = """
@@ -216,6 +438,7 @@ describe 'Vdt', ->
             </div>
         """)
 
+    it 'Render v-if v-else-if v-else with whiteline', ->
         vdt = Vdt("""
             <div>
                 <div v-if={test === 1}>1</div>
@@ -234,14 +457,16 @@ describe 'Vdt', ->
             </div>
         """)
 
+    it 'Should throw error when render v-if v-else-if v-else with not whiteline', ->
         Vdt.bind(Vdt, """
             <div>
                 <div v-if={test === 1}>1</div>
                 sdfsdjf
                 <div v-else-if={test === 2}>2</div>
             </div>
-        """).should.throw('v-else-if (test === 2) must be led with v-if')
+        """).should.throw('v-else-if must be led with v-if. At: {line: 4, column: 6}')
 
+    it 'Render v-if v-else with comment', ->
         vdt = Vdt("""
             <div>
                 <div v-if={test === 1}>1</div>
@@ -255,3 +480,71 @@ describe 'Vdt', ->
                 <!--<div v-else>default</div>-->
             </div>
         """
+
+    it 'Render v-if v-else in widget', ->
+        source = """
+        function Div(attrs) {return <div>{attrs.a}</div>}
+        <div>
+            <div v-if={test === 1}></div>
+            <Div v-else-if={test === 2} a="2"></Div>
+            <div v-else-if={test === 3}></div>
+            <Div v-else a="4"></Div>
+        </div>
+        """
+        render(source, {test: 4}).should.eql """
+        <div>
+            <div>4</div>
+        </div>
+        """
+
+    it 'Render v-if and v-for', ->
+        source = """
+        <ul>
+            <li v-if={index % 2} class="test" v-for={data} v-for-key="index">{value}</li>
+        </ul>
+        """
+        render(source, {data: [1, 2, 3]}).should.eql """
+        <ul>
+            <li class="test">2</li>
+        </ul>
+        """
+
+    it 'Render v-if and v-for in widget', ->
+        source = """
+        function Li(attrs) {return <li>{attrs.children}</li>}
+        <ul>
+            <Li v-if={index % 2} v-for={data} v-for-key="index">{value}</Li>
+        </ul>
+        """
+        render(source, {data: [1, 2, 3]}).should.eql """
+        <ul>
+            <li>2</li>
+        </ul>
+        """
+
+    it 'Render object className', ->
+        source = """
+        <div class={{a: true, 'b c': show}}><i class="{a: 1}"></i></div>
+        """
+        
+        render(source, {show: true}).should.eql """
+        <div class="a b c"><i class="{a: 1}"></i></div>
+        """
+
+    it 'Render when variable undefined', ->
+        source = """
+        <div>{a}</div>
+        """
+        render(source).should.eql "<div></div>"
+
+    it 'Render when function undefined', ->
+        source = """
+        <div ev-click={a}></div>
+        """
+        render(source).should.eql "<div></div>"
+
+    it 'Render when subtemplate error', ->
+        source = """
+        <div a={[<div>{a}</div>]}></div>
+        """
+        render(source).should.eql "<div></div>"

@@ -14,7 +14,8 @@
   "license": "MIT",
   "scripts": {
     "build": "browserify src/browserify.js -o dist/vdt.js -s Vdt -u src/lib/compile.js && uglifyjs dist/vdt.js -o dist/vdt.min.js -m",
-    "test": "mocha --compilers coffee:coffee-script/register test/*.coffee; node_modules/.bin/mocha-phantomjs test/browser/index.html",
+    "test": "mocha --compilers coffee:coffee-script/register test/*.coffee; mocha-phantomjs test/browser/index.html",
+    "cover": "istanbul cover _mocha -- --compilers coffee:coffee-script/register test/*.coffee",
     "release": "npm run release-patch",
     "release-patch": "git checkout master && npm version patch && bower version patch 2>/dev/null; git push origin master --tags && npm publish",
     "release-minor": "git checkout master && npm version minor && bower version minor 2>/dev/null; git push origin master --tags && npm publish",
@@ -28,6 +29,7 @@
     "benchmark": "^1.0.0",
     "coffee-script": "^1.9.2",
     "handlebars": "^3.0.2",
+    "istanbul": "^0.4.5",
     "jquery": "^2.1.3",
     "mocha": "^2.2.4",
     "mocha-phantomjs": "^4.0.1",

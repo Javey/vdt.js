@@ -44,6 +44,10 @@ Stringifier.prototype = {
             }
         }, this);
 
+        if (!isRoot && !this.enterStringExpression) {
+            str = 'function() {try {return ' + str + '} catch(e) {_e(e)}}.call(this)';
+        }
+
         return str;
     },
 
@@ -51,7 +55,7 @@ Stringifier.prototype = {
         element = element || {};
         switch (element.type) {
             case Type.JS:
-                return this._visitJS(element);
+                return this._visitJS(element, isRoot);
             case Type.JSXElement:
                 return this._visitJSX(element);
             case Type.JSXText:
@@ -72,7 +76,9 @@ Stringifier.prototype = {
     },
 
     _visitJS: function(element) {
-        return this.enterStringExpression ? '(' + element.value + ')' : element.value;
+        return this.enterStringExpression ? 
+            '(' + element.value + ')' : 
+            element.value; 
     },
 
     _visitJSX: function(element) {
@@ -125,7 +131,10 @@ Stringifier.prototype = {
                 case 'v-else-if':
                 case 'v-else':
                     if (element._skip) break;
-                    throw new Error(directive.name + ' (' + this._visitJSXAttributeValue(directive.value) + ') must be led with v-if');
+                    throw new Error(directive.name + ' must be led with v-if. At: {line: ' +
+                        element.line + ', column: ' + 
+                        element.column + '}'
+                    );
                 case 'v-for':
                     directiveFor.data = this._visitJSXAttributeValue(directive.value);
                     break;

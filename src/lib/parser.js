@@ -440,6 +440,8 @@ Parser.prototype = {
         ret || (ret = {});
         ret.type = type;
         ret.typeName = TypeName[type];
+        ret.line = this.line;
+        ret.column = this.column;
         return ret;
     },
 

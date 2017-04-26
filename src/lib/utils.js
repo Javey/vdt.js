@@ -1,5 +1,4 @@
-/**
- * @fileoverview utility methods
+/** * @fileoverview utility methods
  * @author javey
  * @date 15-4-22
  */
@@ -59,7 +58,8 @@ var i = 0,
 
     Delimiters = ['{', '}'];
 
-var hasOwn = Object.prototype.hasOwnProperty;
+var hasOwn = Object.prototype.hasOwnProperty,
+    noop = function() {};
 
 (function() {
     for (var type in Type) {
@@ -188,9 +188,14 @@ var Utils = {
         return Object.prototype.toString.call(arr) === '[object Array]';
     },
 
-    noop: function() {},
+    noop: noop,
 
-    require: require('./compile')
+    require: require('./compile'),
+
+    error: (function() {
+        var hasConsole = typeof console !== 'undefined';
+        return hasConsole ? function(e) {console.error(e);} : noop;
+    })()
 };
 
 module.exports = Utils;

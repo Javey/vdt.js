@@ -95,7 +95,7 @@ function compile(source, options) {
                 'obj || (obj = {});',
                 'blocks || (blocks = {});',
                 'var h = _Vdt.virtualDom.h, widgets = this && this.widgets || {}, _blocks = {}, __blocks = {},',
-                    'extend = _Vdt.utils.extend, ' +
+                    'extend = _Vdt.utils.extend, _e = _Vdt.utils.error,' +
                     (options.server ? 
                         'require = function(file) { return _Vdt.utils.require(file, "' + 
                             options.filename.replace(/\\/g, '\\\\') + 
