@@ -548,3 +548,11 @@ describe 'Vdt', ->
         <div a={[<div>{a}</div>]}></div>
         """
         render(source).should.eql "<div></div>"
+
+    it 'Render when variable in new line', ->
+        source = """
+        <div>{
+        a
+        }</div>
+        """
+        render(source, {a: 1}).should.eql "<div>1</div>"
