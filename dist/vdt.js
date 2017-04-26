@@ -445,6 +445,8 @@ Parser.prototype = {
         ret || (ret = {});
         ret.type = type;
         ret.typeName = TypeName[type];
+        ret.line = this.line;
+        ret.column = this.column;
         return ret;
     },
 
@@ -518,6 +520,10 @@ Stringifier.prototype = {
             }
         }, this);
 
+        if (!isRoot && !this.enterStringExpression) {
+            str = 'function() {try {return ' + str + '} catch(e) {_e(e)}}.call(this)';
+        }
+
         return str;
     },
 
@@ -525,7 +531,7 @@ Stringifier.prototype = {
         element = element || {};
         switch (element.type) {
             case Type.JS:
-                return this._visitJS(element);
+                return this._visitJS(element, isRoot);
             case Type.JSXElement:
                 return this._visitJSX(element);
             case Type.JSXText:
@@ -546,7 +552,9 @@ Stringifier.prototype = {
     },
 
     _visitJS: function(element) {
-        return this.enterStringExpression ? '(' + element.value + ')' : element.value;
+        return this.enterStringExpression ? 
+            '(' + element.value + ')' : 
+            element.value; 
     },
 
     _visitJSX: function(element) {
@@ -566,7 +574,7 @@ Stringifier.prototype = {
             }
         }
 
-        return this._visitJSXDiretive(element, this._visitJSXElement(element));
+        return this._visitJSXDirective(element, this._visitJSXElement(element));
     },
 
     _visitJSXElement: function(element) {
@@ -585,7 +593,7 @@ Stringifier.prototype = {
         return '[' + ret.join(', ') + ']';
     },
 
-    _visitJSXDiretive: function(element, ret) {
+    _visitJSXDirective: function(element, ret) {
         var directiveFor = {
             data: null,
             value: 'value',
@@ -594,12 +602,15 @@ Stringifier.prototype = {
         Utils.each(element.directives, function(directive) {
             switch (directive.name) {
                 case 'v-if':
-                    ret = this._visitJSXDiretiveIf(directive, ret, element);
+                    ret = this._visitJSXDirectiveIf(directive, ret, element);
                     break;
                 case 'v-else-if':
                 case 'v-else':
                     if (element._skip) break;
-                    throw new Error(directive.name + ' (' + this._visitJSXAttributeValue(directive.value) + ') must be led with v-if');
+                    throw new Error(directive.name + ' must be led with v-if. At: {line: ' +
+                        element.line + ', column: ' + 
+                        element.column + '}'
+                    );
                 case 'v-for':
                     directiveFor.data = this._visitJSXAttributeValue(directive.value);
                     break;
@@ -615,13 +626,13 @@ Stringifier.prototype = {
         }, this);
         // if exists v-for
         if (directiveFor.data) {
-            ret = this._visitJSXDiretiveFor(directiveFor, ret);
+            ret = this._visitJSXDirectiveFor(directiveFor, ret);
         }
 
         return ret;
     },
 
-    _visitJSXDiretiveIf: function(directive, ret, element) {
+    _visitJSXDirectiveIf: function(directive, ret, element) {
         var result = this._visitJSXAttributeValue(directive.value) + ' ? ' + ret + ' : ',
             hasElse = false,
             next = element,
@@ -637,7 +648,7 @@ Stringifier.prototype = {
                 if (!/^\s*$/.test(next.value)) break;
                 // is not the last text node, mark as handled
                 else emptyTextNodes.push(next);
-            } else if (next.type === Utils.Type.JSXElement) {
+            } else if (next.type === Utils.Type.JSXElement || next.type === Utils.Type.JSXWidget) {
                 if (!next.directives || !next.directives.length) break;
                 var isContinue = false;
                 for (var i = 0, l = next.directives.length; i < l; i++) {
@@ -668,7 +679,7 @@ Stringifier.prototype = {
         return result;
     },
 
-    _visitJSXDiretiveFor: function(directive, ret) {
+    _visitJSXDirectiveFor: function(directive, ret) {
         return '_Vdt.utils.map(' + directive.data + ', function(' + directive.value + ', ' + directive.key + ') {\n' +
             'return ' + ret + ';\n' +
         '}, this)';
@@ -713,7 +724,7 @@ Stringifier.prototype = {
 
     _visitJSXWidget: function(element) {
         element.attributes.push({name: 'children', value: element.children});
-        return this._visitJSXDiretive(element, element.value + '(' + this._visitJSXAttribute(element.attributes) + ', widgets)');
+        return this._visitJSXDirective(element, element.value + '(' + this._visitJSXAttribute(element.attributes) + ', widgets)');
     },
 
     _visitJSXBlock: function(element, isAncestor) {
@@ -754,8 +765,7 @@ Stringifier.prototype = {
 module.exports = Stringifier;
 
 },{"./utils":5}],5:[function(require,module,exports){
-/**
- * @fileoverview utility methods
+/** * @fileoverview utility methods
  * @author javey
  * @date 15-4-22
  */
@@ -815,7 +825,8 @@ var i = 0,
 
     Delimiters = ['{', '}'];
 
-var hasOwn = Object.prototype.hasOwnProperty;
+var hasOwn = Object.prototype.hasOwnProperty,
+    noop = function() {};
 
 (function() {
     for (var type in Type) {
@@ -944,9 +955,14 @@ var Utils = {
         return Object.prototype.toString.call(arr) === '[object Array]';
     },
 
-    noop: function() {},
+    noop: noop,
 
-    require: require('./compile')
+    require: require('./compile'),
+
+    error: (function() {
+        var hasConsole = typeof console !== 'undefined';
+        return hasConsole ? function(e) {console.error(e);} : noop;
+    })()
 };
 
 module.exports = Utils;
@@ -1049,7 +1065,7 @@ function compile(source, options) {
                 'obj || (obj = {});',
                 'blocks || (blocks = {});',
                 'var h = _Vdt.virtualDom.h, widgets = this && this.widgets || {}, _blocks = {}, __blocks = {},',
-                    'extend = _Vdt.utils.extend, ' +
+                    'extend = _Vdt.utils.extend, _e = _Vdt.utils.error,' +
                     (options.server ? 
                         'require = function(file) { return _Vdt.utils.require(file, "' + 
                             options.filename.replace(/\\/g, '\\\\') + 
