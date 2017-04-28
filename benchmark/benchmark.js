@@ -1,5 +1,5 @@
 var Benchmark = require('benchmark'),
-    Vdt = require('../src/vdt'),
+    Vdt = require('../src/lib/vdt'),
     _ = require('lodash');
 
 var suite = new Benchmark.Suite;

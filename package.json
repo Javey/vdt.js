@@ -23,7 +23,7 @@
   },
   "dependencies": {
     "dom-delegator": "^13.1.0",
-    "virtual-domx": "^2.1.9"
+    "virtual-domx": "^2.1.10"
   },
   "devDependencies": {
     "benchmark": "^1.0.0",
