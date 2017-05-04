@@ -22,8 +22,7 @@
     "release-major": "git checkout master && npm version major && bower version major 2>/dev/null; git push origin master --tags && npm publish"
   },
   "dependencies": {
-    "dom-delegator": "^13.1.0",
-    "virtual-domx": "^2.1.10"
+    "miss": "*"
   },
   "devDependencies": {
     "benchmark": "^1.0.0",

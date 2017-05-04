@@ -45,10 +45,7 @@ Stringifier.prototype = {
         }, this);
 
         if (!isRoot && !this.enterStringExpression) {
-            // for 
-            // return (
-            // /* comment */
-            // )
+            // add [][0] for return /* comment */
             str = 'function() {try {return [' + str + '][0]} catch(e) {_e(e)}}.call(this)';
         }
 
@@ -228,7 +225,12 @@ Stringifier.prototype = {
         Utils.each(attributes, function(attr) {
             var name = attrMap(attr.name),
                 value = this._visitJSXAttributeValue(attr.value);
-            if (name === 'className' && attr.value.type === Type.JSXExpressionContainer) {
+            if (name === 'widget' && attr.value.type === Type.JSXText) {
+                // for compatility v1.0
+                // convert widget="a" to ref=(i) => widgets.a = i
+                name = 'ref';
+                value = 'function(i) {widgets.' + value + ' = i}';
+            } else if (name === 'className' && attr.value.type === Type.JSXExpressionContainer) {
                 // for class={ {active: true} }
                 value = '_Vdt.utils.className(' + value + ')';
             }
@@ -252,7 +254,7 @@ Stringifier.prototype = {
 
     _visitJSXWidget: function(element) {
         element.attributes.push({name: 'children', value: element.children});
-        return this._visitJSXDirective(element, element.value + '(' + this._visitJSXAttribute(element.attributes) + ', widgets)');
+        return this._visitJSXDirective(element, 'h(' + element.value + ', ' + this._visitJSXAttribute(element.attributes) + ')');
     },
 
     _visitJSXBlock: function(element, isAncestor) {
@@ -286,7 +288,7 @@ Stringifier.prototype = {
     },
 
     _visitJSXComment: function(element) {
-        return 'h.c(' + this._visitJSXText(element) + ')';
+        return 'hc(' + this._visitJSXText(element) + ')';
     }
 };
 

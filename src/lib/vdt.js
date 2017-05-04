@@ -1,13 +1,13 @@
 var parser = new (require('./parser')),
     stringifier = new (require('./stringifier')),
-    virtualDom = require('virtual-domx'),
+    miss = require('miss'),
     utils = require('./utils');
 
 var Vdt = function(source, options) {
     var vdt = {
         render: function(data) {
             vdt.renderTree.apply(vdt, arguments); 
-            vdt.node = virtualDom.create(vdt.tree);
+            vdt.node = miss.render(vdt.tree);
             return vdt.node;
         },
 
@@ -29,8 +29,7 @@ var Vdt = function(source, options) {
         update: function(data) {
             var oldTree = vdt.tree;
             vdt.renderTree.apply(vdt, arguments);
-            vdt.patches = virtualDom.diff(oldTree, vdt.tree);
-            vdt.node = virtualDom.patch(vdt.node, vdt.patches);
+            vdt.node = miss.patch(oldTree, vdt.tree);
             return vdt.node;
         },
 
@@ -94,7 +93,7 @@ function compile(source, options) {
                 '_Vdt || (_Vdt = Vdt);',
                 'obj || (obj = {});',
                 'blocks || (blocks = {});',
-                'var h = _Vdt.virtualDom.h, widgets = this && this.widgets || {}, _blocks = {}, __blocks = {},',
+                'var h = _Vdt.miss.h, hc = _Vdt.miss.hc, widgets = this && this.widgets || {}, _blocks = {}, __blocks = {},',
                     'extend = _Vdt.utils.extend, _e = _Vdt.utils.error,' +
                     (options.server ? 
                         'require = function(file) { return _Vdt.utils.require(file, "' + 
@@ -124,10 +123,13 @@ function compile(source, options) {
 
 Vdt.parser = parser;
 Vdt.stringifier = stringifier;
-Vdt.virtualDom = virtualDom;
+Vdt.miss = miss;
 Vdt.compile = compile;
 Vdt.utils = utils;
 Vdt.setDelimiters = utils.setDelimiters;
 Vdt.getDelimiters = utils.getDelimiters;
+
+// for compatibility v1.0
+Vdt.virtualDom = miss; 
 
 module.exports = Vdt;
