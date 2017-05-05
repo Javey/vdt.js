@@ -1,13 +1,16 @@
 var parser = new (require('./parser')),
     stringifier = new (require('./stringifier')),
-    miss = require('miss'),
+    // miss = require('miss'),
+    miss = require('inferno'),
     utils = require('./utils');
 
 var Vdt = function(source, options) {
+    var node = document.createElement('div');
     var vdt = {
         render: function(data) {
             vdt.renderTree.apply(vdt, arguments); 
-            vdt.node = miss.render(vdt.tree);
+            vdt.node = node;
+            miss.render(vdt.tree, node);
             return vdt.node;
         },
 
@@ -28,8 +31,13 @@ var Vdt = function(source, options) {
 
         update: function(data) {
             var oldTree = vdt.tree;
-            vdt.renderTree.apply(vdt, arguments);
-            vdt.node = miss.patch(oldTree, vdt.tree);
+            console.time('a')
+            // vdt.renderTree.apply(vdt, arguments);
+            vdt.tree = vdt.template(vdt.data, Vdt);
+            console.timeEnd('a')
+            // vdt.node = miss.patch(oldTree, vdt.tree);
+            miss.render(vdt.tree, node);
+            console.timeEnd('a')
             return vdt.node;
         },
 
@@ -124,6 +132,7 @@ function compile(source, options) {
 Vdt.parser = parser;
 Vdt.stringifier = stringifier;
 Vdt.miss = miss;
+Vdt.miss.h = miss.createVNode;
 Vdt.compile = compile;
 Vdt.utils = utils;
 Vdt.setDelimiters = utils.setDelimiters;

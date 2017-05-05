@@ -46,7 +46,7 @@ Stringifier.prototype = {
 
         if (!isRoot && !this.enterStringExpression) {
             // add [][0] for return /* comment */
-            str = 'function() {try {return [' + str + '][0]} catch(e) {_e(e)}}.call(this)';
+            // str = 'function() {try {return [' + str + '][0]} catch(e) {_e(e)}}.call(this)';
         }
 
         return str;
@@ -103,8 +103,10 @@ Stringifier.prototype = {
     },
 
     _visitJSXElement: function(element) {
-        return "h('" + element.value + "'," + this._visitJSXAttribute(element.attributes) + ", " + 
-            this._visitJSXChildren(element.children) + ')';
+        return "h(2, '" + element.value + "', " + 
+            this._visitJSXClassName(element.attributes) + "," + 
+            this._visitJSXChildren(element.children) + ", " + 
+            this._visitJSXAttribute(element.attributes) + ')';
     },
 
     _visitJSXChildren: function(children) {
@@ -233,11 +235,28 @@ Stringifier.prototype = {
             } else if (name === 'className' && attr.value.type === Type.JSXExpressionContainer) {
                 // for class={ {active: true} }
                 value = '_Vdt.utils.className(' + value + ')';
+            } else if (name.substr(0, 3) === 'ev-') {
+                name = 'on' + name[3].toUpperCase() + name.substr(4);
             }
             ret.push("'" + name + "': " + value);
         }, this);
 
         return ret.length ? '{' + ret.join(', ') + '}' : 'null';
+    },
+
+    _visitJSXClassName: function(attributes) {
+        var ret = 'null';
+        if (!attributes) return ret;
+        for (var i = 0; i < attributes.length; i++) {
+            var attr = attributes[i],
+                name = attrMap(attr.name);
+            if (name === 'className') {
+                ret = this._visitJSXAttributeValue(attr.value);
+                attributes.splice(i, 1);
+                break;
+            }
+        }
+        return ret;
     },
 
     _visitJSXAttributeValue: function(value) {
