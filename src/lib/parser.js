@@ -34,7 +34,8 @@ Parser.prototype = {
         this.length = this.source.length;
 
         this.options = Utils.extend({
-            delimiters: Utils.getDelimiters()
+            delimiters: Utils.getDelimiters(),
+            ignoreWhitespace: true
         }, options);
 
         return this._parseTemplate();
@@ -129,23 +130,34 @@ Parser.prototype = {
     _scanJSXText: function(stopChars) {
         var start = this.index,
             l = stopChars.length,
-            i;
+            i,
+            charCode,
+            skipped = false;
         loop:
         while (this.index < this.length) {
-            if (this._charCode() === 10) {
-                this._updateLine();
-            }
-            for (i = 0; i < l; i++) {
-                if (typeof stopChars[i] === 'function' && stopChars[i].call(this) || 
-                    this._isExpect(stopChars[i])
-                ) {
-                    break loop;
+            charCode = this._charCode();
+            if (Utils.isWhiteSpace(charCode)) {
+                // skip whitespace chars
+                if (charCode === 10) {
+                    this._updateLine();
+                }
+                if (!skipped) {
+                    start++;
+                }
+            } else {
+                skipped = true;
+                for (i = 0; i < l; i++) {
+                    if (typeof stopChars[i] === 'function' && stopChars[i].call(this) || 
+                        this._isExpect(stopChars[i])
+                    ) {
+                        break loop;
+                    }
                 }
             }
             this._updateIndex();
         }
 
-        return this._type(Type.JSXText, {
+        return start === this.index ? null : this._type(Type.JSXText, {
             value: this.source.slice(start, this.index)
         });
     },
@@ -329,7 +341,9 @@ Parser.prototype = {
                 break;
             }
             current = this._parseJSXChild(element, endTag, current);
-            children.push(current);
+            if (current) {
+                children.push(current);
+            }
         }
         this._parseJSXClosingElement();
         return children;
@@ -351,13 +365,15 @@ Parser.prototype = {
             }, Delimiters[0]]);
         }
 
-        ret.prev = undefined;
-        ret.next = undefined;
-        if (prev) {
-            prev.next = ret;
-            ret.prev = prev;
+        if (ret) {
+            ret.prev = undefined;
+            ret.next = undefined;
+            if (prev) {
+                prev.next = ret;
+                ret.prev = prev;
+            }
         }
-
+        
         return ret;
     },
 
