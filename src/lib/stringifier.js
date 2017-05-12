@@ -46,7 +46,8 @@ Stringifier.prototype = {
 
         if (!isRoot && !this.enterStringExpression) {
             // add [][0] for return /* comment */
-            str = 'function() {try {return [' + str + '][0]} catch(e) {_e(e)}}.call(this)';
+            // str = 'function() {try {return [' + str + '][0]} catch(e) {_e(e)}}.call(this)';
+            str = 'function() {try {return (' + str + ')} catch(e) {_e(e)}}.call(this)';
         }
 
         return str;

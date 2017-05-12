@@ -2296,7 +2296,8 @@ Stringifier.prototype = {
 
         if (!isRoot && !this.enterStringExpression) {
             // add [][0] for return /* comment */
-            str = 'function() {try {return [' + str + '][0]} catch(e) {_e(e)}}.call(this)';
+            // str = 'function() {try {return [' + str + '][0]} catch(e) {_e(e)}}.call(this)';
+            str = 'function() {try {return (' + str + ')} catch(e) {_e(e)}}.call(this)';
         }
 
         return str;
@@ -2353,7 +2354,8 @@ Stringifier.prototype = {
     },
 
     _visitJSXElement: function(element) {
-        return "h('" + element.value + "'," + this._visitJSXAttribute(element.attributes) + ", " + 
+        return "h('" + element.value + "'," + 
+            this._visitJSXAttribute(element.attributes) + ", " + 
             this._visitJSXChildren(element.children) + ')';
     },
 
@@ -2365,7 +2367,7 @@ Stringifier.prototype = {
             ret.push(this._visit(child));
         }, this);
 
-        return '[' + ret.join(', ') + ']';
+        return ret.length > 1 ? '[' + ret.join(', ') + ']' : ret[0];
     },
 
     _visitJSXDirective: function(element, ret) {
