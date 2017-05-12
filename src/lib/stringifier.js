@@ -103,7 +103,8 @@ Stringifier.prototype = {
     },
 
     _visitJSXElement: function(element) {
-        return "h('" + element.value + "'," + this._visitJSXAttribute(element.attributes) + ", " + 
+        return "h('" + element.value + "'," + 
+            this._visitJSXAttribute(element.attributes) + ", " + 
             this._visitJSXChildren(element.children) + ')';
     },
 
@@ -115,7 +116,7 @@ Stringifier.prototype = {
             ret.push(this._visit(child));
         }, this);
 
-        return '[' + ret.join(', ') + ']';
+        return ret.length > 1 ? '[' + ret.join(', ') + ']' : ret[0];
     },
 
     _visitJSXDirective: function(element, ret) {

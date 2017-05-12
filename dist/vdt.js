@@ -399,6 +399,113 @@ function addChild(vNodes, children, index) {
     return hasKeyed;
 }
 
+var ALL_PROPS = ["altKey", "bubbles", "cancelable", "ctrlKey", "eventPhase", "metaKey", "relatedTarget", "shiftKey", "target", "timeStamp", "type", "view", "which"];
+var KEY_PROPS = ["char", "charCode", "key", "keyCode"];
+var MOUSE_PROPS = ["button", "buttons", "clientX", "clientY", "layerX", "layerY", "offsetX", "offsetY", "pageX", "pageY", "screenX", "screenY", "toElement"];
+
+var rkeyEvent = /^key|input/;
+var rmouseEvent = /^(?:mouse|pointer|contextmenu)|click/;
+
+function Event(e) {
+    for (var i = 0; i < ALL_PROPS.length; i++) {
+        var propKey = ALL_PROPS[i];
+        this[propKey] = e[propKey];
+    }
+
+    this._rawEvent = e;
+}
+Event.prototype.preventDefault = function () {
+    this._rawEvent.preventDefault();
+};
+Event.prototype.stopPropagation = function () {
+    var e = this._rawEvent;
+    e.cancelBubble = true;
+    e.stopImmediatePropagation();
+};
+
+function MouseEvent(e) {
+    Event.call(this, e);
+    for (var j = 0; j < MOUSE_PROPS.length; j++) {
+        var mousePropKey = MOUSE_PROPS[j];
+        this[mousePropKey] = e[mousePropKey];
+    }
+}
+MouseEvent.prototype = createObject(Event.prototype);
+MouseEvent.prototype.constructor = MouseEvent;
+
+function KeyEvent(e) {
+    Event.call(this, e);
+    for (var j = 0; j < KEY_PROPS.length; j++) {
+        var keyPropKey = KEY_PROPS[j];
+        this[keyPropKey] = e[keyPropKey];
+    }
+}
+KeyEvent.prototype = createObject(Event.prototype);
+KeyEvent.prototype.constructor = KeyEvent;
+
+function proxyEvent(e) {
+    if (rkeyEvent.test(e.type)) {
+        return new KeyEvent(e);
+    } else if (rmouseEvent.test(e.type)) {
+        return new MouseEvent(e);
+    } else {
+        return new Event(e);
+    }
+}
+
+var delegatedEvents = {};
+
+function handleEvent(name, lastEvent, nextEvent, dom) {
+    var delegatedRoots = delegatedEvents[name];
+
+    if (nextEvent) {
+        if (!delegatedRoots) {
+            delegatedRoots = { items: new SimpleMap(), docEvent: null };
+            delegatedRoots.docEvent = attachEventToDocument(name, delegatedRoots);
+            delegatedEvents[name] = delegatedRoots;
+        }
+        delegatedRoots.items.set(dom, nextEvent);
+    } else if (delegatedRoots) {
+        var items = delegatedRoots.items;
+        if (items.delete(dom)) {
+            if (items.size === 0) {
+                doc.removeEventListener(name, delegatedRoots.docEvent);
+                delete delegatedRoots[name];
+            }
+        }
+    }
+}
+
+function dispatchEvent(event, target, items, count, isClick) {
+    var eventToTrigger = items.get(target);
+    if (eventToTrigger) {
+        count--;
+        event.currentTarget = target;
+        eventToTrigger(event);
+        if (event._rawEvent.cancelBubble) {
+            return;
+        }
+    }
+    if (count > 0) {
+        var parentDom = target.parentNode;
+        if (isNullOrUndefined(parentDom) || isClick && parentDom.nodeType === 1 && parentDom.disabled) {
+            return;
+        }
+        dispatchEvent(event, parentDom, items, count, isClick);
+    }
+}
+
+function attachEventToDocument(name, delegatedRoots) {
+    var docEvent = function docEvent(event) {
+        var count = delegatedRoots.items.size;
+        if (count > 0) {
+            dispatchEvent(proxyEvent(event), event.target, delegatedRoots.items, count, event.type === 'click');
+        }
+    };
+    doc.addEventListener(name, docEvent);
+    return docEvent;
+}
+
 function render(vNode, parentDom) {
     if (isNullOrUndefined(vNode)) return;
     var mountedQueue = new MountedQueue();
@@ -631,113 +738,6 @@ function createRef(dom, ref, mountedQueue) {
     } else {
         throw new Error('ref must be a function, but got "' + JSON.stringify(ref) + '"');
     }
-}
-
-var ALL_PROPS = ["altKey", "bubbles", "cancelable", "ctrlKey", "eventPhase", "metaKey", "relatedTarget", "shiftKey", "target", "timeStamp", "type", "view", "which"];
-var KEY_PROPS = ["char", "charCode", "key", "keyCode"];
-var MOUSE_PROPS = ["button", "buttons", "clientX", "clientY", "layerX", "layerY", "offsetX", "offsetY", "pageX", "pageY", "screenX", "screenY", "toElement"];
-
-var rkeyEvent = /^key|input/;
-var rmouseEvent = /^(?:mouse|pointer|contextmenu)|click/;
-
-function Event(e) {
-    for (var i = 0; i < ALL_PROPS.length; i++) {
-        var propKey = ALL_PROPS[i];
-        this[propKey] = e[propKey];
-    }
-
-    this._rawEvent = e;
-}
-Event.prototype.preventDefault = function () {
-    this._rawEvent.preventDefault();
-};
-Event.prototype.stopPropagation = function () {
-    var e = this._rawEvent;
-    e.cancelBubble = true;
-    e.stopImmediatePropagation();
-};
-
-function MouseEvent(e) {
-    Event.call(this, e);
-    for (var j = 0; j < MOUSE_PROPS.length; j++) {
-        var mousePropKey = MOUSE_PROPS[j];
-        this[mousePropKey] = e[mousePropKey];
-    }
-}
-MouseEvent.prototype = createObject(Event.prototype);
-MouseEvent.prototype.constructor = MouseEvent;
-
-function KeyEvent(e) {
-    Event.call(this, e);
-    for (var j = 0; j < KEY_PROPS.length; j++) {
-        var keyPropKey = KEY_PROPS[j];
-        this[keyPropKey] = e[keyPropKey];
-    }
-}
-KeyEvent.prototype = createObject(Event.prototype);
-KeyEvent.prototype.constructor = KeyEvent;
-
-function proxyEvent(e) {
-    if (rkeyEvent.test(e.type)) {
-        return new KeyEvent(e);
-    } else if (rmouseEvent.test(e.type)) {
-        return new MouseEvent(e);
-    } else {
-        return new Event(e);
-    }
-}
-
-var delegatedEvents = {};
-
-function handleEvent$1(name, lastEvent, nextEvent, dom) {
-    var delegatedRoots = delegatedEvents[name];
-
-    if (nextEvent) {
-        if (!delegatedRoots) {
-            delegatedRoots = { items: new SimpleMap(), docEvent: null };
-            delegatedRoots.docEvent = attachEventToDocument(name, delegatedRoots);
-            delegatedEvents[name] = delegatedRoots;
-        }
-        delegatedRoots.items.set(dom, nextEvent);
-    } else if (delegatedRoots) {
-        var items = delegatedRoots.items;
-        if (items.delete(dom)) {
-            if (items.size === 0) {
-                doc.removeEventListener(name, delegatedRoots.docEvent);
-                delete delegatedRoots[name];
-            }
-        }
-    }
-}
-
-function dispatchEvent(event, target, items, count, isClick) {
-    var eventToTrigger = items.get(target);
-    if (eventToTrigger) {
-        count--;
-        event.currentTarget = target;
-        eventToTrigger(event);
-        if (event._rawEvent.cancelBubble) {
-            return;
-        }
-    }
-    if (count > 0) {
-        var parentDom = target.parentNode;
-        if (isNullOrUndefined(parentDom) || isClick && parentDom.nodeType === 1 && parentDom.disabled) {
-            return;
-        }
-        dispatchEvent(event, parentDom, items, count, isClick);
-    }
-}
-
-function attachEventToDocument(name, delegatedRoots) {
-    var docEvent = function docEvent(event) {
-        var count = delegatedRoots.items.size;
-        if (count > 0) {
-            dispatchEvent(proxyEvent(event), event.target, delegatedRoots.items, count, event.type === 'click');
-        }
-    };
-    doc.addEventListener(name, docEvent);
-    return docEvent;
 }
 
 function patch(lastVNode, nextVNode, parentDom) {
@@ -1103,145 +1103,32 @@ function patchProps(lastVNode, nextVNode) {
 
         var propValue = nextProps[propName];
         if (isNullOrUndefined(propValue)) {
-            removeProp(propName, dom, lastProps);
+            // removeProp(propName, dom, lastProps);
         } else if (isEventProp(propName)) {
             patchEvent(propName, propValue, dom, lastProps);
         } else if (isObject(propValue)) {
-            patchPropByObject(propName, propValue, dom, lastProps);
+            // patchPropByObject(propName, propValue, dom, lastProps);
         } else if (propName === 'style') {
-            dom.style.cssText = propValue;
+            // dom.style.cssText = propValue;
         } else {
-            try {
-                dom[propName] = propValue;
-            } catch (e) {}
+            // try {
+            dom[propName] = propValue;
+            // } catch (e) {}
         }
     }
     if (!isNullOrUndefined(lastProps)) {
-        for (propName in lastProps) {
-            if (!(propName in nextProps)) {
-                removeProp(propName, dom, lastProps);
-            }
-        }
-    }
-}
-
-function removeProp(propName, dom, lastProps) {
-    if (!isNullOrUndefined(lastProps)) {
-        var lastValue = lastProps[propName];
-        var domProp = dom[propName];
-        if (propName === 'attributes') {
-            for (var key in lastValue) {
-                dom.removeAttribute(key);
-            }
-        } else if (propName === 'style') {
-            dom.style.cssText = '';
-        } else if (isEventProp(propName)) {
-            handleEvent$1(propName.substr(3), lastValue, null, dom);
-        } else if (typeof lastValue === 'string' || typeof domProp === 'string') {
-            dom[propName] = '';
-        } else if ((typeof lastValue === 'undefined' ? 'undefined' : _typeof(lastValue)) === 'object') {
-            try {
-                dom[propName] = undefined;
-                delete dom[propName];
-            } catch (e) {
-                for (var _key in lastValue) {
-                    delete domProp[_key];
-                }
-            }
-        } else {
-            delete dom[propName];
-        }
-    }
-}
-
-function patchPropByObject(propName, propValue, dom, lastProps) {
-    var lastPropValue = void 0;
-    if (lastProps) {
-        lastPropValue = lastProps[propName];
-        if (!isObject(lastPropValue) && !isNullOrUndefined(lastPropValue)) {
-            removeProp(propName, dom, lastProps);
-            lastPropValue = null;
-        }
-    }
-    switch (propName) {
-        case 'attributes':
-            return patchAttributes(lastPropValue, propValue, dom);
-        case 'style':
-            return patchStyle(lastPropValue, propValue, dom);
-        default:
-            return patchObject(propName, lastPropValue, propValue, dom);
-    }
-}
-
-function patchObject(propName, lastValue, nextValue, dom) {
-    var domProps = dom[propName];
-    if (isNullOrUndefined(domProps)) {
-        domProps = dom[propName] = {};
-    }
-    var key = void 0;
-    var value = void 0;
-    for (key in nextValue) {
-        domProps[key] = nextValue[key];
-    }
-    if (!isNullOrUndefined(lastValue)) {
-        for (key in lastValue) {
-            if (isNullOrUndefined(nextValue[key])) {
-                // domProps[key] = undefined;
-                delete domProps[key];
-            }
-        }
-    }
-}
-
-function patchAttributes(lastValue, nextValue, dom) {
-    var hasRemoved = {};
-    var key = void 0;
-    var value = void 0;
-    for (key in nextValue) {
-        value = nextValue[key];
-        if (isNullOrUndefined(value)) {
-            dom.removeAttribute(key);
-            hasRemoved[key] = true;
-        } else {
-            dom.setAttribute(key, value);
-        }
-    }
-    if (!isNullOrUndefined(lastValue)) {
-        for (key in lastValue) {
-            if (isNullOrUndefined(nextValue[key]) && !hasRemoved[key]) {
-                dom.removeAttribute(key);
-            }
-        }
-    }
-}
-
-function patchStyle(lastValue, nextValue, dom) {
-    var domStyle = dom.style;
-    var hasRemoved = {};
-    var key = void 0;
-    var value = void 0;
-    for (key in nextValue) {
-        value = nextValue[key];
-        if (isNullOrUndefined(value)) {
-            domStyle[key] = '';
-            hasRemoved[key] = true;
-        } else {
-            domStyle[key] = value;
-        }
-    }
-    if (!isNullOrUndefined(lastValue)) {
-        for (key in lastValue) {
-            if (isNullOrUndefined(nextValue[key]) && !hasRemoved[key]) {
-                domStyle[key] = '';
-            }
-        }
+        // for (propName in lastProps) {
+        // if (!(propName in nextProps)) {
+        // removeProp(propName, dom, lastProps);
+        // } 
+        // }
     }
 }
 
 function patchEvent(propName, nextValue, dom, lastProps) {
     var lastValue = lastProps && lastProps[propName] || null;
     if (lastValue !== nextValue) {
-        handleEvent$1(propName.substr(3), lastValue, nextValue, dom);
+        handleEvent(propName.substr(3), lastValue, nextValue, dom);
     }
 }
 
@@ -1910,7 +1797,8 @@ Parser.prototype = {
         this.length = this.source.length;
 
         this.options = Utils.extend({
-            delimiters: Utils.getDelimiters()
+            delimiters: Utils.getDelimiters(),
+            ignoreWhitespace: true
         }, options);
 
         return this._parseTemplate();
@@ -2005,23 +1893,34 @@ Parser.prototype = {
     _scanJSXText: function(stopChars) {
         var start = this.index,
             l = stopChars.length,
-            i;
+            i,
+            charCode,
+            skipped = false;
         loop:
         while (this.index < this.length) {
-            if (this._charCode() === 10) {
-                this._updateLine();
-            }
-            for (i = 0; i < l; i++) {
-                if (typeof stopChars[i] === 'function' && stopChars[i].call(this) || 
-                    this._isExpect(stopChars[i])
-                ) {
-                    break loop;
+            charCode = this._charCode();
+            if (Utils.isWhiteSpace(charCode)) {
+                // skip whitespace chars
+                if (charCode === 10) {
+                    this._updateLine();
+                }
+                if (!skipped) {
+                    start++;
+                }
+            } else {
+                skipped = true;
+                for (i = 0; i < l; i++) {
+                    if (typeof stopChars[i] === 'function' && stopChars[i].call(this) || 
+                        this._isExpect(stopChars[i])
+                    ) {
+                        break loop;
+                    }
                 }
             }
             this._updateIndex();
         }
 
-        return this._type(Type.JSXText, {
+        return start === this.index ? null : this._type(Type.JSXText, {
             value: this.source.slice(start, this.index)
         });
     },
@@ -2205,7 +2104,9 @@ Parser.prototype = {
                 break;
             }
             current = this._parseJSXChild(element, endTag, current);
-            children.push(current);
+            if (current) {
+                children.push(current);
+            }
         }
         this._parseJSXClosingElement();
         return children;
@@ -2227,13 +2128,15 @@ Parser.prototype = {
             }, Delimiters[0]]);
         }
 
-        ret.prev = undefined;
-        ret.next = undefined;
-        if (prev) {
-            prev.next = ret;
-            ret.prev = prev;
+        if (ret) {
+            ret.prev = undefined;
+            ret.next = undefined;
+            if (prev) {
+                prev.next = ret;
+                ret.prev = prev;
+            }
         }
-
+        
         return ret;
     },
 
