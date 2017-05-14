@@ -24,7 +24,6 @@ Stringifier.prototype = {
     constructor: Stringifier,
 
     stringify: function(ast, autoReturn) {
-        //console.log(require('util').inspect(ast, {showHidden: true, depth: null}));
         if (arguments.length === 1) {
             autoReturn = true;
         }
@@ -104,9 +103,13 @@ Stringifier.prototype = {
     },
 
     _visitJSXElement: function(element) {
+        var attributes = this._visitJSXAttribute(element.attributes, true, true);
         return "h('" + element.value + "'," + 
-            this._visitJSXAttribute(element.attributes) + ", " + 
-            this._visitJSXChildren(element.children) + ')';
+            attributes.props + ", " + 
+            this._visitJSXChildren(element.children) + ", " + 
+            attributes.className + ', ' +
+            attributes.key + ', ' + 
+            attributes.ref + ')';
     },
 
     _visitJSXChildren: function(children) {
@@ -222,24 +225,45 @@ Stringifier.prototype = {
         return ret.join('+');
     },
 
-    _visitJSXAttribute: function(attributes) {
-        var ret = [];
+    _visitJSXAttribute: function(attributes, individualClassName, individualKeyAndRef) {
+        var ret = [],
+            className,
+            key,
+            ref;
         Utils.each(attributes, function(attr) {
             var name = attrMap(attr.name),
                 value = this._visitJSXAttributeValue(attr.value);
             if (name === 'widget' && attr.value.type === Type.JSXText) {
                 // for compatility v1.0
                 // convert widget="a" to ref=(i) => widgets.a = i
-                name = 'ref';
-                value = 'function(i) {widgets.' + value + ' = i}';
-            } else if (name === 'className' && attr.value.type === Type.JSXExpressionContainer) {
-                // for class={ {active: true} }
-                value = '_Vdt.utils.className(' + value + ')';
+                ref = 'function(i) {widgets.' + value + ' = i}';
+                return;
+            } else if (name === 'className') {
+                // process className individually
+                if (attr.value.type === Type.JSXExpressionContainer) {
+                    // for class={ {active: true} }
+                    value = '_Vdt.utils.className(' + value + ')';
+                }
+                if (individualClassName) {
+                    className = value;
+                    return;
+                }
+            } else if (name === 'key' && individualKeyAndRef) {
+                key = value;
+                return;
+            } else if (name === 'ref' && individualKeyAndRef) {
+                ref = value;
+                return;
             }
             ret.push("'" + name + "': " + value);
         }, this);
 
-        return ret.length ? '{' + ret.join(', ') + '}' : 'null';
+        return {
+            props: ret.length ? '{' + ret.join(', ') + '}' : 'null',
+            className: className || 'null',
+            ref: ref || 'null',
+            key: key || 'null'
+        };
     },
 
     _visitJSXAttributeValue: function(value) {
@@ -256,7 +280,9 @@ Stringifier.prototype = {
 
     _visitJSXWidget: function(element) {
         element.attributes.push({name: 'children', value: element.children});
-        return this._visitJSXDirective(element, 'h(' + element.value + ', ' + this._visitJSXAttribute(element.attributes) + ')');
+        var attributes = this._visitJSXAttribute(element.attributes, false, true);
+        return this._visitJSXDirective(element, 'h(' + element.value + ', ' + 
+             attributes.props + ', ' + attributes.key + ', ' + attributes.ref + ')');
     },
 
     _visitJSXBlock: function(element, isAncestor) {
@@ -272,7 +298,8 @@ Stringifier.prototype = {
 
     _visitJSXVdt: function(element, isRoot) {
         var ret = ['(function(blocks) {',
-                'var _blocks = {}, __blocks = extend({}, blocks), _obj = ' + this._visitJSXAttribute(element.attributes) + ' || {};',
+                'var _blocks = {}, __blocks = extend({}, blocks), _obj = ' + 
+                this._visitJSXAttribute(element.attributes, false, false).props + ' || {};',
                 'if (_obj.hasOwnProperty("arguments")) { extend(_obj, _obj.arguments === null ? obj : _obj.arguments); delete _obj.arguments; }',
                 'return ' + element.value + '.call(this, _obj, _Vdt, '
             ].join('\n'),
