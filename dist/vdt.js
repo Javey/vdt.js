@@ -289,7 +289,35 @@ var SimpleMap = typeof Map === 'function' ? Map : function () {
 var skipProps = {
     key: true,
     ref: true,
-    children: true
+    children: true,
+    className: true
+};
+
+var booleanProps = {
+    muted: true,
+    scoped: true,
+    loop: true,
+    open: true,
+    checked: true,
+    default: true,
+    capture: true,
+    disabled: true,
+    readOnly: true,
+    required: true,
+    autoplay: true,
+    controls: true,
+    seamless: true,
+    reversed: true,
+    allowfullscreen: true,
+    novalidate: true,
+    hidden: true,
+    autoFocus: true,
+    selected: true
+};
+
+var strictProps = {
+    volume: true,
+    defaultChecked: true
 };
 
 function MountedQueue() {
@@ -324,16 +352,17 @@ if (process.env.NODE_ENV !== 'production') {
     Object.freeze(EMPTY_OBJ);
 }
 
-function VNode(type, tag, props, children) {
+function VNode(type, tag, props, children, className, key, ref) {
     this.type = type;
     this.tag = tag;
     this.props = props;
     this.children = children;
-    this.key = props.key;
-    this.ref = props.ref;
+    this.key = key || props.key;
+    this.ref = ref || props.ref;
+    this.className = className || props.className;
 }
 
-function createVNode(tag, props, children) {
+function createVNode(tag, props, children, className, key, ref) {
     var type = void 0;
     props || (props = EMPTY_OBJ);
     switch (typeof tag === 'undefined' ? 'undefined' : _typeof(tag)) {
@@ -355,7 +384,7 @@ function createVNode(tag, props, children) {
         props.children = normalizeChildren(props.children);
     }
 
-    return new VNode(type, tag, props, normalizeChildren(children));
+    return new VNode(type, tag, props, normalizeChildren(children), className, key, ref);
 }
 
 function createCommentVNode(children) {
@@ -369,34 +398,46 @@ function createTextVNode(text) {
 
 
 function normalizeChildren(vNodes) {
-    if (isNullOrUndefined(vNodes)) return vNodes;
-    var childNodes = [];
-    addChild(vNodes, childNodes, 0);
-    return childNodes.length ? childNodes : null;
+    if (isArray(vNodes)) {
+        var childNodes = addChild(vNodes, { index: 0 });
+        return childNodes.length ? childNodes : null;
+    }
+    return vNodes;
 }
 
-function addChild(vNodes, children, index) {
-    var hasKeyed = true;
-    if (isNullOrUndefined(vNodes)) {
-        vNodes = createTextVNode('');
-    } else if (isArray(vNodes)) {
-        for (var i = 0; i < vNodes.length; i++) {
-            if (addChild(vNodes[i], children, index + i)) {
-                --index;
+function applyKey(vNode, reference) {
+    if (isNullOrUndefined(vNode.key)) {
+        vNode.key = '.$' + reference.index++;
+    }
+    return vNode;
+}
+
+function addChild(vNodes, reference) {
+    var newVNodes = void 0;
+    for (var i = 0; i < vNodes.length; i++) {
+        var n = vNodes[i];
+        if (isNullOrUndefined(n)) {
+            if (!newVNodes) {
+                newVNodes = vNodes.slice(0, i);
             }
+        } else if (isArray(n)) {
+            if (!newVNodes) {
+                newVNodes = vNodes.slice(0, i);
+            }
+            newVNodes = newVNodes.concat(addChild(n, reference));
+        } else if (isStringOrNumber(n)) {
+            if (!newVNodes) {
+                newVNodes = vNodes.slice(0, i);
+            }
+            newVNodes.push(applyKey(createTextVNode(n), reference));
+        } else if (n.type) {
+            if (!newVNodes) {
+                newVNodes = vNodes.slice(0, i);
+            }
+            newVNodes.push(applyKey(n, reference));
         }
-        return;
-    } else if (isStringOrNumber(vNodes)) {
-        vNodes = createTextVNode(vNodes);
-    } else if (!vNodes.type) {
-        throw new Error('expect a vNode, but got ' + vNodes);
     }
-    if (isNullOrUndefined(vNodes.key)) {
-        vNodes.key = '.$' + index;
-        hasKeyed = false;
-    }
-    children.push(vNodes);
-    return hasKeyed;
+    return newVNodes || vNodes;
 }
 
 var ALL_PROPS = ["altKey", "bubbles", "cancelable", "ctrlKey", "eventPhase", "metaKey", "relatedTarget", "shiftKey", "target", "timeStamp", "type", "view", "which"];
@@ -516,19 +557,18 @@ function render(vNode, parentDom) {
 
 function createElement(vNode, parentDom, mountedQueue) {
     var type = vNode.type;
-    switch (type) {
-        case Types.HtmlElement:
-            return createHtmlElement(vNode, parentDom, mountedQueue);
-        case Types.Text:
-            return createTextElement(vNode, parentDom);
-        case Types.ComponentClass:
-            return createComponentClass(vNode, parentDom, mountedQueue);
-        case Types.ComponentFunction:
-            return createComponentFunction(vNode, parentDom, mountedQueue);
-        case Types.HtmlComment:
-            return createCommentElement(vNode, parentDom);
-        default:
-            throw new Error('unknown vnode type');
+    if (type & Types.HtmlElement) {
+        return createHtmlElement(vNode, parentDom, mountedQueue);
+    } else if (type & Types.Text) {
+        return createTextElement(vNode, parentDom);
+    } else if (type & Types.ComponentClass) {
+        return createComponentClass(vNode, parentDom, mountedQueue);
+    } else if (type & Types.ComponentFunction) {
+        return createComponentFunction(vNode, parentDom, mountedQueue);
+    } else if (type & Types.HtmlComment) {
+        return createCommentElement(vNode, parentDom);
+    } else {
+        throw new Error('unknown vnode type');
     }
 }
 
@@ -536,12 +576,24 @@ function createHtmlElement(vNode, parentDom, mountedQueue) {
     var dom = doc.createElement(vNode.tag);
     var children = vNode.children;
     var ref = vNode.ref;
+    var props = vNode.props;
+    var className = vNode.className;
 
     vNode.dom = dom;
 
-    createElements(children, dom, mountedQueue);
+    if (!isNullOrUndefined(children)) {
+        createElements(children, dom, mountedQueue);
+    }
 
-    patchProps(null, vNode);
+    if (!isNullOrUndefined(className)) {
+        dom.className = className;
+    }
+
+    if (props !== EMPTY_OBJ) {
+        for (var prop in props) {
+            patchProp(prop, null, props[prop], dom);
+        }
+    }
 
     if (!isNullOrUndefined(ref)) {
         createRef(dom, ref, mountedQueue);
@@ -636,30 +688,39 @@ function createComponentFunctionVNode(vNode) {
 }
 
 function createElements(vNodes, parentDom, mountedQueue) {
-    if (isNullOrUndefined(vNodes)) return;
-    for (var i = 0; i < vNodes.length; i++) {
-        createElement(vNodes[i], parentDom, mountedQueue);
+    if (isStringOrNumber(vNodes)) {
+        parentDom.textContent = vNodes;
+    } else if (isArray(vNodes)) {
+        for (var i = 0; i < vNodes.length; i++) {
+            createElement(vNodes[i], parentDom, mountedQueue);
+        }
+    } else {
+        createElement(vNodes, parentDom, mountedQueue);
     }
 }
 
 function removeElements(vNodes, parentDom) {
-    if (isNullOrUndefined(vNodes)) return;
-    for (var i = 0; i < vNodes.length; i++) {
-        removeElement(vNodes[i], parentDom);
+    if (isNullOrUndefined(vNodes)) {
+        return;
+    } else if (isArray(vNodes)) {
+        for (var i = 0; i < vNodes.length; i++) {
+            removeElement(vNodes[i], parentDom);
+        }
+    } else {
+        removeElement(vNodes, parentDom);
     }
 }
 
 function removeElement(vNode, parentDom) {
-    switch (vNode.type) {
-        case Types.Element:
-            return removeHtmlElement(vNode, parentDom);
-        case Types.Text:
-        case Types.HtmlComment:
-            return removeText(vNode, parentDom);
-        case Types.ComponentFunction:
-            return removeComponentFunction(vNode, parentDom);
-        case Types.ComponentClass:
-            return removeComponentClass(vNode, parentDom);
+    var type = vNode.type;
+    if (type & Types.Element) {
+        return removeHtmlElement(vNode, parentDom);
+    } else if (type & Types.TextElement) {
+        return removeText(vNode, parentDom);
+    } else if (type & Types.ComponentClass) {
+        return removeComponentClass(vNode, parentDom);
+    } else if (type & Types.ComponentFunction) {
+        return removeComponentFunction(vNode, parentDom);
     }
 }
 
@@ -788,15 +849,29 @@ function patchElement(lastVNode, nextVNode, parentDom, mountedQueue) {
     var lastChildren = lastVNode.children;
     var nextChildren = nextVNode.children;
     var nextRef = nextVNode.ref;
+    var lastClassName = lastVNode.className;
+    var nextClassName = nextVNode.className;
 
     nextVNode.dom = dom;
 
     if (lastVNode.tag !== nextVNode.tag) {
         replaceElement(lastVNode, nextVNode, parentDom, mountedQueue);
     } else {
-        patchChildren(lastChildren, nextChildren, dom, mountedQueue);
+        if (lastChildren !== nextChildren) {
+            patchChildren(lastChildren, nextChildren, dom, mountedQueue);
+        }
 
-        patchProps(lastVNode, nextVNode);
+        if (lastProps !== nextProps) {
+            patchProps(lastVNode, nextVNode);
+        }
+
+        if (lastClassName !== nextClassName) {
+            if (isNullOrUndefined(nextClassName)) {
+                dom.removeAttribute('class');
+            } else {
+                dom.className = nextClassName;
+            }
+        }
 
         if (!isNullOrUndefined(nextRef) && lastVNode.ref !== nextRef) {
             createRef(dom, nextRef, mountedQueue);
@@ -842,11 +917,23 @@ function patchComponentFunction(lastVNode, nextVNode, parentDom, mountedQueue) {
 
 function patchChildren(lastChildren, nextChildren, parentDom, mountedQueue) {
     if (isNullOrUndefined(lastChildren)) {
-        createElements(nextChildren, parentDom, mountedQueue);
+        if (!isNullOrUndefined(nextChildren)) {
+            createElements(nextChildren, parentDom, mountedQueue);
+        }
     } else if (isNullOrUndefined(nextChildren)) {
         removeElements(lastChildren, parentDom);
+    } else if (isArray(lastChildren)) {
+        if (isArray(nextChildren)) {
+            patchChildrenByKey(lastChildren, nextChildren, parentDom, mountedQueue);
+        } else {
+            removeElements(lastChildren, parentDom);
+            createElement(nextChildren, parentDom, mountedQueue);
+        }
+    } else if (isArray(nextChildren)) {
+        removeElement(lastChildren, parentDom);
+        createElements(nextChildren, parentDom, mountedQueue);
     } else {
-        patchChildrenByKey(lastChildren, nextChildren, parentDom, mountedQueue);
+        patchVNode(lastChildren, nextChildren, parentDom, mountedQueue);
     }
 }
 
@@ -1094,41 +1181,169 @@ function patchText(lastVNode, nextVNode, parentDom) {
 }
 
 function patchProps(lastVNode, nextVNode) {
-    var lastProps = lastVNode && lastVNode.props || null;
+    var lastProps = lastVNode.props;
     var nextProps = nextVNode.props;
     var dom = nextVNode.dom;
-    var propName = void 0;
-    for (propName in nextProps) {
-        if (skipProps[propName]) continue;
-
-        var propValue = nextProps[propName];
-        if (isNullOrUndefined(propValue)) {
-            // removeProp(propName, dom, lastProps);
-        } else if (isEventProp(propName)) {
-            patchEvent(propName, propValue, dom, lastProps);
-        } else if (isObject(propValue)) {
-            // patchPropByObject(propName, propValue, dom, lastProps);
-        } else if (propName === 'style') {
-            // dom.style.cssText = propValue;
-        } else {
-            // try {
-            dom[propName] = propValue;
-            // } catch (e) {}
+    var prop = void 0;
+    if (nextProps !== EMPTY_OBJ) {
+        for (prop in nextProps) {
+            patchProp(prop, lastProps[prop], nextProps[prop], dom);
         }
     }
-    if (!isNullOrUndefined(lastProps)) {
-        // for (propName in lastProps) {
-        // if (!(propName in nextProps)) {
-        // removeProp(propName, dom, lastProps);
-        // } 
-        // }
+    if (lastProps !== EMPTY_OBJ) {
+        for (prop in lastProps) {
+            if (!(prop in nextProps)) {
+                removeProp(prop, lastProps[prop], dom);
+            }
+        }
     }
 }
 
-function patchEvent(propName, nextValue, dom, lastProps) {
-    var lastValue = lastProps && lastProps[propName] || null;
+function patchProp(prop, lastValue, nextValue, dom) {
     if (lastValue !== nextValue) {
-        handleEvent(propName.substr(3), lastValue, nextValue, dom);
+        if (skipProps[prop]) {
+            return;
+        } else if (booleanProps[prop]) {
+            dom[prop] = !!nextValue;
+        } else if (strictProps[prop]) {
+            var value = isNullOrUndefined(nextValue) ? '' : nextValue;
+            if (dom[prop] !== value) {
+                dom[prop] = value;
+            }
+        } else if (isNullOrUndefined(nextValue)) {
+            removeProp(prop, lastValue, dom);
+        } else if (isEventProp(prop)) {
+            handleEvent(prop.substr(3), lastValue, nextValue, dom);
+        } else if (isObject(nextValue)) {
+            patchPropByObject(prop, lastValue, nextValue, dom);
+        } else if (prop === 'innerHTML') {
+            dom.innerHTML = nextValue;
+        } else {
+            dom.setAttribute(prop, nextValue);
+        }
+    }
+}
+
+function removeProp(prop, lastValue, dom) {
+    if (!isNullOrUndefined(lastValue)) {
+        var handled = false;
+        switch (prop) {
+            // case 'className':
+            // dom.removeAttribute('class');
+            // handled = true;
+            // break;
+            case 'value':
+                dom.value = '';
+                handled = true;
+                break;
+            case 'style':
+                dom.removeAttribute('style');
+                handled = true;
+                break;
+            case 'attributes':
+                for (var key in lastValue) {
+                    dom.removeAttribute(key);
+                }
+                handled = true;
+                break;
+            default:
+                break;
+        }
+        if (!handled) {
+            if (isEventProp(prop)) {
+                handleEvent(prop.substr(3), lastValue, null, dom);
+            } else if (isObject(lastValue)) {
+                var domProp = dom[prop];
+                try {
+                    dom[prop] = undefined;
+                    delete dom[prop];
+                } catch (e) {
+                    for (var _key in lastValue) {
+                        delete domProp[_key];
+                    }
+                }
+            } else {
+                dom.removeAttribute(prop);
+            }
+        }
+    }
+}
+
+function patchPropByObject(prop, lastValue, nextValue, dom) {
+    if (lastValue && !isObject(lastValue) && !isNullOrUndefined(lastValue)) {
+        removeProp(prop, lastValue, dom);
+    }
+    switch (prop) {
+        case 'attributes':
+            return patchAttributes(lastValue, nextValue, dom);
+        case 'style':
+            return patchStyle(lastValue, nextValue, dom);
+        default:
+            return patchObject(prop, lastValue, nextValue, dom);
+    }
+}
+
+function patchObject(prop, lastValue, nextValue, dom) {
+    var domProps = dom[prop];
+    if (isNullOrUndefined(domProps)) {
+        domProps = dom[prop] = {};
+    }
+    var key = void 0;
+    var value = void 0;
+    for (key in nextValue) {
+        domProps[key] = nextValue[key];
+    }
+    if (!isNullOrUndefined(lastValue)) {
+        for (key in lastValue) {
+            if (isNullOrUndefined(nextValue[key])) {
+                delete domProps[key];
+            }
+        }
+    }
+}
+
+function patchAttributes(lastValue, nextValue, dom) {
+    var hasRemoved = {};
+    var key = void 0;
+    var value = void 0;
+    for (key in nextValue) {
+        value = nextValue[key];
+        if (isNullOrUndefined(value)) {
+            dom.removeAttribute(key);
+            hasRemoved[key] = true;
+        } else {
+            dom.setAttribute(key, value);
+        }
+    }
+    if (!isNullOrUndefined(lastValue)) {
+        for (key in lastValue) {
+            if (isNullOrUndefined(nextValue[key]) && !hasRemoved[key]) {
+                dom.removeAttribute(key);
+            }
+        }
+    }
+}
+
+function patchStyle(lastValue, nextValue, dom) {
+    var domStyle = dom.style;
+    var hasRemoved = {};
+    var key = void 0;
+    var value = void 0;
+    for (key in nextValue) {
+        value = nextValue[key];
+        if (isNullOrUndefined(value)) {
+            domStyle[key] = '';
+            hasRemoved[key] = true;
+        } else {
+            domStyle[key] = value;
+        }
+    }
+    if (!isNullOrUndefined(lastValue)) {
+        for (key in lastValue) {
+            if (isNullOrUndefined(nextValue[key]) && !hasRemoved[key]) {
+                domStyle[key] = '';
+            }
+        }
     }
 }
 
@@ -2274,7 +2489,6 @@ Stringifier.prototype = {
     constructor: Stringifier,
 
     stringify: function(ast, autoReturn) {
-        //console.log(require('util').inspect(ast, {showHidden: true, depth: null}));
         if (arguments.length === 1) {
             autoReturn = true;
         }
@@ -2354,9 +2568,13 @@ Stringifier.prototype = {
     },
 
     _visitJSXElement: function(element) {
+        var attributes = this._visitJSXAttribute(element.attributes, true, true);
         return "h('" + element.value + "'," + 
-            this._visitJSXAttribute(element.attributes) + ", " + 
-            this._visitJSXChildren(element.children) + ')';
+            attributes.props + ", " + 
+            this._visitJSXChildren(element.children) + ", " + 
+            attributes.className + ', ' +
+            attributes.key + ', ' + 
+            attributes.ref + ')';
     },
 
     _visitJSXChildren: function(children) {
@@ -2472,24 +2690,45 @@ Stringifier.prototype = {
         return ret.join('+');
     },
 
-    _visitJSXAttribute: function(attributes) {
-        var ret = [];
+    _visitJSXAttribute: function(attributes, individualClassName, individualKeyAndRef) {
+        var ret = [],
+            className,
+            key,
+            ref;
         Utils.each(attributes, function(attr) {
             var name = attrMap(attr.name),
                 value = this._visitJSXAttributeValue(attr.value);
             if (name === 'widget' && attr.value.type === Type.JSXText) {
                 // for compatility v1.0
                 // convert widget="a" to ref=(i) => widgets.a = i
-                name = 'ref';
-                value = 'function(i) {widgets.' + value + ' = i}';
-            } else if (name === 'className' && attr.value.type === Type.JSXExpressionContainer) {
-                // for class={ {active: true} }
-                value = '_Vdt.utils.className(' + value + ')';
+                ref = 'function(i) {widgets.' + value + ' = i}';
+                return;
+            } else if (name === 'className') {
+                // process className individually
+                if (attr.value.type === Type.JSXExpressionContainer) {
+                    // for class={ {active: true} }
+                    value = '_Vdt.utils.className(' + value + ')';
+                }
+                if (individualClassName) {
+                    className = value;
+                    return;
+                }
+            } else if (name === 'key' && individualKeyAndRef) {
+                key = value;
+                return;
+            } else if (name === 'ref' && individualKeyAndRef) {
+                ref = value;
+                return;
             }
             ret.push("'" + name + "': " + value);
         }, this);
 
-        return ret.length ? '{' + ret.join(', ') + '}' : 'null';
+        return {
+            props: ret.length ? '{' + ret.join(', ') + '}' : 'null',
+            className: className || 'null',
+            ref: ref || 'null',
+            key: key || 'null'
+        };
     },
 
     _visitJSXAttributeValue: function(value) {
@@ -2506,7 +2745,9 @@ Stringifier.prototype = {
 
     _visitJSXWidget: function(element) {
         element.attributes.push({name: 'children', value: element.children});
-        return this._visitJSXDirective(element, 'h(' + element.value + ', ' + this._visitJSXAttribute(element.attributes) + ')');
+        var attributes = this._visitJSXAttribute(element.attributes, false, true);
+        return this._visitJSXDirective(element, 'h(' + element.value + ', ' + 
+             attributes.props + ', ' + attributes.key + ', ' + attributes.ref + ')');
     },
 
     _visitJSXBlock: function(element, isAncestor) {
@@ -2522,7 +2763,8 @@ Stringifier.prototype = {
 
     _visitJSXVdt: function(element, isRoot) {
         var ret = ['(function(blocks) {',
-                'var _blocks = {}, __blocks = extend({}, blocks), _obj = ' + this._visitJSXAttribute(element.attributes) + ' || {};',
+                'var _blocks = {}, __blocks = extend({}, blocks), _obj = ' + 
+                this._visitJSXAttribute(element.attributes, false, false).props + ' || {};',
                 'if (_obj.hasOwnProperty("arguments")) { extend(_obj, _obj.arguments === null ? obj : _obj.arguments); delete _obj.arguments; }',
                 'return ' + element.value + '.call(this, _obj, _Vdt, '
             ].join('\n'),
