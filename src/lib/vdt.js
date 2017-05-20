@@ -4,66 +4,46 @@ var parser = new (require('./parser')),
     utils = require('./utils');
 
 var Vdt = function(source, options) {
-    var vdt = {
-        render: function(data) {
-            vdt.renderTree.apply(vdt, arguments); 
-            vdt.node = miss.render(vdt.tree);
-            return vdt.node;
-        },
+    if (!(this instanceof Vdt)) return new Vdt(source, options);
 
-        renderTree: function(data) {
-            if (arguments.length) {
-                vdt.data = data;
-            }
-            vdt.data.vdt = vdt;
-            // pass vdt as `this`, does not dirty data.
-            vdt.tree = vdt.template.call(vdt, vdt.data, Vdt);
-            return vdt.tree;
-        },
+    this.template = compile(source, options);
+    this.data = null;
+    this.vNode = null;
+    this.node = null;
+    this.widgets = {};
+};
+Vdt.prototype = {
+    constructor: Vdt,
 
-        renderString: function(data) {
-            var node = vdt.render.apply(vdt, arguments);
-            return node.outerHTML || node.toString();
-        },
+    render: function(data) {
+        this.renderVNode(data);
+        this.node = miss.render(this.vNode);
 
-        update: function(data) {
-            var oldTree = vdt.tree;
-            vdt.renderTree.apply(vdt, arguments);
-            vdt.node = miss.patch(oldTree, vdt.tree);
-            return vdt.node;
-        },
+        return this.node;
+    },
 
-        /**
-         * Restore the data, so you can modify it directly.
-         */
-        data: {},
-        tree: {},
-        patches: {},
-        widgets: {},
-        node: null,
-        template: compile(source, options),
-
-        getTree: function() {
-            return vdt.tree;
-        },
-
-        setTree: function(tree) {
-            vdt.tree = tree;
-        },
-
-        getNode: function() {
-            return vdt.node;
-        },
-
-        setNode: function(node) {
-            vdt.node = node;
+    renderVNode: function(data) {
+        if (data !== undefined) {
+            this.data = data;
         }
-    };
+        this.vNode = this.template(this.data, Vdt);
 
-    // reference cycle vdt
-    // vdt.data.vdt = vdt;
+        return this.vNode;
+    },
 
-    return vdt;
+    renderString: function(data) {
+        var node = this.render(data);
+
+        return node.outerHTML || node.toString();
+    },
+
+    update: function(data) {
+        var oldVNode = this.VNode;
+        this.renderTree(data);
+        this.node = miss.patch(oldVNode, this.vNode);
+
+        return this.node;
+    }
 };
 
 function compile(source, options) {
@@ -74,15 +54,7 @@ function compile(source, options) {
         options = {autoReturn: options};
     }
 
-    options = utils.extend({
-        autoReturn: true,
-        onlySource: false,
-        delimiters: utils.getDelimiters(),
-        // remove `with` statement
-        noWith: false,
-        // whether rendering on server or not
-        server: false
-    }, options);
+    options = utils.extend({}, utils.configure(), options);
 
     switch (typeof source) {
         case 'string':

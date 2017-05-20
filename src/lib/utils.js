@@ -56,7 +56,17 @@ var i = 0,
         'v-for-key': true
     },
 
-    Delimiters = ['{', '}'];
+    Options = {
+        autoReturn: true,
+        onlySource: false,
+        delimiters: ['{', '}'],
+        // remove `with` statement
+        noWith: false,
+        // whether rendering on server or not
+        server: false,
+        // skip all whitespaces in template
+        skipWhitespace: false
+    };
 
 var hasOwn = Object.prototype.hasOwnProperty,
     noop = function() {};
@@ -148,11 +158,18 @@ var Utils = {
         if (!Utils.isArray(delimiters)) {
             throw new Error('The parameter must be an array like ["{{", "}}"]');
         }
-        Delimiters = delimiters;
+        Options.delimiters = delimiters;
     },
 
     getDelimiters: function() {
-        return Delimiters;
+        return Options.delimiters;
+    },
+
+    configure: function(options) {
+        if (options !== undefined) {
+            utils.extend(Options, options);
+        } 
+        return Options;
     },
 
     isSelfClosingTag: function(tag) {

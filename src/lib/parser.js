@@ -33,10 +33,7 @@ Parser.prototype = {
         this.column = 1;
         this.length = this.source.length;
 
-        this.options = Utils.extend({
-            delimiters: Utils.getDelimiters(),
-            ignoreWhitespace: true
-        }, options);
+        this.options = Utils.extend({}, Utils.configure(), options);
 
         return this._parseTemplate();
     },
@@ -137,11 +134,11 @@ Parser.prototype = {
         while (this.index < this.length) {
             charCode = this._charCode();
             if (Utils.isWhiteSpace(charCode)) {
-                // skip whitespace chars
                 if (charCode === 10) {
                     this._updateLine();
                 }
-                if (!skipped) {
+                // skip whitespace chars
+                if (this.options.skipWhitespace && !skipped) {
                     start++;
                 }
             } else {

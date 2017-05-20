@@ -8,7 +8,7 @@
     <h1>index page powered by Advanced uses vdt template engine</h1>
     <div>{{'{'}}test}</div>
     <div innerHTML="AAA"></div>
-    <div textContent="BBB"></div>
+    <div>BBB</div>
     <div>{{'<div>{test}</div>'}}</div>
     <p>Hello {{test}}</p>
     <script type="text/javascript">
