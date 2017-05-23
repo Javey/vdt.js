@@ -1,4 +1,5 @@
-/** * @fileoverview utility methods
+/** 
+ * @fileoverview utility methods
  * @author javey
  * @date 15-4-22
  */

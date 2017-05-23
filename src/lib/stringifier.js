@@ -236,7 +236,7 @@ Stringifier.prototype = {
             if (name === 'widget' && attr.value.type === Type.JSXText) {
                 // for compatility v1.0
                 // convert widget="a" to ref=(i) => widgets.a = i
-                ref = 'function(i) {widgets.' + value + ' = i}';
+                ref = 'function(i) {widgets[' + value + '] = i}';
                 return;
             } else if (name === 'className') {
                 // process className individually

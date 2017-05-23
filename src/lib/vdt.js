@@ -38,8 +38,8 @@ Vdt.prototype = {
     },
 
     update: function(data) {
-        var oldVNode = this.VNode;
-        this.renderTree(data);
+        var oldVNode = this.vNode;
+        this.renderVNode(data);
         this.node = miss.patch(oldVNode, this.vNode);
 
         return this.node;
