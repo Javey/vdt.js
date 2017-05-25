@@ -1,10 +1,12 @@
-var fs = require('fs'),
-    utils = require('./utils'),
-    Vdt = require('./vdt'),
-    compile = require('./compile'),
-    middleware = require('./middleware');
+import fs from 'fs';
+import * as utils from './utils';
+import Vdt from './vdt';
+import compile from './compile';
+import middleware from './middleware';
 
-var defaultOptions = {
+utils.require = compile;
+
+const defaultOptions = {
     doctype: '<!DOCTYPE html>',
     force: false,
     autoReturn: true,
@@ -55,9 +57,11 @@ function __express(file, options, callback) {
     }
 }
 
-module.exports = Vdt;
-module.exports.middleware = middleware; 
-module.exports.renderFile = renderFile;
-module.exports.__express = __express;
-module.exports.setDefaults = setDefaults;
-module.exports.getDefaults = getDefaults;
+Vdt.utils = utils;
+Vdt.middleware = middleware; 
+Vdt.renderFile = renderFile;
+Vdt.__express = __express;
+Vdt.setDefaults = setDefaults;
+Vdt.getDefaults = getDefaults;
+
+export default Vdt;

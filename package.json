@@ -2,12 +2,8 @@
   "name": "vdt",
   "version": "0.10.3",
   "description": "A template engine based on virtual-dom",
-  "main": "src/index",
-  "browser": {
-    "./src/lib/index.js": "./src/lib/vdt.js",
-    "./src/lib/compile.js": "./src/lib/vdt.js",
-    "src/index": "./dist/vdt.js"
-  },
+  "main": "dist/index",
+  "module": "src/client",
   "repository": {
     "type": "git",
     "url": "git://github.com/Javey/vdt.js.vdt"
@@ -26,8 +22,15 @@
     "miss": "*"
   },
   "devDependencies": {
+    "babel-plugin-external-helpers": "^6.22.0",
+    "babel-plugin-transform-es3-member-expression-literals": "^6.22.0",
+    "babel-plugin-transform-es3-property-literals": "^6.22.0",
+    "babel-preset-es2015": "^6.24.1",
+    "babel-preset-es2015-loose": "^8.0.0",
     "benchmark": "^1.0.0",
     "coffee-script": "^1.9.2",
+    "gulp": "^3.9.1",
+    "gulp-babel": "^6.1.2",
     "handlebars": "^3.0.2",
     "istanbul": "^0.4.5",
     "jquery": "^2.1.3",
@@ -36,6 +39,7 @@
     "mustache": "^2.0.0",
     "platform": "^1.3.0",
     "rollup": "^0.41.6",
+    "rollup-plugin-babel": "^2.7.1",
     "rollup-plugin-commonjs": "^8.0.2",
     "rollup-plugin-node-resolve": "^3.0.0",
     "rollup-plugin-replace": "^1.1.1",

@@ -1,9 +1,12 @@
-var parser = new (require('./parser')),
-    stringifier = new (require('./stringifier')),
-    miss = require('miss'),
-    utils = require('./utils');
+import Parser from './parser';
+import Stringifier from './stringifier';
+import * as utils from './utils';
+import * as miss from 'miss';
 
-var Vdt = function(source, options) {
+const parser = new Parser();
+const stringifier = new Stringifier();
+
+export default function Vdt(source, options) {
     if (!(this instanceof Vdt)) return new Vdt(source, options);
 
     this.template = compile(source, options);
@@ -11,18 +14,18 @@ var Vdt = function(source, options) {
     this.vNode = null;
     this.node = null;
     this.widgets = {};
-};
+}
 Vdt.prototype = {
     constructor: Vdt,
 
-    render: function(data) {
+    render(data) {
         this.renderVNode(data);
         this.node = miss.render(this.vNode);
 
         return this.node;
     },
 
-    renderVNode: function(data) {
+    renderVNode(data) {
         if (data !== undefined) {
             this.data = data;
         }
@@ -31,13 +34,13 @@ Vdt.prototype = {
         return this.vNode;
     },
 
-    renderString: function(data) {
+    renderString(data) {
         var node = this.render(data);
 
         return node.outerHTML || node.toString();
     },
 
-    update: function(data) {
+    update(data) {
         var oldVNode = this.vNode;
         this.renderVNode(data);
         this.node = miss.patch(oldVNode, this.vNode);
@@ -103,5 +106,3 @@ Vdt.getDelimiters = utils.getDelimiters;
 
 // for compatibility v1.0
 Vdt.virtualDom = miss; 
-
-module.exports = Vdt;

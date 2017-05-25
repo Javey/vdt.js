@@ -1,1 +1,3 @@
-module.exports = require('./lib/index');
+import Vdt from './lib/index';
+
+export default Vdt;

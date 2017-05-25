@@ -1,22 +1,31 @@
-/**
- * @fileoverview parse jsx to ast
- * @author javey
- * @date 15-4-22
- */
+'use strict';
 
-import * as Utils from './utils';
+exports.__esModule = true;
+exports['default'] = Parser;
 
-const {Type, TypeName} = Utils;
-const elementNameRegexp = /^<\w+:?\s*[\w\/>]/;
+var _utils = require('./utils');
+
+var Utils = _interopRequireWildcard(_utils);
+
+function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj['default'] = obj; return newObj; } }
+
+var Type = Utils.Type,
+    TypeName = Utils.TypeName; /**
+                                * @fileoverview parse jsx to ast
+                                * @author javey
+                                * @date 15-4-22
+                                */
+
+var elementNameRegexp = /^<\w+:?\s*[\w\/>]/;
 
 function isJSXIdentifierPart(ch) {
-    return (ch === 58) || (ch === 95) || (ch === 45) ||  // : and _ (underscore) and -
-        (ch >= 65 && ch <= 90) ||         // A..Z
-        (ch >= 97 && ch <= 122) ||        // a..z
-        (ch >= 48 && ch <= 57);         // 0..9
+    return ch === 58 || ch === 95 || ch === 45 || // : and _ (underscore) and -
+    ch >= 65 && ch <= 90 || // A..Z
+    ch >= 97 && ch <= 122 || // a..z
+    ch >= 48 && ch <= 57; // 0..9
 }
 
-export default function Parser() {
+function Parser() {
     this.source = '';
     this.index = 0;
     this.length = 0;
@@ -25,7 +34,7 @@ export default function Parser() {
 Parser.prototype = {
     constructor: Parser,
 
-    parse: function(source, options) {
+    parse: function parse(source, options) {
         this.source = Utils.trimRight(source);
         this.index = 0;
         this.line = 1;
@@ -37,9 +46,9 @@ Parser.prototype = {
         return this._parseTemplate();
     },
 
-    _parseTemplate: function() {
+    _parseTemplate: function _parseTemplate() {
         var elements = [],
-            braces = {count: 0};
+            braces = { count: 0 };
         while (this.index < this.length && braces.count >= 0) {
             elements.push(this._advance(braces));
         }
@@ -47,7 +56,7 @@ Parser.prototype = {
         return elements;
     },
 
-    _advance: function(braces) {
+    _advance: function _advance(braces) {
         var ch = this._char();
         if (ch !== '<') {
             return this._scanJS(braces);
@@ -56,7 +65,7 @@ Parser.prototype = {
         }
     },
 
-    _scanJS: function(braces) {
+    _scanJS: function _scanJS(braces) {
         var start = this.index,
             Delimiters = this.options.delimiters;
 
@@ -88,7 +97,7 @@ Parser.prototype = {
         });
     },
 
-    _scanStringLiteral: function() {
+    _scanStringLiteral: function _scanStringLiteral() {
         var quote = this._char(),
             start = this.index,
             str = '';
@@ -119,18 +128,17 @@ Parser.prototype = {
         });
     },
 
-    _scanJSX: function() {
+    _scanJSX: function _scanJSX() {
         return this._parseJSXElement();
     },
 
-    _scanJSXText: function(stopChars) {
+    _scanJSXText: function _scanJSXText(stopChars) {
         var start = this.index,
             l = stopChars.length,
             i,
             charCode,
             skipped = false;
-        loop:
-        while (this.index < this.length) {
+        loop: while (this.index < this.length) {
             charCode = this._charCode();
             if (Utils.isWhiteSpace(charCode)) {
                 if (charCode === 10) {
@@ -143,9 +151,7 @@ Parser.prototype = {
             } else {
                 skipped = true;
                 for (i = 0; i < l; i++) {
-                    if (typeof stopChars[i] === 'function' && stopChars[i].call(this) || 
-                        this._isExpect(stopChars[i])
-                    ) {
+                    if (typeof stopChars[i] === 'function' && stopChars[i].call(this) || this._isExpect(stopChars[i])) {
                         break loop;
                     }
                 }
@@ -158,7 +164,7 @@ Parser.prototype = {
         });
     },
 
-    _scanJSXStringLiteral: function() {
+    _scanJSXStringLiteral: function _scanJSXStringLiteral() {
         var quote = this._char();
         if (quote !== '\'' && quote !== '"') {
             this._error('String literal must starts with a qoute');
@@ -169,32 +175,34 @@ Parser.prototype = {
         return token;
     },
 
-    _parseJSXElement: function() {
+    _parseJSXElement: function _parseJSXElement() {
         this._expect('<');
         var start = this.index,
             ret = {},
             flag = this._charCode();
-        if (flag >= 65 && flag <= 90/* upper case */) {
-            // is a widget
-            this._type(Type.JSXWidget, ret);
-        } else if (this._isExpect('!--')) {
+        if (flag >= 65 && flag <= 90 /* upper case */) {
+                // is a widget
+                this._type(Type.JSXWidget, ret);
+            } else if (this._isExpect('!--')) {
             // is html comment
             return this._parseJSXComment();
-        } else if (this._charCode(this.index + 1) === 58/* : */){
-            // is a directive
-            start += 2;
-            switch (flag) {
-                case 116: // t
-                    this._type(Type.JSXVdt, ret);
-                    break;
-                case 98: // b
-                    this._type(Type.JSXBlock, ret);
-                    break;
-                default:
-                    this._error('Unknown directive ' + String.fromCharCode(flag) + ':');
-            }
-            this._updateIndex(2);
-        } else {
+        } else if (this._charCode(this.index + 1) === 58 /* : */) {
+                // is a directive
+                start += 2;
+                switch (flag) {
+                    case 116:
+                        // t
+                        this._type(Type.JSXVdt, ret);
+                        break;
+                    case 98:
+                        // b
+                        this._type(Type.JSXBlock, ret);
+                        break;
+                    default:
+                        this._error('Unknown directive ' + String.fromCharCode(flag) + ':');
+                }
+                this._updateIndex(2);
+            } else {
             // is an element
             this._type(Type.JSXElement, ret);
         }
@@ -211,7 +219,7 @@ Parser.prototype = {
         return this._parseAttributeAndChildren(ret);
     },
 
-    _parseAttributeAndChildren: function(ret) {
+    _parseAttributeAndChildren: function _parseAttributeAndChildren(ret) {
         var attrs = this._parseJSXAttribute();
         Utils.extend(ret, {
             attributes: attrs.attributes,
@@ -238,7 +246,7 @@ Parser.prototype = {
         return ret;
     },
 
-    _parseJSXAttribute: function() {
+    _parseJSXAttribute: function _parseJSXAttribute() {
         var ret = {
             attributes: [],
             directives: []
@@ -260,7 +268,7 @@ Parser.prototype = {
         return ret;
     },
 
-    _parseJSXAttributeName: function() {
+    _parseJSXAttributeName: function _parseJSXAttributeName() {
         var start = this.index;
         if (!isJSXIdentifierPart(this._charCode())) {
             this._error('Unexpected identifier ' + this._char());
@@ -272,16 +280,16 @@ Parser.prototype = {
             }
             this._updateIndex();
         }
-        
+
         var name = this.source.slice(start, this.index);
         if (Utils.isDirective(name)) {
-            return this._type(Type.JSXDirective, {name: name});
+            return this._type(Type.JSXDirective, { name: name });
         }
 
-        return this._type(Type.JSXAttribute, {name: name});
+        return this._type(Type.JSXAttribute, { name: name });
     },
 
-    _parseJSXAttributeValue: function() {
+    _parseJSXAttributeValue: function _parseJSXAttributeValue() {
         var value,
             Delimiters = this.options.delimiters;
         if (this._isExpect(Delimiters[0])) {
@@ -292,7 +300,7 @@ Parser.prototype = {
         return value;
     },
 
-    _parseJSXExpressionContainer: function() {
+    _parseJSXExpressionContainer: function _parseJSXExpressionContainer() {
         var expression,
             Delimiters = this.options.delimiters;
         this._expect(Delimiters[0]);
@@ -303,18 +311,18 @@ Parser.prototype = {
         }
         this._expect(Delimiters[1]);
 
-        return this._type(Type.JSXExpressionContainer, {value: expression});
+        return this._type(Type.JSXExpressionContainer, { value: expression });
     },
 
-    _parseJSXEmptyExpression: function() {
-        return this._type(Type.JSXEmptyExpression, {value: null});
+    _parseJSXEmptyExpression: function _parseJSXEmptyExpression() {
+        return this._type(Type.JSXEmptyExpression, { value: null });
     },
 
-    _parseExpression: function() {
+    _parseExpression: function _parseExpression() {
         return this._parseTemplate();
     },
 
-    _parseJSXChildren: function(element) {
+    _parseJSXChildren: function _parseJSXChildren(element) {
         var children = [],
             endTag = element.value + '>',
             current = null;
@@ -345,7 +353,7 @@ Parser.prototype = {
         return children;
     },
 
-    _parseJSXChild: function(element, endTag, prev) {
+    _parseJSXChild: function _parseJSXChild(element, endTag, prev) {
         var ret,
             Delimiters = this.options.delimiters;
 
@@ -356,7 +364,7 @@ Parser.prototype = {
         } else if (this._isElementStart()) {
             ret = this._parseJSXElement();
         } else {
-            ret = this._scanJSXText([function() {
+            ret = this._scanJSXText([function () {
                 return this._isExpect(endTag) || this._isElementStart();
             }, Delimiters[0]]);
         }
@@ -369,11 +377,11 @@ Parser.prototype = {
                 ret.prev = prev;
             }
         }
-        
+
         return ret;
     },
 
-    _parseJSXClosingElement: function() {
+    _parseJSXClosingElement: function _parseJSXClosingElement() {
         this._expect('</');
 
         while (this.index < this.length) {
@@ -387,7 +395,7 @@ Parser.prototype = {
         this._expect('>');
     },
 
-    _parseJSXComment: function() {
+    _parseJSXComment: function _parseJSXComment() {
         this._expect('!--');
         var start = this.index;
         while (this.index < this.length) {
@@ -406,17 +414,17 @@ Parser.prototype = {
         return ret;
     },
 
-    _char: function(index) {
+    _char: function _char(index) {
         arguments.length === 0 && (index = this.index);
         return this.source.charAt(index);
     },
 
-    _charCode: function(index) {
-         arguments.length === 0 && (index = this.index);
-         return this.source.charCodeAt(index);
+    _charCode: function _charCode(index) {
+        arguments.length === 0 && (index = this.index);
+        return this.source.charCodeAt(index);
     },
 
-    _skipWhitespace: function() {
+    _skipWhitespace: function _skipWhitespace() {
         while (this.index < this.length) {
             var code = this._charCode();
             if (!Utils.isWhiteSpace(code)) {
@@ -429,26 +437,22 @@ Parser.prototype = {
         }
     },
 
-    _expect: function(str) {
+    _expect: function _expect(str) {
         if (!this._isExpect(str)) {
             this._error('expect string ' + str);
         }
         this._updateIndex(str.length);
     },
 
-    _isExpect: function(str) {
+    _isExpect: function _isExpect(str) {
         return this.source.slice(this.index, this.index + str.length) === str;
     },
 
-    _isElementStart: function() {
-        return this._char() === '<' && 
-            (
-                this._isExpect('<!--') || 
-                elementNameRegexp.test(this.source.slice(this.index))
-            );
+    _isElementStart: function _isElementStart() {
+        return this._char() === '<' && (this._isExpect('<!--') || elementNameRegexp.test(this.source.slice(this.index)));
     },
 
-    _type: function(type, ret) {
+    _type: function _type(type, ret) {
         ret || (ret = {});
         ret.type = type;
         ret.typeName = TypeName[type];
@@ -457,12 +461,12 @@ Parser.prototype = {
         return ret;
     },
 
-    _updateLine: function() {
+    _updateLine: function _updateLine() {
         this.line++;
         this.column = 0;
     },
 
-    _updateIndex: function(value) {
+    _updateIndex: function _updateIndex(value) {
         value === undefined && (value = 1);
         var index = this.index;
         this.index = this.index + value;
@@ -470,10 +474,7 @@ Parser.prototype = {
         return index;
     },
 
-    _error: function(msg) {
-        throw new Error(
-            msg + ' At: {line: ' + this.line + ', column: ' + this.column +
-            '} Near: "' + this.source.slice(this.index - 10, this.index + 20) + '"'
-        );
+    _error: function _error(msg) {
+        throw new Error(msg + ' At: {line: ' + this.line + ', column: ' + this.column + '} Near: "' + this.source.slice(this.index - 10, this.index + 20) + '"');
     }
 };
