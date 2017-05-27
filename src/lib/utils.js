@@ -4,7 +4,9 @@
  * @date 15-4-22
  */
 
-export {isNullOrUndefined, isArray} from 'miss/src/utils';
+import {isNullOrUndefined, isArray} from 'miss/src/utils';
+
+export {isNullOrUndefined, isArray};
 
 let i = 0;
 export const Type = {
@@ -132,7 +134,7 @@ export function isWhiteSpace(charCode) {
 export function trimRight(str) {
     var index = str.length;
 
-    while (index-- && Utils.isWhiteSpace(str.charCodeAt(index))) {}
+    while (index-- && isWhiteSpace(str.charCodeAt(index))) {}
 
     return str.slice(0, index + 1);
 }
@@ -140,7 +142,7 @@ export function trimRight(str) {
 export function trimLeft(str) {
     var length = str.length, index = -1;
 
-    while (index++ < length && Utils.isWhiteSpace(str.charCodeAt(index))) {}
+    while (index++ < length && isWhiteSpace(str.charCodeAt(index))) {}
 
     return str.slice(index);
 }
