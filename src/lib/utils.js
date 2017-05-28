@@ -65,7 +65,7 @@ export const Directives = {
     'v-for-key': true
 };
 
-const Options = {
+export const Options = {
     autoReturn: true,
     onlySource: false,
     delimiters: ['{', '}'],

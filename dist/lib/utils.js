@@ -1,23 +1,14 @@
 'use strict';
 
 exports.__esModule = true;
+exports.error = exports.noop = exports.hasOwn = exports.Directives = exports.TextTags = exports.SelfClosingTags = exports.TypeName = exports.Type = exports.isArray = exports.isNullOrUndefined = undefined;
 
-var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
+var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; /** 
+                                                                                                                                                                                                                                                                               * @fileoverview utility methods
+                                                                                                                                                                                                                                                                               * @author javey
+                                                                                                                                                                                                                                                                               * @date 15-4-22
+                                                                                                                                                                                                                                                                               */
 
-var _utils = require('miss/src/utils');
-
-Object.defineProperty(exports, 'isNullOrUndefined', {
-    enumerable: true,
-    get: function get() {
-        return _utils.isNullOrUndefined;
-    }
-});
-Object.defineProperty(exports, 'isArray', {
-    enumerable: true,
-    get: function get() {
-        return _utils.isArray;
-    }
-});
 exports.each = each;
 exports.isObject = isObject;
 exports.map = map;
@@ -32,6 +23,11 @@ exports.isSelfClosingTag = isSelfClosingTag;
 exports.isTextTag = isTextTag;
 exports.isDirective = isDirective;
 exports.extend = extend;
+
+var _utils = require('miss/src/utils');
+
+exports.isNullOrUndefined = _utils.isNullOrUndefined;
+exports.isArray = _utils.isArray;
 
 
 var i = 0;
@@ -106,7 +102,7 @@ var hasOwn = exports.hasOwn = Object.prototype.hasOwnProperty;
 var noop = exports.noop = function noop() {};
 
 function isArrayLike(value) {
-    if (isNullOrUndefined(value)) return false;
+    if ((0, _utils.isNullOrUndefined)(value)) return false;
     var length = value.length;
     return typeof length === 'number' && length > -1 && length % 1 === 0 && length <= 9007199254740991 && typeof value !== 'function';
 }
@@ -139,7 +135,7 @@ function map(obj, iter, thisArgs) {
 }
 
 function className(obj) {
-    if (isNullOrUndefined(obj)) return;
+    if ((0, _utils.isNullOrUndefined)(obj)) return;
     if (typeof obj === 'string') return obj;
     var ret = [];
     for (var key in obj) {
@@ -157,7 +153,7 @@ function isWhiteSpace(charCode) {
 function trimRight(str) {
     var index = str.length;
 
-    while (index-- && Utils.isWhiteSpace(str.charCodeAt(index))) {}
+    while (index-- && isWhiteSpace(str.charCodeAt(index))) {}
 
     return str.slice(0, index + 1);
 }
@@ -166,13 +162,13 @@ function trimLeft(str) {
     var length = str.length,
         index = -1;
 
-    while (index++ < length && Utils.isWhiteSpace(str.charCodeAt(index))) {}
+    while (index++ < length && isWhiteSpace(str.charCodeAt(index))) {}
 
     return str.slice(index);
 }
 
 function setDelimiters(delimiters) {
-    if (isArray(delimiters)) {
+    if ((0, _utils.isArray)(delimiters)) {
         throw new Error('The parameter must be an array like ["{{", "}}"]');
     }
     Options.delimiters = delimiters;
@@ -223,9 +219,6 @@ function extend() {
     return dest;
 }
 
-var _require = _require('./compile');
-
-exports.require = _require;
 var error = exports.error = function () {
     var hasConsole = typeof console !== 'undefined';
     return hasConsole ? function (e) {

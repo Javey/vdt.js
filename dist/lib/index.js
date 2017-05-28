@@ -26,6 +26,8 @@ function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj;
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
+utils.require = _compile2['default'];
+
 var defaultOptions = {
     doctype: '<!DOCTYPE html>',
     force: false,
@@ -77,6 +79,7 @@ function __express(file, options, callback) {
     }
 }
 
+_vdt2['default'].utils = utils;
 _vdt2['default'].middleware = _middleware2['default'];
 _vdt2['default'].renderFile = renderFile;
 _vdt2['default'].__express = __express;

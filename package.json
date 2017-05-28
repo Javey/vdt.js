@@ -4,6 +4,9 @@
   "description": "A template engine based on virtual-dom",
   "main": "dist/index",
   "module": "src/client",
+  "browser": {
+      "./src/lib/compile.js": false
+  },
   "repository": {
     "type": "git",
     "url": "git://github.com/Javey/vdt.js.vdt"

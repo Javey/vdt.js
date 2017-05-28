@@ -4,17 +4,16 @@ var replace = require('rollup-plugin-replace');
 var babel = require('rollup-plugin-babel');
 
 module.exports = {
-    entry: 'src/client.js',
-    dest: 'dist/vdt.js',
-    format: 'umd',
-    moduleName: 'Vdt',
+    entry: 'src/index.js',
+    dest: 'dist/index.js',
+    format: 'cjs',
     external: ['fs', 'path', 'url'],
     legacy: true,
     plugins: [
         babel({
             exclude: 'node_modules/**',
             presets: [
-                ['es2015', {"modules": false, "loose": true}]
+                ['es2015', {"modules": false}]
             ],
             plugins: [
                 "external-helpers",
@@ -24,10 +23,12 @@ module.exports = {
             ],
             babelrc: false
         }),
-        nodeResolve({module: true, jsnext: true, main: true, browser: true}),
-        commonjs(),
-        replace({
-            'process.env.NODE_ENV': JSON.stringify('production')
+        nodeResolve({module: true, jsnext: true, main: true}),
+        commonjs({
+            namedExports: {
+                'node_modules/miss/node_modules/min-document/serialize.js': ['aaa'],
+                '/home/javey/Workspace/miss/node_modules/min-document/serialize.js': ['serializeNode']
+            }
         })
     ]
 };

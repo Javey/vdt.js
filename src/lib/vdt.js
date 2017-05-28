@@ -71,7 +71,7 @@ function compile(source, options) {
                 'var h = _Vdt.miss.h, hc = _Vdt.miss.hc, widgets = this && this.widgets || {}, _blocks = {}, __blocks = {},',
                     'extend = _Vdt.utils.extend, _e = _Vdt.utils.error,' +
                     (options.server ? 
-                        'require = function(file) { return _Vdt.utils.require(file, "' + 
+                        'require = function(file) { return _Vdt.require(file, "' + 
                             options.filename.replace(/\\/g, '\\\\') + 
                         '") }, ' : 
                         ''
