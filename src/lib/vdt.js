@@ -46,6 +46,10 @@ Vdt.prototype = {
         this.node = miss.patch(oldVNode, this.vNode);
 
         return this.node;
+    },
+
+    destroy() {
+        miss.remove(this.vNode);
     }
 };
 
