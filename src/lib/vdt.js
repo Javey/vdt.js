@@ -18,9 +18,9 @@ export default function Vdt(source, options) {
 Vdt.prototype = {
     constructor: Vdt,
 
-    render(data) {
+    render(data, parentDom, queue) {
         this.renderVNode(data);
-        this.node = miss.render(this.vNode);
+        this.node = miss.render(this.vNode, parentDom, queue);
 
         return this.node;
     },
