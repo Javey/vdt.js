@@ -1,5 +1,5 @@
 should = require('should')
-Vdt = require('../src/index')
+Vdt = require('../dist/index')
 
 describe 'Server', ->
     it 'Render file in server', ->

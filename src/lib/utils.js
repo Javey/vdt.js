@@ -148,7 +148,7 @@ export function trimLeft(str) {
 }
 
 export function setDelimiters(delimiters) {
-    if (isArray(delimiters)) {
+    if (!isArray(delimiters)) {
         throw new Error('The parameter must be an array like ["{{", "}}"]');
     }
     Options.delimiters = delimiters;

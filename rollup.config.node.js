@@ -11,12 +11,12 @@ module.exports = {
     legacy: true,
     plugins: [
         babel({
-            exclude: 'node_modules/**',
+            // exclude: 'node_modules/**',
             presets: [
                 ['es2015', {"modules": false}]
             ],
             plugins: [
-                "external-helpers",
+                // "external-helpers",
                 // "minify-constant-folding",
                 // "transform-es3-property-literals",
                 // "transform-es3-member-expression-literals",
@@ -26,8 +26,7 @@ module.exports = {
         nodeResolve({module: true, jsnext: true, main: true}),
         commonjs({
             namedExports: {
-                'node_modules/miss/node_modules/min-document/serialize.js': ['aaa'],
-                '/home/javey/Workspace/miss/node_modules/min-document/serialize.js': ['serializeNode']
+                'min-document/serialize': ['a', 'b']
             }
         })
     ]

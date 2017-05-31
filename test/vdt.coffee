@@ -1,4 +1,4 @@
-Vdt = require('../src/index')
+Vdt = require('../dist/index')
 should = require('should')
 
 render = (source, data) ->

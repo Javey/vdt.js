@@ -33,4 +33,3 @@ Vdt.middleware = middleware;
 Vdt.require = compile;
 
 export default Vdt;
-module.exports = Vdt;

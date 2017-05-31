@@ -149,13 +149,9 @@ function removeEventListener(type, listener) {
     }
 }
 
-var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) {
-  return typeof obj;
-} : function (obj) {
-  return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj;
-};
+var _typeof$3 = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
 
-module.exports = serializeNode;
+var serialize = serializeNode;
 
 var voidElements = ["area", "base", "br", "col", "embed", "hr", "img", "input", "keygen", "link", "menuitem", "meta", "param", "source", "track", "wbr"];
 
@@ -201,7 +197,7 @@ function serializeElement(elem) {
 }
 
 function isProperty(elem, key) {
-    var type = _typeof(elem[key]);
+    var type = _typeof$3(elem[key]);
 
     if (key === "style" && (type === "object" && Object.keys(elem.style).length > 0 || type === "string" && elem.style)) {
         return true;
@@ -280,14 +276,6 @@ function escapeText(s) {
 function escapeAttributeValue(str) {
     return escapeText(str).replace(/"/g, "&quot;");
 }
-
-
-
-var serialize = (Object.freeze || Object)({
-
-});
-
-var serializeNode$1 = ( serialize && undefined ) || serialize;
 
 var htmlns = "http://www.w3.org/1999/xhtml";
 
@@ -442,7 +430,7 @@ DOMElement.prototype.focus = function _Element_focus() {
 };
 
 DOMElement.prototype.toString = function _Element_toString() {
-    return serializeNode$1(this);
+    return serialize(this);
 };
 
 DOMElement.prototype.getElementsByClassName = function _Element_getElementsByClassName(classNames) {
@@ -586,6 +574,8 @@ proto.dispatchEvent = dispatchEvent_1;
 
 var index$1 = new document$1();
 
+var _typeof$2 = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
+
 var toString = Object.prototype.toString;
 
 var doc = typeof document === 'undefined' ? index$1 : document;
@@ -595,11 +585,11 @@ var isArray = Array.isArray || function (arr) {
 };
 
 function isObject$1(o) {
-    return (typeof o === 'undefined' ? 'undefined' : _typeof(o)) === 'object' && o !== null;
+    return (typeof o === 'undefined' ? 'undefined' : _typeof$2(o)) === 'object' && o !== null;
 }
 
 function isStringOrNumber(o) {
-    var type = typeof o === 'undefined' ? 'undefined' : _typeof(o);
+    var type = typeof o === 'undefined' ? 'undefined' : _typeof$2(o);
     return type === 'string' || type === 'number';
 }
 
@@ -746,6 +736,8 @@ var setTextContent = browser.isIE8 ? function (dom, text) {
     dom.textContent = text;
 };
 
+var _typeof$1 = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
+
 /** 
  * @fileoverview utility methods
  * @author javey
@@ -844,7 +836,7 @@ function each(obj, iter, thisArg) {
 }
 
 function isObject$$1(obj) {
-    var type = typeof obj === 'undefined' ? 'undefined' : _typeof(obj);
+    var type = typeof obj === 'undefined' ? 'undefined' : _typeof$1(obj);
     return type === 'function' || type === 'object' && !!obj;
 }
 
@@ -890,7 +882,7 @@ function trimLeft(str) {
 }
 
 function setDelimiters(delimiters) {
-    if (isArray(delimiters)) {
+    if (!isArray(delimiters)) {
         throw new Error('The parameter must be an array like ["{{", "}}"]');
     }
     Options.delimiters = delimiters;
@@ -941,14 +933,12 @@ function extend() {
     return dest;
 }
 
-var error$1 = function () {
+var error = function () {
     var hasConsole = typeof console !== 'undefined';
     return hasConsole ? function (e) {
         console.error(e);
     } : noop;
 }();
-
-
 
 var utils = (Object.freeze || Object)({
 	isNullOrUndefined: isNullOrUndefined,
@@ -975,7 +965,7 @@ var utils = (Object.freeze || Object)({
 	isTextTag: isTextTag,
 	isDirective: isDirective,
 	extend: extend,
-	error: error$1
+	error: error
 });
 
 /**
@@ -1764,6 +1754,8 @@ Stringifier.prototype = {
     }
 };
 
+var _typeof$4 = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
+
 var Types = {
     Text: 1,
     HtmlElement: 1 << 1,
@@ -1796,7 +1788,7 @@ function VNode(type, tag, props, children, className, key, ref) {
 function createVNode(tag, props, children, className, key, ref) {
     var type = void 0;
     props || (props = EMPTY_OBJ);
-    switch (typeof tag === 'undefined' ? 'undefined' : _typeof(tag)) {
+    switch (typeof tag === 'undefined' ? 'undefined' : _typeof$4(tag)) {
         case 'string':
             type = Types.HtmlElement;
             break;
@@ -2021,11 +2013,17 @@ function attachEventToDocument(name, delegatedRoots) {
     return docEvent;
 }
 
-function render(vNode, parentDom) {
+function render(vNode, parentDom, mountedQueue) {
     if (isNullOrUndefined(vNode)) return;
-    var mountedQueue = new MountedQueue();
+    var isTrigger = false;
+    if (parentDom || !mountedQueue) {
+        mountedQueue = new MountedQueue();
+        isTrigger = true;
+    }
     var dom = createElement(vNode, parentDom, mountedQueue);
-    mountedQueue.trigger();
+    if (isTrigger) {
+        mountedQueue.trigger();
+    }
     return dom;
 }
 
@@ -2096,6 +2094,8 @@ function createTextElement(vNode, parentDom) {
 function createComponentClassOrInstance(vNode, parentDom, mountedQueue, lastVNode) {
     var props = vNode.props;
     var instance = vNode.type & Types.ComponentClass ? new vNode.tag(props) : vNode.children;
+    instance.parentDom = null;
+    instance.mountedQueue = mountedQueue;
     var dom = instance.init(lastVNode, vNode);
     var ref = vNode.ref;
 
@@ -2118,29 +2118,6 @@ function createComponentClassOrInstance(vNode, parentDom, mountedQueue, lastVNod
 
     return dom;
 }
-
-// export function createComponentInstance(vNode, parentDom, mountedQueue, lastVNode) {
-// const props = vNode.props;
-// const instance = vNode.children;
-// const dom = instance.init(lastVNode, vNode);
-// const ref = vNode.ref;
-
-// vNode.dom = dom;
-
-// if (parentDom) {
-// parentDom.appendChild(dom);
-// }
-
-// if (typeof instance.mount === 'function') {
-// mountedQueue.push(() => instance.mount(lastVNode, vNode));
-// }
-
-// if (typeof ref === 'function') {
-// ref(instance);
-// }
-
-// return dom;
-// }
 
 function createComponentFunction(vNode, parentDom, mountedQueue) {
     var props = vNode.props;
@@ -2273,7 +2250,8 @@ function removeComponentClassOrInstance(vNode, parentDom, nextVNode) {
         ref(null);
     }
 
-    removeElements(vNode.props.children, null);
+    // instance destroy method will remove everything
+    // removeElements(vNode.props.children, null);
 
     if (parentDom) {
         parentDom.removeChild(vNode.dom);
@@ -2936,8 +2914,12 @@ var miss = (Object.freeze || Object)({
 	h: createVNode,
 	patch: patch,
 	render: render,
-	hc: createCommentVNode
+	hc: createCommentVNode,
+	remove: removeElement,
+	MountedQueue: MountedQueue
 });
+
+var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
 
 var parser = new Parser();
 var stringifier = new Stringifier();
@@ -2954,9 +2936,9 @@ function Vdt$1(source, options) {
 Vdt$1.prototype = {
     constructor: Vdt$1,
 
-    render: function render$$1(data) {
+    render: function render$$1(data, parentDom, queue) {
         this.renderVNode(data);
-        this.node = render(this.vNode);
+        this.node = render(this.vNode, parentDom, queue);
 
         return this.node;
     },
@@ -2979,6 +2961,9 @@ Vdt$1.prototype = {
         this.node = patch(oldVNode, this.vNode);
 
         return this.node;
+    },
+    destroy: function destroy() {
+        removeElement(this.vNode);
     }
 };
 
@@ -3214,7 +3199,3 @@ Vdt$1.middleware = middleware;
 Vdt$1.require = compile$1;
 
 module.exports = Vdt$1;
-
-exports.renderFile = renderFile;
-exports.__express = __express;
-exports['default'] = Vdt$1;

@@ -16,7 +16,7 @@ var toString = Object.prototype.toString;
 
 var doc = typeof document === 'undefined' ? minDocument : document;
 
-var isArray$1 = Array.isArray || function (arr) {
+var isArray = Array.isArray || function (arr) {
     return toString.call(arr) === '[object Array]';
 };
 
@@ -29,7 +29,7 @@ function isStringOrNumber(o) {
     return type === 'string' || type === 'number';
 }
 
-function isNullOrUndefined$1(o) {
+function isNullOrUndefined(o) {
     return o === null || o === undefined;
 }
 
@@ -260,7 +260,7 @@ function each(obj, iter, thisArg) {
         for (var i = 0, l = obj.length; i < l; i++) {
             iter.call(thisArg, obj[i], i, obj);
         }
-    } else if (isObject(obj)) {
+    } else if (isObject$$1(obj)) {
         for (var key in obj) {
             if (hasOwn.call(obj, key)) {
                 iter.call(thisArg, obj[key], key, obj);
@@ -269,7 +269,7 @@ function each(obj, iter, thisArg) {
     }
 }
 
-function isObject(obj) {
+function isObject$$1(obj) {
     var type = typeof obj === 'undefined' ? 'undefined' : _typeof(obj);
     return type === 'function' || type === 'object' && !!obj;
 }
@@ -301,7 +301,7 @@ function isWhiteSpace(charCode) {
 function trimRight(str) {
     var index = str.length;
 
-    while (index-- && Utils.isWhiteSpace(str.charCodeAt(index))) {}
+    while (index-- && isWhiteSpace(str.charCodeAt(index))) {}
 
     return str.slice(0, index + 1);
 }
@@ -310,13 +310,13 @@ function trimLeft(str) {
     var length = str.length,
         index = -1;
 
-    while (index++ < length && Utils.isWhiteSpace(str.charCodeAt(index))) {}
+    while (index++ < length && isWhiteSpace(str.charCodeAt(index))) {}
 
     return str.slice(index);
 }
 
 function setDelimiters(delimiters) {
-    if (isArray(delimiters)) {
+    if (!isArray(delimiters)) {
         throw new Error('The parameter must be an array like ["{{", "}}"]');
     }
     Options.delimiters = delimiters;
@@ -367,8 +367,6 @@ function extend() {
     return dest;
 }
 
-var require = require('./compile');
-
 var error$1 = function () {
     var hasConsole = typeof console !== 'undefined';
     return hasConsole ? function (e) {
@@ -379,15 +377,18 @@ var error$1 = function () {
 
 
 var utils = (Object.freeze || Object)({
+	isNullOrUndefined: isNullOrUndefined,
+	isArray: isArray,
 	Type: Type$1,
 	TypeName: TypeName$1,
 	SelfClosingTags: SelfClosingTags,
 	TextTags: TextTags,
 	Directives: Directives,
+	Options: Options,
 	hasOwn: hasOwn,
 	noop: noop,
 	each: each,
-	isObject: isObject,
+	isObject: isObject$$1,
 	map: map,
 	className: className,
 	isWhiteSpace: isWhiteSpace,
@@ -400,10 +401,7 @@ var utils = (Object.freeze || Object)({
 	isTextTag: isTextTag,
 	isDirective: isDirective,
 	extend: extend,
-	require: require,
-	error: error$1,
-	isNullOrUndefined: isNullOrUndefined$1,
-	isArray: isArray$1
+	error: error$1
 });
 
 /**
@@ -1147,7 +1145,7 @@ Stringifier.prototype = {
     },
 
     _visitJSXAttributeValue: function _visitJSXAttributeValue(value) {
-        return isArray$1(value) ? this._visitJSXChildren(value) : this._visit(value);
+        return isArray(value) ? this._visitJSXChildren(value) : this._visit(value);
     },
 
     _visitJSXText: function _visitJSXText(element, noQuotes) {
@@ -1262,7 +1260,7 @@ function createComponentInstanceVNode(instance) {
 }
 
 function normalizeChildren(vNodes) {
-    if (isArray$1(vNodes)) {
+    if (isArray(vNodes)) {
         var childNodes = addChild(vNodes, { index: 0 });
         return childNodes.length ? childNodes : null;
     } else if (isComponentInstance(vNodes)) {
@@ -1272,7 +1270,7 @@ function normalizeChildren(vNodes) {
 }
 
 function applyKey(vNode, reference) {
-    if (isNullOrUndefined$1(vNode.key)) {
+    if (isNullOrUndefined(vNode.key)) {
         vNode.key = '.$' + reference.index++;
     }
     return vNode;
@@ -1282,11 +1280,11 @@ function addChild(vNodes, reference) {
     var newVNodes = void 0;
     for (var i = 0; i < vNodes.length; i++) {
         var n = vNodes[i];
-        if (isNullOrUndefined$1(n)) {
+        if (isNullOrUndefined(n)) {
             if (!newVNodes) {
                 newVNodes = vNodes.slice(0, i);
             }
-        } else if (isArray$1(n)) {
+        } else if (isArray(n)) {
             if (!newVNodes) {
                 newVNodes = vNodes.slice(0, i);
             }
@@ -1429,7 +1427,7 @@ function dispatchEvent(event, target, items, count, isClick) {
     }
     if (count > 0) {
         var parentDom = target.parentNode;
-        if (isNullOrUndefined$1(parentDom) || isClick && parentDom.nodeType === 1 && parentDom.disabled) {
+        if (isNullOrUndefined(parentDom) || isClick && parentDom.nodeType === 1 && parentDom.disabled) {
             return;
         }
         dispatchEvent(event, parentDom, items, count, isClick);
@@ -1449,11 +1447,17 @@ function attachEventToDocument(name, delegatedRoots) {
     return docEvent;
 }
 
-function render(vNode, parentDom) {
-    if (isNullOrUndefined$1(vNode)) return;
-    var mountedQueue = new MountedQueue();
+function render(vNode, parentDom, mountedQueue) {
+    if (isNullOrUndefined(vNode)) return;
+    var isTrigger = false;
+    if (parentDom || !mountedQueue) {
+        mountedQueue = new MountedQueue();
+        isTrigger = true;
+    }
     var dom = createElement(vNode, parentDom, mountedQueue);
-    mountedQueue.trigger();
+    if (isTrigger) {
+        mountedQueue.trigger();
+    }
     return dom;
 }
 
@@ -1485,11 +1489,11 @@ function createHtmlElement(vNode, parentDom, mountedQueue) {
 
     vNode.dom = dom;
 
-    if (!isNullOrUndefined$1(children)) {
+    if (!isNullOrUndefined(children)) {
         createElements(children, dom, mountedQueue);
     }
 
-    if (!isNullOrUndefined$1(className)) {
+    if (!isNullOrUndefined(className)) {
         dom.className = className;
     }
 
@@ -1499,7 +1503,7 @@ function createHtmlElement(vNode, parentDom, mountedQueue) {
         }
     }
 
-    if (!isNullOrUndefined$1(ref)) {
+    if (!isNullOrUndefined(ref)) {
         createRef(dom, ref, mountedQueue);
     }
 
@@ -1524,6 +1528,8 @@ function createTextElement(vNode, parentDom) {
 function createComponentClassOrInstance(vNode, parentDom, mountedQueue, lastVNode) {
     var props = vNode.props;
     var instance = vNode.type & Types.ComponentClass ? new vNode.tag(props) : vNode.children;
+    instance.parentDom = null;
+    instance.mountedQueue = mountedQueue;
     var dom = instance.init(lastVNode, vNode);
     var ref = vNode.ref;
 
@@ -1546,29 +1552,6 @@ function createComponentClassOrInstance(vNode, parentDom, mountedQueue, lastVNod
 
     return dom;
 }
-
-// export function createComponentInstance(vNode, parentDom, mountedQueue, lastVNode) {
-// const props = vNode.props;
-// const instance = vNode.children;
-// const dom = instance.init(lastVNode, vNode);
-// const ref = vNode.ref;
-
-// vNode.dom = dom;
-
-// if (parentDom) {
-// parentDom.appendChild(dom);
-// }
-
-// if (typeof instance.mount === 'function') {
-// mountedQueue.push(() => instance.mount(lastVNode, vNode));
-// }
-
-// if (typeof ref === 'function') {
-// ref(instance);
-// }
-
-// return dom;
-// }
 
 function createComponentFunction(vNode, parentDom, mountedQueue) {
     var props = vNode.props;
@@ -1603,7 +1586,7 @@ function createCommentElement(vNode, parentDom) {
 
 function createComponentFunctionVNode(vNode) {
     var result = vNode.tag(vNode.props);
-    if (isArray$1(result)) {
+    if (isArray(result)) {
         throw new Error('ComponentFunction ' + vNode.tag.name + ' returned a invalid vNode');
     } else if (isStringOrNumber(result)) {
         result = createTextVNode(result);
@@ -1617,7 +1600,7 @@ function createComponentFunctionVNode(vNode) {
 function createElements(vNodes, parentDom, mountedQueue) {
     if (isStringOrNumber(vNodes)) {
         setTextContent(parentDom, vNodes);
-    } else if (isArray$1(vNodes)) {
+    } else if (isArray(vNodes)) {
         for (var i = 0; i < vNodes.length; i++) {
             createElement(vNodes[i], parentDom, mountedQueue);
         }
@@ -1627,9 +1610,9 @@ function createElements(vNodes, parentDom, mountedQueue) {
 }
 
 function removeElements(vNodes, parentDom) {
-    if (isNullOrUndefined$1(vNodes)) {
+    if (isNullOrUndefined(vNodes)) {
         return;
-    } else if (isArray$1(vNodes)) {
+    } else if (isArray(vNodes)) {
         for (var i = 0; i < vNodes.length; i++) {
             removeElement(vNodes[i], parentDom);
         }
@@ -1665,7 +1648,7 @@ function removeHtmlElement(vNode, parentDom) {
     // remove event
     for (var name in props) {
         var prop = props[name];
-        if (!isNullOrUndefined$1(prop) && isEventProp(name)) {
+        if (!isNullOrUndefined(prop) && isEventProp(name)) {
             handleEvent(name.substr(0, 3), prop, null, dom);
         }
     }
@@ -1701,7 +1684,8 @@ function removeComponentClassOrInstance(vNode, parentDom, nextVNode) {
         ref(null);
     }
 
-    removeElements(vNode.props.children, null);
+    // instance destroy method will remove everything
+    // removeElements(vNode.props.children, null);
 
     if (parentDom) {
         parentDom.removeChild(vNode.dom);
@@ -1799,14 +1783,14 @@ function patchElement(lastVNode, nextVNode, parentDom, mountedQueue) {
         }
 
         if (lastClassName !== nextClassName) {
-            if (isNullOrUndefined$1(nextClassName)) {
+            if (isNullOrUndefined(nextClassName)) {
                 dom.removeAttribute('class');
             } else {
                 dom.className = nextClassName;
             }
         }
 
-        if (!isNullOrUndefined$1(nextRef) && lastVNode.ref !== nextRef) {
+        if (!isNullOrUndefined(nextRef) && lastVNode.ref !== nextRef) {
             createRef(dom, nextRef, mountedQueue);
         }
     }
@@ -1870,11 +1854,11 @@ function patchComponentFunction(lastVNode, nextVNode, parentDom, mountedQueue) {
 }
 
 function patchChildren(lastChildren, nextChildren, parentDom, mountedQueue) {
-    if (isNullOrUndefined$1(lastChildren)) {
-        if (!isNullOrUndefined$1(nextChildren)) {
+    if (isNullOrUndefined(lastChildren)) {
+        if (!isNullOrUndefined(nextChildren)) {
             createElements(nextChildren, parentDom, mountedQueue);
         }
-    } else if (isNullOrUndefined$1(nextChildren)) {
+    } else if (isNullOrUndefined(nextChildren)) {
         removeElements(lastChildren, parentDom);
     } else if (isStringOrNumber(nextChildren)) {
         if (isStringOrNumber(lastChildren)) {
@@ -1883,14 +1867,14 @@ function patchChildren(lastChildren, nextChildren, parentDom, mountedQueue) {
             removeElements(lastChildren, parentDom);
             setTextContent(parentDom, nextChildren);
         }
-    } else if (isArray$1(lastChildren)) {
-        if (isArray$1(nextChildren)) {
+    } else if (isArray(lastChildren)) {
+        if (isArray(nextChildren)) {
             patchChildrenByKey(lastChildren, nextChildren, parentDom, mountedQueue);
         } else {
             removeElements(lastChildren, parentDom);
             createElement(nextChildren, parentDom, mountedQueue);
         }
-    } else if (isArray$1(nextChildren)) {
+    } else if (isArray(nextChildren)) {
         removeElement(lastChildren, parentDom);
         createElements(nextChildren, parentDom, mountedQueue);
     } else if (isStringOrNumber(lastChildren)) {
@@ -2172,11 +2156,11 @@ function patchProp(prop, lastValue, nextValue, dom) {
         } else if (booleanProps[prop]) {
             dom[prop] = !!nextValue;
         } else if (strictProps[prop]) {
-            var value = isNullOrUndefined$1(nextValue) ? '' : nextValue;
+            var value = isNullOrUndefined(nextValue) ? '' : nextValue;
             if (dom[prop] !== value) {
                 dom[prop] = value;
             }
-        } else if (isNullOrUndefined$1(nextValue)) {
+        } else if (isNullOrUndefined(nextValue)) {
             removeProp(prop, lastValue, dom);
         } else if (isEventProp(prop)) {
             handleEvent(prop.substr(3), lastValue, nextValue, dom);
@@ -2191,7 +2175,7 @@ function patchProp(prop, lastValue, nextValue, dom) {
 }
 
 function removeProp(prop, lastValue, dom) {
-    if (!isNullOrUndefined$1(lastValue)) {
+    if (!isNullOrUndefined(lastValue)) {
         switch (prop) {
             case 'value':
                 dom.value = '';
@@ -2243,7 +2227,7 @@ var removeDataset = browser.isIE ? function (lastValue, dom) {
 };
 
 function patchPropByObject(prop, lastValue, nextValue, dom) {
-    if (lastValue && !isObject$1(lastValue) && !isNullOrUndefined$1(lastValue)) {
+    if (lastValue && !isObject$1(lastValue) && !isNullOrUndefined(lastValue)) {
         removeProp(prop, lastValue, dom);
         lastValue = null;
     }
@@ -2267,7 +2251,7 @@ var patchDataset = browser.isIE ? function patchDataset(prop, lastValue, nextVal
     for (key in nextValue) {
         var dataKey = 'data-' + kebabCase(key);
         value = nextValue[key];
-        if (isNullOrUndefined$1(value)) {
+        if (isNullOrUndefined(value)) {
             dom.removeAttribute(dataKey);
             hasRemoved[key] = true;
         } else {
@@ -2275,9 +2259,9 @@ var patchDataset = browser.isIE ? function patchDataset(prop, lastValue, nextVal
         }
     }
 
-    if (!isNullOrUndefined$1(lastValue)) {
+    if (!isNullOrUndefined(lastValue)) {
         for (key in lastValue) {
-            if (isNullOrUndefined$1(nextValue[key]) && !hasRemoved[key]) {
+            if (isNullOrUndefined(nextValue[key]) && !hasRemoved[key]) {
                 dom.removeAttribute('data-' + kebabCase(key));
             }
         }
@@ -2296,7 +2280,7 @@ function kebabCase(word) {
 
 function patchObject(prop, lastValue, nextValue, dom) {
     var domProps = dom[prop];
-    if (isNullOrUndefined$1(domProps)) {
+    if (isNullOrUndefined(domProps)) {
         domProps = dom[prop] = {};
     }
     var key = void 0;
@@ -2304,9 +2288,9 @@ function patchObject(prop, lastValue, nextValue, dom) {
     for (key in nextValue) {
         domProps[key] = nextValue[key];
     }
-    if (!isNullOrUndefined$1(lastValue)) {
+    if (!isNullOrUndefined(lastValue)) {
         for (key in lastValue) {
-            if (isNullOrUndefined$1(nextValue[key])) {
+            if (isNullOrUndefined(nextValue[key])) {
                 delete domProps[key];
             }
         }
@@ -2319,16 +2303,16 @@ function patchAttributes(lastValue, nextValue, dom) {
     var value = void 0;
     for (key in nextValue) {
         value = nextValue[key];
-        if (isNullOrUndefined$1(value)) {
+        if (isNullOrUndefined(value)) {
             dom.removeAttribute(key);
             hasRemoved[key] = true;
         } else {
             dom.setAttribute(key, value);
         }
     }
-    if (!isNullOrUndefined$1(lastValue)) {
+    if (!isNullOrUndefined(lastValue)) {
         for (key in lastValue) {
-            if (isNullOrUndefined$1(nextValue[key]) && !hasRemoved[key]) {
+            if (isNullOrUndefined(nextValue[key]) && !hasRemoved[key]) {
                 dom.removeAttribute(key);
             }
         }
@@ -2342,16 +2326,16 @@ function patchStyle(lastValue, nextValue, dom) {
     var value = void 0;
     for (key in nextValue) {
         value = nextValue[key];
-        if (isNullOrUndefined$1(value)) {
+        if (isNullOrUndefined(value)) {
             domStyle[key] = '';
             hasRemoved[key] = true;
         } else {
             domStyle[key] = value;
         }
     }
-    if (!isNullOrUndefined$1(lastValue)) {
+    if (!isNullOrUndefined(lastValue)) {
         for (key in lastValue) {
-            if (isNullOrUndefined$1(nextValue[key]) && !hasRemoved[key]) {
+            if (isNullOrUndefined(nextValue[key]) && !hasRemoved[key]) {
                 domStyle[key] = '';
             }
         }
@@ -2364,7 +2348,9 @@ var miss = (Object.freeze || Object)({
 	h: createVNode,
 	patch: patch,
 	render: render,
-	hc: createCommentVNode
+	hc: createCommentVNode,
+	remove: removeElement,
+	MountedQueue: MountedQueue
 });
 
 var parser = new Parser();
@@ -2382,9 +2368,9 @@ function Vdt$1(source, options) {
 Vdt$1.prototype = {
     constructor: Vdt$1,
 
-    render: function render$$1(data) {
+    render: function render$$1(data, parentDom, queue) {
         this.renderVNode(data);
-        this.node = render(this.vNode);
+        this.node = render(this.vNode, parentDom, queue);
 
         return this.node;
     },
@@ -2407,6 +2393,9 @@ Vdt$1.prototype = {
         this.node = patch(oldVNode, this.vNode);
 
         return this.node;
+    },
+    destroy: function destroy() {
+        removeElement(this.vNode);
     }
 };
 
@@ -2425,7 +2414,7 @@ function compile(source, options) {
             var ast = parser.parse(source, { delimiters: options.delimiters }),
                 hscript = stringifier.stringify(ast, options.autoReturn);
 
-            hscript = ['_Vdt || (_Vdt = Vdt);', 'obj || (obj = {});', 'blocks || (blocks = {});', 'var h = _Vdt.miss.h, hc = _Vdt.miss.hc, widgets = this && this.widgets || {}, _blocks = {}, __blocks = {},', 'extend = _Vdt.utils.extend, _e = _Vdt.utils.error,' + (options.server ? 'require = function(file) { return _Vdt.utils.require(file, "' + options.filename.replace(/\\/g, '\\\\') + '") }, ' : '') + 'self = this.data, scope = obj;', options.noWith ? hscript : ['with (obj) {', hscript, '}'].join('\n')].join('\n');
+            hscript = ['_Vdt || (_Vdt = Vdt);', 'obj || (obj = {});', 'blocks || (blocks = {});', 'var h = _Vdt.miss.h, hc = _Vdt.miss.hc, widgets = this && this.widgets || {}, _blocks = {}, __blocks = {},', 'extend = _Vdt.utils.extend, _e = _Vdt.utils.error,' + (options.server ? 'require = function(file) { return _Vdt.require(file, "' + options.filename.replace(/\\/g, '\\\\') + '") }, ' : '') + 'self = this.data, scope = obj;', options.noWith ? hscript : ['with (obj) {', hscript, '}'].join('\n')].join('\n');
             templateFn = options.onlySource ? function () {} : new Function('obj', '_Vdt', 'blocks', hscript);
             templateFn.source = 'function(obj, _Vdt, blocks) {\n' + hscript + '\n}';
             break;
