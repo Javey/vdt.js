@@ -1,14 +1,15 @@
 import fs from 'fs';
 import * as utils from './utils';
 
-export const defaultOptions = {
+export const defaultOptions = utils.Options;
+utils.extend(defaultOptions, {
     doctype: '<!DOCTYPE html>',
     force: false,
     autoReturn: true,
     extname: 'vdt',
     views: 'views',
     delimiters: utils.getDelimiters() 
-};
+});
 
 export function setDefaults(key, value) {
     var options = {};

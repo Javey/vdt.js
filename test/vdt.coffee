@@ -413,6 +413,15 @@ describe 'Vdt', ->
 
         vdt.renderString({test: 1}).should.eql('<div name="1"></div>')
 
+    it 'Render with skip whitespace', ->
+        vdt = Vdt("""
+            <div>
+                <div>a</div>
+            </div>
+        """, {skipWhitespace: true})
+
+        vdt.renderString().should.eql('<div><div>a</div></div>')
+
     it 'Render v-if v-else-if v-else', ->
         vdt = Vdt("""
             <div>
@@ -446,6 +455,25 @@ describe 'Vdt', ->
                 <div v-else-if={test === 2}>2</div>
             </div>
         """)
+        vdt.renderString({test: 2}).should.eql("""
+            <div>
+                <div>2</div>
+            </div>
+        """)
+        vdt.renderString({test: 3}).should.eql("""
+            <div>
+                
+            </div>
+        """)
+
+    it 'Render v-if v-else-if v-else with whiteline and skip whitespace', ->
+        vdt = Vdt("""
+            <div>
+                <div v-if={test === 1}>1</div>
+
+                <div v-else-if={test === 2}>2</div>
+            </div>
+        """, {skipWhitespace: true})
         vdt.renderString({test: 2}).should.eql("""
             <div>
                 <div>2</div>

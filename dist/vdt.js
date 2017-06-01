@@ -1160,7 +1160,7 @@ Stringifier.prototype = {
         if (element.children.length) {
             element.attributes.push({ name: 'children', value: element.children });
         }
-        var attributes = this._visitJSXAttribute(element.attributes, false, true);
+        var attributes = this._visitJSXAttribute(element.attributes, false, false);
         return this._visitJSXDirective(element, 'h(' + normalizeArgs([element.value, attributes.props, 'null', 'null', attributes.key, attributes.ref]) + ')');
     },
 
@@ -1230,7 +1230,8 @@ function createVNode(tag, props, children, className, key, ref) {
             if (tag.prototype.init) {
                 type = Types.ComponentClass;
             } else {
-                type = Types.ComponentFunction;
+                return tag(props);
+                // type = Types.ComponentFunction;
             }
             break;
         default:
@@ -1559,12 +1560,22 @@ function createComponentFunction(vNode, parentDom, mountedQueue) {
 
     createComponentFunctionVNode(vNode);
 
-    var dom = createElement(vNode.children, null, mountedQueue);
+    var children = vNode.children;
+    var dom = void 0;
+    // support ComponentFunction return an array for macro usage
+    if (isArray(children)) {
+        dom = [];
+        for (var i = 0; i < children.length; i++) {
+            dom.push(createElement(children[i], parentDom, mountedQueue));
+        }
+    } else {
+        dom = createElement(vNode.children, parentDom, mountedQueue);
+    }
     vNode.dom = dom;
 
-    if (parentDom) {
-        parentDom.appendChild(dom);
-    }
+    // if (parentDom) {
+    // parentDom.appendChild(dom);
+    // }
 
     if (ref) {
         createRef(dom, ref, mountedQueue);
@@ -1586,11 +1597,9 @@ function createCommentElement(vNode, parentDom) {
 
 function createComponentFunctionVNode(vNode) {
     var result = vNode.tag(vNode.props);
-    if (isArray(result)) {
-        throw new Error('ComponentFunction ' + vNode.tag.name + ' returned a invalid vNode');
-    } else if (isStringOrNumber(result)) {
+    if (isStringOrNumber(result)) {
         result = createTextVNode(result);
-    }
+    } else {}
 
     vNode.children = result;
 
@@ -1844,12 +1853,12 @@ function patchComponentFunction(lastVNode, nextVNode, parentDom, mountedQueue) {
     var nextTag = nextVNode.tag;
 
     if (lastVNode.key !== nextVNode.key) {
-        removeElement(lastVNode.children, parentDom);
+        removeElements(lastVNode.children, parentDom);
         createComponentFunction(nextVNode, parentDom, mountedQueue);
     } else {
         nextVNode.dom = lastVNode.dom;
         createComponentFunctionVNode(nextVNode);
-        patchVNode(lastVNode.children, nextVNode.children, parentDom, mountedQueue);
+        patchChildren(lastVNode.children, nextVNode.children, parentDom, mountedQueue);
     }
 }
 
@@ -1879,7 +1888,7 @@ function patchChildren(lastChildren, nextChildren, parentDom, mountedQueue) {
         createElements(nextChildren, parentDom, mountedQueue);
     } else if (isStringOrNumber(lastChildren)) {
         setTextContent(parentDom, '');
-        createElement(nextChildren, parentDom);
+        createElement(nextChildren, parentDom, mountedQueue);
     } else {
         patchVNode(lastChildren, nextChildren, parentDom, mountedQueue);
     }
@@ -2411,7 +2420,7 @@ function compile(source, options) {
 
     switch (typeof source === 'undefined' ? 'undefined' : _typeof(source)) {
         case 'string':
-            var ast = parser.parse(source, { delimiters: options.delimiters }),
+            var ast = parser.parse(source, options),
                 hscript = stringifier.stringify(ast, options.autoReturn);
 
             hscript = ['_Vdt || (_Vdt = Vdt);', 'obj || (obj = {});', 'blocks || (blocks = {});', 'var h = _Vdt.miss.h, hc = _Vdt.miss.hc, widgets = this && this.widgets || {}, _blocks = {}, __blocks = {},', 'extend = _Vdt.utils.extend, _e = _Vdt.utils.error,' + (options.server ? 'require = function(file) { return _Vdt.require(file, "' + options.filename.replace(/\\/g, '\\\\') + '") }, ' : '') + 'self = this.data, scope = obj;', options.noWith ? hscript : ['with (obj) {', hscript, '}'].join('\n')].join('\n');
@@ -2435,6 +2444,7 @@ Vdt$1.compile = compile;
 Vdt$1.utils = utils;
 Vdt$1.setDelimiters = setDelimiters;
 Vdt$1.getDelimiters = getDelimiters;
+Vdt$1.configure = configure;
 
 // for compatibility v1.0
 Vdt$1.virtualDom = miss;

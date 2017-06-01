@@ -65,7 +65,7 @@ function compile(source, options) {
 
     switch (typeof source) {
         case 'string':
-            var ast = parser.parse(source, {delimiters: options.delimiters}),
+            var ast = parser.parse(source, options),
                 hscript = stringifier.stringify(ast, options.autoReturn);
 
             hscript = [
@@ -107,6 +107,7 @@ Vdt.compile = compile;
 Vdt.utils = utils;
 Vdt.setDelimiters = utils.setDelimiters;
 Vdt.getDelimiters = utils.getDelimiters;
+Vdt.configure = utils.configure;
 
 // for compatibility v1.0
 Vdt.virtualDom = miss; 

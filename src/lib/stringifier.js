@@ -294,7 +294,7 @@ Stringifier.prototype = {
         if (element.children.length) {
             element.attributes.push({name: 'children', value: element.children});
         }
-        var attributes = this._visitJSXAttribute(element.attributes, false, true);
+        var attributes = this._visitJSXAttribute(element.attributes, false, false);
         return this._visitJSXDirective(
             element, 
             'h(' + normalizeArgs(
