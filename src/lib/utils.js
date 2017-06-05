@@ -74,7 +74,15 @@ export const Options = {
     // whether rendering on server or not
     server: false,
     // skip all whitespaces in template
-    skipWhitespace: false
+    skipWhitespace: false,
+    setModel: function(data, key) {
+        return function(e) {
+            data[key] = typeof e === 'boolean' ? e : e.target.value;
+        };
+    },
+    getModel: function(data, key) {
+        return data[key]; 
+    }
 };
 
 export const hasOwn = Object.prototype.hasOwnProperty;

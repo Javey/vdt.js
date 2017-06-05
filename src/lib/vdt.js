@@ -73,7 +73,8 @@ function compile(source, options) {
                 'obj || (obj = {});',
                 'blocks || (blocks = {});',
                 'var h = _Vdt.miss.h, hc = _Vdt.miss.hc, widgets = this && this.widgets || {}, _blocks = {}, __blocks = {},',
-                    'extend = _Vdt.utils.extend, _e = _Vdt.utils.error,' +
+                    '__u = _Vdt.utils, extend = __u.extend, _e = __u.error,',
+                    '__o = __u.Options, _getModel = __o.getModel, _setModel = __o.setModel,',
                     (options.server ? 
                         'require = function(file) { return _Vdt.require(file, "' + 
                             options.filename.replace(/\\/g, '\\\\') + 

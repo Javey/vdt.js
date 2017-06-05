@@ -101,6 +101,22 @@
     </div>
 </script>
 
+<script type="text/vdt" id="v-model">
+    <div>
+        <input name="text" v-model="text" />
+
+        <input name="radio-with-constant-value" type="radio" v-model="radioConst" value="1" />
+        <input name="radio-with-variable-value" type="radio" v-model="radioVar" value={variable} />
+        <input name="radio-with-no-value" type="radio" v-model="radioNo" />
+        <input name="radio-groups" type="radio" v-model="radioGroup" v-for={list} value={value} />
+
+        <input name="checkbox-with-constant-value" type="checkbox" v-model="radioConst" value="1" />
+        <input name="checkbox-with-variable-value" type="checkbox" v-model="radioVar" value={variable} />
+        <input name="checkbox-with-no-value" type="checkbox" v-model="radioNo" />
+        <input name="checkbox-groups" type="checkbox" v-model="radioGroup" v-for={list} value={value} />
+    </div>
+</script>
+
 <script src="mocha.js"></script>
 <script src="should.js"></script>
 <script src="../../dist/vdt.js"></script>

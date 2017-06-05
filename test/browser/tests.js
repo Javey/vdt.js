@@ -100,4 +100,55 @@ describe('Template Inherit', function() {
         $.trim($dom.children().eq(1).attr('style')).should.eql('display: none;');
         (style2 === undefined || style2 === '').should.be.true;
     });
+
+    it('should render v-model correctly', function() {
+        var vdt = Vdt(document.getElementById('v-model').innerHTML),
+            $dom = $(vdt.render({
+                text: '',
+                radioConst: '',
+                radioVar: '2',
+                variable: '2',
+                radioNo: '',
+                radioGroup: '2',
+                list: ['1', '2', '3']
+            }));
+        var children = $dom.children();
+        console.log(vdt.template.source);
+
+        children[0].value.should.eql('');
+
+        var checked = [false, true, false, false, true, false];
+        checked.forEach(function(checked, index) {
+            // radio
+            children[index + 1].checked.should.eql(checked);
+            // checkbox
+            children[index + 1 + 6].checked.should.eql(checked);
+        });
+
+        $('body').append($dom);
+        $dom.children()[0].value = "test";
+        var event = new Event('input', {
+            'bubbles': true,
+            'cancelable': true
+        });
+        $dom.children()[0].dispatchEvent(event);
+        vdt.data.text.should.eql('test');
+
+        children.eq(1).click();
+        vdt.data.radioConst.should.eql('1');
+
+        children.eq(3).click();
+        vdt.data.radioNo.should.eql(true);
+
+        $dom.children().eq(4).click();
+        $dom.children()[4].checked.should.eql(true);
+        $dom.children()[5].checked.should.eql(false);
+        vdt.data.radioGroup.should.eql('1');
+
+        vdt.update();
+        children[4 + 6].checked.should.eql(true);
+        children[5 + 6].checked.should.eql(false);
+        // $dom.remove();
+        window._vdt = vdt;
+    });
 });

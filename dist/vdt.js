@@ -243,7 +243,15 @@ var Options = {
     // whether rendering on server or not
     server: false,
     // skip all whitespaces in template
-    skipWhitespace: false
+    skipWhitespace: false,
+    setModel: function setModel(data, key) {
+        return function (e) {
+            data[key] = typeof e === 'boolean' ? e : e.target.value;
+        };
+    },
+    getModel: function getModel(data, key) {
+        return data[key];
+    }
 };
 
 var hasOwn = Object.prototype.hasOwnProperty;
@@ -1006,7 +1014,7 @@ Stringifier.prototype = {
     },
 
     _visitJSXElement: function _visitJSXElement(element) {
-        var attributes = this._visitJSXAttribute(element.attributes, true, true);
+        var attributes = this._visitJSXAttribute(element, true, true);
         return "h(" + normalizeArgs(["'" + element.value + "'", attributes.props, this._visitJSXChildren(element.children), attributes.className, attributes.key, attributes.ref]) + ')';
     },
 
@@ -1109,6 +1117,8 @@ Stringifier.prototype = {
         return '_Vdt.utils.map(' + directive.data + ', function(' + directive.value + ', ' + directive.key + ') {\n' + 'return ' + ret + ';\n' + '}, this)';
     },
 
+    _visitJSXDirectiveModel: function _visitJSXDirectiveModel(directive, ret) {},
+
     _visitJSXChildrenAsString: function _visitJSXChildrenAsString(children) {
         var ret = [];
         this.enterStringExpression = true;
@@ -1119,11 +1129,15 @@ Stringifier.prototype = {
         return ret.join('+');
     },
 
-    _visitJSXAttribute: function _visitJSXAttribute(attributes, individualClassName, individualKeyAndRef) {
+    _visitJSXAttribute: function _visitJSXAttribute(element, individualClassName, individualKeyAndRef) {
         var ret = [],
+            attributes = element.attributes,
             className$$1,
             key,
-            ref;
+            ref,
+            type = 'text',
+            hasModel = false,
+            inputValue;
         each(attributes, function (attr) {
             var name = attrMap(attr.name),
                 value = this._visitJSXAttributeValue(attr.value);
@@ -1148,9 +1162,21 @@ Stringifier.prototype = {
             } else if (name === 'ref' && individualKeyAndRef) {
                 ref = value;
                 return;
+            } else if (name === 'v-model') {
+                hasModel = value;
+                return;
+            } else if (name === 'type') {
+                // save the type value for v-model of input element
+                type = value;
+            } else if (name === 'value') {
+                inputValue = value;
             }
             ret.push("'" + name + "': " + value);
         }, this);
+
+        if (hasModel) {
+            this._visitJSXAttributeModel(element, hasModel, ret, type, inputValue);
+        }
 
         return {
             props: ret.length ? '{' + ret.join(', ') + '}' : 'null',
@@ -1158,6 +1184,43 @@ Stringifier.prototype = {
             ref: ref || 'null',
             key: key || 'null'
         };
+    },
+
+    _visitJSXAttributeModel: function _visitJSXAttributeModel(element, value, ret, type, inputValue) {
+        var valueName, eventName;
+        if (element.type === Type$2.JSXElement) {
+            switch (element.value) {
+                case 'input':
+                    valueName = 'value';
+                    switch (type) {
+                        case "'file'":
+                            eventName = 'change';
+                            break;
+                        case "'radio'":
+                        case "'checkbox'":
+                            if (isNullOrUndefined(inputValue)) {
+                                // if does not exists value, then treat it as checked
+                                ret.push('checked: !!_getModel(self, ' + value + ')');
+                                ret.push('\'ev-change\': function(e) {_setModel(self, ' + value + ')(e.target.checked)}');
+                            } else {
+                                // otherwise, compare with value
+                                ret.push('checked: _getModel(self, ' + value + ') == ' + inputValue);
+                                ret.push('\'ev-change\': _setModel(self, ' + value + ')');
+                            }
+                            return;
+                        default:
+                            eventName = 'input';
+                            break;
+                    }
+                    break;
+                default:
+                    valueName = 'value';
+                    eventName = 'change';
+                    break;
+            }
+        }
+        ret.push(valueName + ': _getModel(self, ' + value + ')');
+        ret.push('\'ev-' + eventName + '\': _setModel(self, ' + value + ')');
     },
 
     _visitJSXAttributeValue: function _visitJSXAttributeValue(value) {
@@ -1176,7 +1239,7 @@ Stringifier.prototype = {
         if (element.children.length) {
             element.attributes.push({ name: 'children', value: element.children });
         }
-        var attributes = this._visitJSXAttribute(element.attributes, false, false);
+        var attributes = this._visitJSXAttribute(element, false, false);
         return this._visitJSXDirective(element, 'h(' + normalizeArgs([element.value, attributes.props, 'null', 'null', attributes.key, attributes.ref]) + ')');
     },
 
@@ -1187,7 +1250,7 @@ Stringifier.prototype = {
     },
 
     _visitJSXVdt: function _visitJSXVdt(element, isRoot) {
-        var ret = ['(function(blocks) {', 'var _blocks = {}, __blocks = extend({}, blocks), _obj = ' + this._visitJSXAttribute(element.attributes, false, false).props + ' || {};', 'if (_obj.hasOwnProperty("arguments")) { extend(_obj, _obj.arguments === null ? obj : _obj.arguments); delete _obj.arguments; }', 'return ' + element.value + '.call(this, _obj, _Vdt, '].join('\n'),
+        var ret = ['(function(blocks) {', 'var _blocks = {}, __blocks = extend({}, blocks), _obj = ' + this._visitJSXAttribute(element, false, false).props + ' || {};', 'if (_obj.hasOwnProperty("arguments")) { extend(_obj, _obj.arguments === null ? obj : _obj.arguments); delete _obj.arguments; }', 'return ' + element.value + '.call(this, _obj, _Vdt, '].join('\n'),
             blocks = [];
 
         each(element.children, function (child) {
@@ -2439,7 +2502,7 @@ function compile(source, options) {
             var ast = parser.parse(source, options),
                 hscript = stringifier.stringify(ast, options.autoReturn);
 
-            hscript = ['_Vdt || (_Vdt = Vdt);', 'obj || (obj = {});', 'blocks || (blocks = {});', 'var h = _Vdt.miss.h, hc = _Vdt.miss.hc, widgets = this && this.widgets || {}, _blocks = {}, __blocks = {},', 'extend = _Vdt.utils.extend, _e = _Vdt.utils.error,' + (options.server ? 'require = function(file) { return _Vdt.require(file, "' + options.filename.replace(/\\/g, '\\\\') + '") }, ' : '') + 'self = this.data, scope = obj;', options.noWith ? hscript : ['with (obj) {', hscript, '}'].join('\n')].join('\n');
+            hscript = ['_Vdt || (_Vdt = Vdt);', 'obj || (obj = {});', 'blocks || (blocks = {});', 'var h = _Vdt.miss.h, hc = _Vdt.miss.hc, widgets = this && this.widgets || {}, _blocks = {}, __blocks = {},', '__u = _Vdt.utils, extend = __u.extend, _e = __u.error,', '__o = __u.Options, _getModel = __o.getModel, _setModel = __o.setModel,', (options.server ? 'require = function(file) { return _Vdt.require(file, "' + options.filename.replace(/\\/g, '\\\\') + '") }, ' : '') + 'self = this.data, scope = obj;', options.noWith ? hscript : ['with (obj) {', hscript, '}'].join('\n')].join('\n');
             templateFn = options.onlySource ? function () {} : new Function('obj', '_Vdt', 'blocks', hscript);
             templateFn.source = 'function(obj, _Vdt, blocks) {\n' + hscript + '\n}';
             break;
