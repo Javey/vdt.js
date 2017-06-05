@@ -127,8 +127,8 @@ Parser.prototype = {
         var start = this.index,
             l = stopChars.length,
             i,
-            charCode,
-            skipped = false;
+            charCode;
+
         loop:
         while (this.index < this.length) {
             charCode = this._charCode();
@@ -136,12 +136,7 @@ Parser.prototype = {
                 if (charCode === 10) {
                     this._updateLine();
                 }
-                // skip whitespace chars
-                if (this.options.skipWhitespace && !skipped) {
-                    start++;
-                }
             } else {
-                skipped = true;
                 for (i = 0; i < l; i++) {
                     if (typeof stopChars[i] === 'function' && stopChars[i].call(this) || 
                         this._isExpect(stopChars[i])
@@ -153,7 +148,7 @@ Parser.prototype = {
             this._updateIndex();
         }
 
-        return start === this.index ? null : this._type(Type.JSXText, {
+        return this._type(Type.JSXText, {
             value: this.source.slice(start, this.index)
         });
     },
@@ -332,14 +327,13 @@ Parser.prototype = {
                 break;
         }
 
+        this._skipWhitespaceBetweenElements(endTag);
         while (this.index < this.length) {
             if (this._isExpect(endTag)) {
                 break;
             }
             current = this._parseJSXChild(element, endTag, current);
-            if (current) {
-                children.push(current);
-            }
+            children.push(current);
         }
         this._parseJSXClosingElement();
         return children;
@@ -355,19 +349,18 @@ Parser.prototype = {
             ret = this._scanJSXText([endTag, Delimiters[0]]);
         } else if (this._isElementStart()) {
             ret = this._parseJSXElement();
+            this._skipWhitespaceBetweenElements(endTag);
         } else {
             ret = this._scanJSXText([function() {
                 return this._isExpect(endTag) || this._isElementStart();
             }, Delimiters[0]]);
         }
 
-        if (ret) {
-            ret.prev = undefined;
-            ret.next = undefined;
-            if (prev) {
-                prev.next = ret;
-                ret.prev = prev;
-            }
+        ret.prev = undefined;
+        ret.next = undefined;
+        if (prev) {
+            prev.next = ret;
+            ret.prev = prev;
         }
         
         return ret;
@@ -406,14 +399,29 @@ Parser.prototype = {
         return ret;
     },
 
-    _char: function(index) {
-        arguments.length === 0 && (index = this.index);
+    _char: function(index = this.index) {
         return this.source.charAt(index);
     },
 
-    _charCode: function(index) {
-         arguments.length === 0 && (index = this.index);
+    _charCode: function(index = this.index) {
          return this.source.charCodeAt(index);
+    },
+
+    _skipWhitespaceBetweenElements: function(endTag) {
+        if (!this.options.skipWhitespace) return;
+
+        let start = this.index;
+        while (start < this.length) {
+            const code = this._charCode(start);
+            if (Utils.isWhiteSpace(code)) {
+                start++;
+            } else if (this._isExpect(endTag, start) || this._isElementStart(start)) {
+                this._skipWhitespace();
+                break;
+            } else {
+                break;
+            }
+        }
     },
 
     _skipWhitespace: function() {
@@ -436,15 +444,15 @@ Parser.prototype = {
         this._updateIndex(str.length);
     },
 
-    _isExpect: function(str) {
-        return this.source.slice(this.index, this.index + str.length) === str;
+    _isExpect: function(str, index = this.index) {
+        return this.source.slice(index, index + str.length) === str;
     },
 
-    _isElementStart: function() {
-        return this._char() === '<' && 
+    _isElementStart: function(index = this.index) {
+        return this._char(index) === '<' && 
             (
                 this._isExpect('<!--') || 
-                elementNameRegexp.test(this.source.slice(this.index))
+                elementNameRegexp.test(this.source.slice(index))
             );
     },
 

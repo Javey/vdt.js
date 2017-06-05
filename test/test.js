@@ -1,11 +1,11 @@
-var Parser = require('../src/lib/parser');
-var Stringifier = require('../src/lib/stringifier');
-var util = require('util');
-var Utils = require('../src/lib/utils');
-var Vdt = require('../src/index');
-
-var parser = new Parser();
-var stringifier = new Stringifier();
+//var Parser = require('../src/lib/parser');
+//var Stringifier = require('../src/lib/stringifier');
+//var util = require('util');
+//var Utils = require('../src/lib/utils');
+//var Vdt = require('../src/index');
+//
+//var parser = new Parser();
+//var stringifier = new Stringifier();
 
 //var source;
 //source = "<div class={{ className }} style={{{width: '100px'}}}></div>";
@@ -36,10 +36,10 @@ var source;
 //Utils.setDelimiters(['{{', '}}']);
 //source = "<script>\n    var a;\n\n    function aa() {\n        var msg;\n        msg = '<form onsubmit=\"return setPassword();\"';\n        msg += '  style=\"margin-bottom: 0px\">';\n        msg += '<input type=password size=10 id=\"password_input\">';\n        msg += '<\/form>';\n    }\n\n    if (a<1) { console.log(a) }\n\n    var b = \"{{ a }}\";\n</script>";
 //source = "<div>\n    <div v-if={test === 1}>1</div>\n   <div v-else-if={test === 2}>2</div>\n    <!--<div v-else>default</div>-->\n</div>";
-source = "<div><div v-if={test === 1}></div> <Div v-else></Div></div>";
+//source = "<div><div v-if={test === 1}></div> <Div v-else></Div></div>";
 //console.log(util.inspect(parser.parse(source), {showHidden: true, depth: null}))
 //source = "<Page />"
-console.log(stringifier.stringify(parser.parse(source)));
+//console.log(stringifier.stringify(parser.parse(source)));
 
 // var vdt = Vdt('<option selected={test}></option>');
 // console.log(vdt.renderString({test: 0}));

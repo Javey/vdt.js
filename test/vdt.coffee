@@ -422,6 +422,20 @@ describe 'Vdt', ->
 
         vdt.renderString().should.eql('<div><div>a</div></div>')
 
+    it 'Whitepsace between strings should not be skipped', ->
+        vdt = Vdt("""
+            <div> aa b <div>c </div> </div>
+        """, {skipWhitespace: true})
+
+        vdt.renderString().should.eql('<div> aa b <div>c </div></div>')
+
+    it 'Whitespace between string and expression should not be skipped', ->
+        vdt = Vdt("""
+            <div> aa {value} b <div>{c} </div> </div>
+        """, {skipWhitespace: true})
+
+        vdt.renderString({value: 1, c: 'c'}).should.eql('<div> aa 1 b <div>c </div></div>')
+
     it 'Render v-if v-else-if v-else', ->
         vdt = Vdt("""
             <div>
@@ -475,14 +489,10 @@ describe 'Vdt', ->
             </div>
         """, {skipWhitespace: true})
         vdt.renderString({test: 2}).should.eql("""
-            <div>
-                <div>2</div>
-            </div>
+            <div><div>2</div></div>
         """)
         vdt.renderString({test: 3}).should.eql("""
-            <div>
-                
-            </div>
+            <div></div>
         """)
 
     it 'Should throw error when render v-if v-else-if v-else with not whiteline', ->

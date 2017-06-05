@@ -533,20 +533,15 @@ Parser.prototype = {
         var start = this.index,
             l = stopChars.length,
             i,
-            charCode,
-            skipped = false;
+            charCode;
+
         loop: while (this.index < this.length) {
             charCode = this._charCode();
             if (isWhiteSpace(charCode)) {
                 if (charCode === 10) {
                     this._updateLine();
                 }
-                // skip whitespace chars
-                if (this.options.skipWhitespace && !skipped) {
-                    start++;
-                }
             } else {
-                skipped = true;
                 for (i = 0; i < l; i++) {
                     if (typeof stopChars[i] === 'function' && stopChars[i].call(this) || this._isExpect(stopChars[i])) {
                         break loop;
@@ -556,7 +551,7 @@ Parser.prototype = {
             this._updateIndex();
         }
 
-        return start === this.index ? null : this._type(Type$$1.JSXText, {
+        return this._type(Type$$1.JSXText, {
             value: this.source.slice(start, this.index)
         });
     },
@@ -737,14 +732,13 @@ Parser.prototype = {
                 break;
         }
 
+        this._skipWhitespaceBetweenElements(endTag);
         while (this.index < this.length) {
             if (this._isExpect(endTag)) {
                 break;
             }
             current = this._parseJSXChild(element, endTag, current);
-            if (current) {
-                children.push(current);
-            }
+            children.push(current);
         }
         this._parseJSXClosingElement();
         return children;
@@ -760,19 +754,18 @@ Parser.prototype = {
             ret = this._scanJSXText([endTag, Delimiters[0]]);
         } else if (this._isElementStart()) {
             ret = this._parseJSXElement();
+            this._skipWhitespaceBetweenElements(endTag);
         } else {
             ret = this._scanJSXText([function () {
                 return this._isExpect(endTag) || this._isElementStart();
             }, Delimiters[0]]);
         }
 
-        if (ret) {
-            ret.prev = undefined;
-            ret.next = undefined;
-            if (prev) {
-                prev.next = ret;
-                ret.prev = prev;
-            }
+        ret.prev = undefined;
+        ret.next = undefined;
+        if (prev) {
+            prev.next = ret;
+            ret.prev = prev;
         }
 
         return ret;
@@ -811,14 +804,33 @@ Parser.prototype = {
         return ret;
     },
 
-    _char: function _char(index) {
-        arguments.length === 0 && (index = this.index);
+    _char: function _char() {
+        var index = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : this.index;
+
         return this.source.charAt(index);
     },
 
-    _charCode: function _charCode(index) {
-        arguments.length === 0 && (index = this.index);
+    _charCode: function _charCode() {
+        var index = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : this.index;
+
         return this.source.charCodeAt(index);
+    },
+
+    _skipWhitespaceBetweenElements: function _skipWhitespaceBetweenElements(endTag) {
+        if (!this.options.skipWhitespace) return;
+
+        var start = this.index;
+        while (start < this.length) {
+            var code = this._charCode(start);
+            if (isWhiteSpace(code)) {
+                start++;
+            } else if (this._isExpect(endTag, start) || this._isElementStart(start)) {
+                this._skipWhitespace();
+                break;
+            } else {
+                break;
+            }
+        }
     },
 
     _skipWhitespace: function _skipWhitespace() {
@@ -842,11 +854,15 @@ Parser.prototype = {
     },
 
     _isExpect: function _isExpect(str) {
-        return this.source.slice(this.index, this.index + str.length) === str;
+        var index = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : this.index;
+
+        return this.source.slice(index, index + str.length) === str;
     },
 
     _isElementStart: function _isElementStart() {
-        return this._char() === '<' && (this._isExpect('<!--') || elementNameRegexp.test(this.source.slice(this.index)));
+        var index = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : this.index;
+
+        return this._char(index) === '<' && (this._isExpect('<!--') || elementNameRegexp.test(this.source.slice(index)));
     },
 
     _type: function _type(type, ret) {
