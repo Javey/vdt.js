@@ -227,10 +227,6 @@ Stringifier.prototype = {
         '}, this)';
     },
 
-    _visitJSXDirectiveModel: function(directive, ret) {
-        
-    },
-
     _visitJSXChildrenAsString: function(children) {
         var ret = [];
         this.enterStringExpression = true;
@@ -249,7 +245,7 @@ Stringifier.prototype = {
             ref,
             type = 'text',
             hasModel = false,
-            inputValue;
+            addition = {trueValue: true, falseValue: false};
         Utils.each(attributes, function(attr) {
             var name = attrMap(attr.name),
                 value = this._visitJSXAttributeValue(attr.value);
@@ -262,7 +258,7 @@ Stringifier.prototype = {
                 // process className individually
                 if (attr.value.type === Type.JSXExpressionContainer) {
                     // for class={ {active: true} }
-                    value = '_Vdt.utils.className(' + value + ')';
+                    value = '_className(' + value + ')';
                 }
                 if (individualClassName) {
                     className = value;
@@ -277,17 +273,25 @@ Stringifier.prototype = {
             } else if (name === 'v-model') {
                 hasModel = value;
                 return;
+            } else if (name === 'v-model-true') {
+                addition.trueValue = value;
+                return;
+            } else if (name === 'v-model-false') {
+                addition.falseValue = value;
+                return;
             } else if (name === 'type') {
                 // save the type value for v-model of input element
                 type = value;
             } else if (name === 'value') {
-                inputValue = value;
+                addition.value = value;
+            } else if (name === 'multiple') {
+                addition.multiple = value;
             }
             ret.push("'" + name + "': " + value);
         }, this);
 
         if (hasModel) {
-            this._visitJSXAttributeModel(element, hasModel, ret, type, inputValue);
+            this._visitJSXAttributeModel(element, hasModel, ret, type, addition);
         }
 
         return {
@@ -298,9 +302,9 @@ Stringifier.prototype = {
         };
     },
 
-    _visitJSXAttributeModel: function(element, value, ret, type, inputValue) {
-        var valueName,
-            eventName; 
+    _visitJSXAttributeModel: function(element, value, ret, type, addition) {
+        var valueName = 'value',
+            eventName = 'change'; 
         if (element.type === Type.JSXElement) {
             switch (element.value) {
                 case 'input':
@@ -311,14 +315,26 @@ Stringifier.prototype = {
                             break;
                         case "'radio'":
                         case "'checkbox'":
+                            var trueValue = addition.trueValue,
+                                falseValue = addition.falseValue,
+                                inputValue = addition.value;
                             if (Utils.isNullOrUndefined(inputValue)) {
-                                // if does not exists value, then treat it as checked
-                                ret.push(`checked: !!_getModel(self, ${value})`);
-                                ret.push(`'ev-change': function(e) {_setModel(self, ${value})(e.target.checked)}`);
+                                ret.push(`checked: _getModel(self, ${value}) === ${trueValue}`);
+                                ret.push(`'ev-change': function(__e) {
+                                    _setModel(self, ${value}, __e.target.checked ? ${trueValue} : ${falseValue});
+                                }`);
                             } else {
-                                // otherwise, compare with value
-                                ret.push(`checked: _getModel(self, ${value}) == ${inputValue}`);
-                                ret.push(`'ev-change': _setModel(self, ${value})`);
+                                if (type === "'radio'") {
+                                    ret.push(`checked: _getModel(self, ${value}) === ${inputValue}`);
+                                    ret.push(`'ev-change': function(__e) { 
+                                        _setModel(self, ${value}, __e.target.checked ? ${inputValue} : ${falseValue});
+                                    }`);
+                                } else {
+                                    ret.push(`checked: _detectCheckboxChecked(self, ${value}, ${inputValue})`);
+                                    ret.push(`'ev-change': function(__e) { 
+                                        _setCheckboxModel(self, ${value}, ${inputValue}, ${falseValue}, __e);
+                                    }`);
+                                }
                             }
                             return;
                         default:
@@ -326,14 +342,20 @@ Stringifier.prototype = {
                             break;
                     }
                     break;
+                case 'select':
+                    ret.push(`value: _getModel(self, ${value})`);
+                    ret.push(`'ev-change': function(__e) {
+                        _setSelectModel(self, ${value}, __e);
+                    }`);
+                    return;
                 default:
-                    valueName = 'value';
-                    eventName = 'change';
                     break;
             }
+            ret.push(`${valueName}: _getModel(self, ${value})`);
+            ret.push(`'ev-${eventName}': function(__e) { _setModel(self, ${value}, __e.target.value) }`);
+        } else if (element.type === Type.JSXWidget) {
+
         }
-        ret.push(`${valueName}: _getModel(self, ${value})`);
-        ret.push(`'ev-${eventName}': _setModel(self, ${value})`);
     },
 
     _visitJSXAttributeValue: function(value) {

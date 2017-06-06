@@ -75,10 +75,11 @@ export const Options = {
     server: false,
     // skip all whitespaces in template
     skipWhitespace: false,
-    setModel: function(data, key) {
-        return function(e) {
-            data[key] = typeof e === 'boolean' ? e : e.target.value;
-        };
+    setModel: function(data, key, value) {
+        
+        // return function(e) {
+            data[key] = value; //typeof e === 'boolean' ? e : e.target.value;
+        // };
     },
     getModel: function(data, key) {
         return data[key]; 
@@ -201,6 +202,61 @@ export function extend(...args) {
         }
     }
     return dest;
+}
+
+export function setCheckboxModel(data, key, trueValue, falseValue, e) {
+    var value = Options.getModel(data, key),
+        checked = e.target.checked;
+    if (isArray(value)) {
+        value = value.slice(0);
+        if (checked) {
+            value.push(trueValue);
+        } else {
+            var index = value.indexOf(trueValue);
+            if (~index) {
+                value.splice(index, 1);
+            }
+        }
+    } else {
+        value = checked ? trueValue : falseValue;
+    }
+    Options.setModel(data, key, value);
+}
+
+export function detectCheckboxChecked(data, key, trueValue) {
+    var value = Options.getModel(data, key);
+    if (isArray(value)) {
+        return ~value.indexOf(trueValue);
+    } else {
+        return value === trueValue;
+    }
+}
+
+export function setSelectModel(data, key, e) {
+    var target = e.target,
+        multiple = target.multiple,
+        value, i, opt,
+        options = target.options;
+
+    if (multiple) {
+        value = [];
+        for (i = 0; i < options.length; i++) {
+            opt = options[i];
+            if (opt.selected) {
+                value.push(isNullOrUndefined(opt._value) ? opt.value : opt._value);
+            }
+        }
+    } else {
+        for (i = 0; i < options.length; i++) {
+            opt = options[i];
+            if (opt.selected) {
+                console.log(opt._value);
+                value = isNullOrUndefined(opt._value) ? opt.value : opt._value;
+                break;
+            }
+        }
+    }
+    Options.setModel(data, key, value);
 }
 
 export const error = (function() {

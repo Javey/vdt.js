@@ -810,10 +810,11 @@ var Options = {
     server: false,
     // skip all whitespaces in template
     skipWhitespace: false,
-    setModel: function setModel(data, key) {
-        return function (e) {
-            data[key] = typeof e === 'boolean' ? e : e.target.value;
-        };
+    setModel: function setModel(data, key, value) {
+
+        // return function(e) {
+        data[key] = value; //typeof e === 'boolean' ? e : e.target.value;
+        // };
     },
     getModel: function getModel(data, key) {
         return data[key];
@@ -1681,8 +1682,6 @@ Stringifier.prototype = {
         return '_Vdt.utils.map(' + directive.data + ', function(' + directive.value + ', ' + directive.key + ') {\n' + 'return ' + ret + ';\n' + '}, this)';
     },
 
-    _visitJSXDirectiveModel: function _visitJSXDirectiveModel(directive, ret) {},
-
     _visitJSXChildrenAsString: function _visitJSXChildrenAsString(children) {
         var ret = [];
         this.enterStringExpression = true;
@@ -1701,7 +1700,7 @@ Stringifier.prototype = {
             ref,
             type = 'text',
             hasModel = false,
-            inputValue;
+            addition = { trueValue: true, falseValue: false };
         each(attributes, function (attr) {
             var name = attrMap(attr.name),
                 value = this._visitJSXAttributeValue(attr.value);
@@ -1714,7 +1713,7 @@ Stringifier.prototype = {
                 // process className individually
                 if (attr.value.type === Type$2.JSXExpressionContainer) {
                     // for class={ {active: true} }
-                    value = '_Vdt.utils.className(' + value + ')';
+                    value = '_className(' + value + ')';
                 }
                 if (individualClassName) {
                     className$$1 = value;
@@ -1729,17 +1728,23 @@ Stringifier.prototype = {
             } else if (name === 'v-model') {
                 hasModel = value;
                 return;
+            } else if (name === 'v-model-true') {
+                addition.trueValue = value;
+                return;
+            } else if (name === 'v-model-false') {
+                addition.falseValue = value;
+                return;
             } else if (name === 'type') {
                 // save the type value for v-model of input element
                 type = value;
             } else if (name === 'value') {
-                inputValue = value;
+                addition.value = value;
             }
             ret.push("'" + name + "': " + value);
         }, this);
 
         if (hasModel) {
-            this._visitJSXAttributeModel(element, hasModel, ret, type, inputValue);
+            this._visitJSXAttributeModel(element, hasModel, ret, type, addition);
         }
 
         return {
@@ -1750,7 +1755,7 @@ Stringifier.prototype = {
         };
     },
 
-    _visitJSXAttributeModel: function _visitJSXAttributeModel(element, value, ret, type, inputValue) {
+    _visitJSXAttributeModel: function _visitJSXAttributeModel(element, value, ret, type, addition) {
         var valueName, eventName;
         if (element.type === Type$2.JSXElement) {
             switch (element.value) {
@@ -1762,14 +1767,19 @@ Stringifier.prototype = {
                             break;
                         case "'radio'":
                         case "'checkbox'":
+                            var trueValue = addition.trueValue,
+                                falseValue = addition.falseValue,
+                                inputValue = addition.value;
                             if (isNullOrUndefined(inputValue)) {
-                                // if does not exists value, then treat it as checked
-                                ret.push('checked: !!_getModel(self, ' + value + ')');
-                                ret.push('\'ev-change\': function(e) {_setModel(self, ' + value + ')(e.target.checked)}');
+                                ret.push('checked: _getModel(self, ' + value + ') === ' + trueValue);
+                                ret.push('\'ev-change\': function(e) { _setModel(self, ' + value + ', e.target.checked ? ' + trueValue + ' : ' + falseValue + ') }');
                             } else {
-                                // otherwise, compare with value
-                                ret.push('checked: _getModel(self, ' + value + ') == ' + inputValue);
-                                ret.push('\'ev-change\': _setModel(self, ' + value + ')');
+                                ret.push('checked: _getModel(self, ' + value + ') === ' + inputValue);
+                                if (type === "'radio'") {
+                                    ret.push('\'ev-change\': function(e) { _setModel(self, ' + value + ', e.target.checked ? ' + inputValue + ' : ' + falseValue + ') }');
+                                } else {
+                                    ret.push('\'ev-change\': function(e) { \n                                        var value = _getModel(self, ' + value + '),\n                                            checked = e.target.checked,\n                                            input = ' + inputValue + ';\n                                        if (Array.isArray(value)) { \n                                            value = value.slice(0);  \n                                            if (checked) {\n                                                value.push(input); \n                                            } else {\n                                                var i = value.indexOf(input);\n                                                if (~i) {\n                                                    value.splice(i, 1);\n                                                }\n                                            }\n                                        } else {\n                                            value = checked ? input : ' + falseValue + ';\n                                        }\n                                        _setModel(self, ' + value + ', value);\n                                    }');
+                                }
                             }
                             return;
                         default:
@@ -1784,7 +1794,7 @@ Stringifier.prototype = {
             }
         }
         ret.push(valueName + ': _getModel(self, ' + value + ')');
-        ret.push('\'ev-' + eventName + '\': _setModel(self, ' + value + ')');
+        ret.push('\'ev-' + eventName + '\': function(e) { _setModel(self, ' + value + ', e.target.value) }');
     },
 
     _visitJSXAttributeValue: function _visitJSXAttributeValue(value) {
@@ -3074,7 +3084,7 @@ function compile(source, options) {
             var ast = parser.parse(source, options),
                 hscript = stringifier.stringify(ast, options.autoReturn);
 
-            hscript = ['_Vdt || (_Vdt = Vdt);', 'obj || (obj = {});', 'blocks || (blocks = {});', 'var h = _Vdt.miss.h, hc = _Vdt.miss.hc, widgets = this && this.widgets || {}, _blocks = {}, __blocks = {},', '__u = _Vdt.utils, extend = __u.extend, _e = __u.error,', '__o = __u.Options, _getModel = __o.getModel, _setModel = __o.setModel,', (options.server ? 'require = function(file) { return _Vdt.require(file, "' + options.filename.replace(/\\/g, '\\\\') + '") }, ' : '') + 'self = this.data, scope = obj;', options.noWith ? hscript : ['with (obj) {', hscript, '}'].join('\n')].join('\n');
+            hscript = ['_Vdt || (_Vdt = Vdt);', 'obj || (obj = {});', 'blocks || (blocks = {});', 'var h = _Vdt.miss.h, hc = _Vdt.miss.hc, widgets = this && this.widgets || {}, _blocks = {}, __blocks = {},', '__u = _Vdt.utils, extend = __u.extend, _e = __u.error, _className = __u.className,', '__o = __u.Options, _getModel = __o.getModel, _setModel = __o.setModel,', (options.server ? 'require = function(file) { return _Vdt.require(file, "' + options.filename.replace(/\\/g, '\\\\') + '") }, ' : '') + 'self = this.data, scope = obj;', options.noWith ? hscript : ['with (obj) {', hscript, '}'].join('\n')].join('\n');
             templateFn = options.onlySource ? function () {} : new Function('obj', '_Vdt', 'blocks', hscript);
             templateFn.source = 'function(obj, _Vdt, blocks) {\n' + hscript + '\n}';
             break;

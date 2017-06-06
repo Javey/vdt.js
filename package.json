@@ -5,7 +5,7 @@
   "main": "dist/index",
   "module": "src/client",
   "browser": {
-      "./src/lib/compile.js": false
+    "./src/lib/compile.js": false
   },
   "repository": {
     "type": "git",
@@ -22,7 +22,6 @@
     "release-major": "git checkout master && npm version major && bower version major 2>/dev/null; git push origin master --tags && npm publish"
   },
   "devDependencies": {
-    "miss": "*",
     "babel-plugin-external-helpers": "^6.22.0",
     "babel-plugin-transform-es3-member-expression-literals": "^6.22.0",
     "babel-plugin-transform-es3-property-literals": "^6.22.0",
@@ -35,6 +34,7 @@
     "handlebars": "^3.0.2",
     "istanbul": "^0.4.5",
     "jquery": "^2.1.3",
+    "miss": "*",
     "mocha": "^2.2.4",
     "mocha-phantomjs": "^4.0.1",
     "mustache": "^2.0.0",
@@ -44,6 +44,7 @@
     "rollup-plugin-commonjs": "^8.0.2",
     "rollup-plugin-node-resolve": "^3.0.0",
     "rollup-plugin-replace": "^1.1.1",
+    "rollup-watch": "^4.0.0",
     "should": "^11.2.1",
     "todomvc-app-css": "^2.0.1",
     "todomvc-common": "^1.0.1",
