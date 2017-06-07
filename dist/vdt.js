@@ -1237,8 +1237,6 @@ Stringifier.prototype = {
                 type = value;
             } else if (name === 'value') {
                 addition.value = value;
-            } else if (name === 'multiple') {
-                addition.multiple = value;
             }
             ret.push("'" + name + "': " + value);
         }, this);
@@ -1298,7 +1296,10 @@ Stringifier.prototype = {
             }
             ret.push(valueName + ': _getModel(self, ' + value + ')');
             ret.push('\'ev-' + eventName + '\': function(__e) { _setModel(self, ' + value + ', __e.target.value) }');
-        } else if (element.type === Type$2.JSXWidget) {}
+        } else if (element.type === Type$2.JSXWidget) {
+            ret.push('value: _getModel(self, ' + value + ')');
+            ret.push('\'ev-change:value\': function(__c, __n) { _setModel(self, ' + value + ', __n) }');
+        }
     },
 
     _visitJSXAttributeValue: function _visitJSXAttributeValue(value) {
@@ -1630,19 +1631,15 @@ function processSelect(vNode, dom, nextProps, isRender) {
             value = nextProps.defaultValue;
         }
 
-        if (multiple) {
-            var flag = { hasSelected: false };
-            if (isArray(children)) {
-                for (var i = 0; i < children.length; i++) {
-                    updateChildOptionGroup(children[i], value, flag);
-                }
-            } else {
-                updateChildOptionGroup(children, value, flag);
-            }
-            if (!flag.hasSelected) {
-                dom.value = value;
+        var flag = { hasSelected: false };
+        if (isArray(children)) {
+            for (var i = 0; i < children.length; i++) {
+                updateChildOptionGroup(children[i], value, flag);
             }
         } else {
+            updateChildOptionGroup(children, value, flag);
+        }
+        if (!flag.hasSelected) {
             dom.value = value;
         }
     }

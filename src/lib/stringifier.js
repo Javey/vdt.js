@@ -284,8 +284,6 @@ Stringifier.prototype = {
                 type = value;
             } else if (name === 'value') {
                 addition.value = value;
-            } else if (name === 'multiple') {
-                addition.multiple = value;
             }
             ret.push("'" + name + "': " + value);
         }, this);
@@ -354,7 +352,8 @@ Stringifier.prototype = {
             ret.push(`${valueName}: _getModel(self, ${value})`);
             ret.push(`'ev-${eventName}': function(__e) { _setModel(self, ${value}, __e.target.value) }`);
         } else if (element.type === Type.JSXWidget) {
-
+            ret.push(`value: _getModel(self, ${value})`);
+            ret.push(`'ev-change:value': function(__c, __n) { _setModel(self, ${value}, __n) }`);
         }
     },
 
