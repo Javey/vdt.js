@@ -353,7 +353,7 @@ Stringifier.prototype = {
             ret.push(`'ev-${eventName}': function(__e) { _setModel(self, ${value}, __e.target.value) }`);
         } else if (element.type === Type.JSXWidget) {
             ret.push(`value: _getModel(self, ${value})`);
-            ret.push(`'ev-change:value': function(__c, __n) { _setModel(self, ${value}, __n) }`);
+            ret.push(`'ev-$change:value': function(__c, __n) { _setModel(self, ${value}, __n) }`);
         }
     },
 

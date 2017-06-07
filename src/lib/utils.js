@@ -250,7 +250,6 @@ export function setSelectModel(data, key, e) {
         for (i = 0; i < options.length; i++) {
             opt = options[i];
             if (opt.selected) {
-                console.log(opt._value);
                 value = isNullOrUndefined(opt._value) ? opt.value : opt._value;
                 break;
             }

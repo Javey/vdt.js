@@ -110,7 +110,10 @@ var skipProps = {
     key: true,
     ref: true,
     children: true,
-    className: true
+    className: true,
+    checked: true,
+    multiple: true,
+    defaultValue: true
 };
 
 var booleanProps = {
@@ -137,9 +140,7 @@ var booleanProps = {
 
 var strictProps = {
     volume: true,
-    defaultChecked: true,
-    value: true,
-    defaultValue: true
+    defaultChecked: true
 };
 
 function MountedQueue() {
@@ -426,7 +427,6 @@ function setSelectModel(data, key, e) {
         for (i = 0; i < options.length; i++) {
             opt = options[i];
             if (opt.selected) {
-                console.log(opt._value);
                 value = isNullOrUndefined(opt._value) ? opt.value : opt._value;
                 break;
             }
@@ -487,7 +487,7 @@ var TypeName$$1 = TypeName$1;
 var elementNameRegexp = /^<\w+:?\s*[\w\/>]/;
 
 function isJSXIdentifierPart(ch) {
-    return ch === 58 || ch === 95 || ch === 45 || // : and _ (underscore) and -
+    return ch === 58 || ch === 95 || ch === 45 || ch === 36 || // : and _ (underscore) and - $
     ch >= 65 && ch <= 90 || // A..Z
     ch >= 97 && ch <= 122 || // a..z
     ch >= 48 && ch <= 57; // 0..9
@@ -1298,7 +1298,7 @@ Stringifier.prototype = {
             ret.push('\'ev-' + eventName + '\': function(__e) { _setModel(self, ' + value + ', __e.target.value) }');
         } else if (element.type === Type$2.JSXWidget) {
             ret.push('value: _getModel(self, ' + value + ')');
-            ret.push('\'ev-change:value\': function(__c, __n) { _setModel(self, ' + value + ', __n) }');
+            ret.push('\'ev-$change:value\': function(__c, __n) { _setModel(self, ' + value + ', __n) }');
         }
     },
 
@@ -1362,7 +1362,8 @@ var Types = {
     SelectElement: 1 << 7,
     TextareaElement: 1 << 8
 };
-Types.Element = Types.HtmlElement | Types.InputElement | Types.SelectElement | Types.TextareaElement;
+Types.FormElement = Types.InputElement | Types.SelectElement | Types.TextareaElement;
+Types.Element = Types.HtmlElement | Types.FormElement;
 Types.ComponentClassOrInstance = Types.ComponentClass | Types.ComponentInstance;
 Types.TextElement = Types.Text | Types.HtmlComment;
 
@@ -1566,6 +1567,12 @@ if ('addEventListener' in doc) {
 var delegatedEvents = {};
 
 function handleEvent(name, lastEvent, nextEvent, dom) {
+    if (name === 'blur') {
+        name = 'focusout';
+    } else if (name === 'focus') {
+        name = 'focusin';
+    }
+
     var delegatedRoots = delegatedEvents[name];
 
     if (nextEvent) {
@@ -1640,7 +1647,7 @@ function processSelect(vNode, dom, nextProps, isRender) {
             updateChildOptionGroup(children, value, flag);
         }
         if (!flag.hasSelected) {
-            dom.value = value;
+            dom.value = '';
         }
     }
 }
@@ -1731,11 +1738,11 @@ function createHtmlElement(vNode, parentDom, mountedQueue) {
     }
 
     if (props !== EMPTY_OBJ) {
-        var isSelectElement = (vNode.type & Types.SelectElement) > 0;
+        var isFormElement = (nextVNode.type & Types.FormElement) > 0;
         for (var prop in props) {
-            patchProp(prop, null, props[prop], dom, isSelectElement);
+            patchProp(prop, null, props[prop], dom, isFormElement);
         }
-        if (isSelectElement) {
+        if (isFormElement) {
             processSelect(vNode, dom, props, true);
         }
     }
@@ -2059,7 +2066,7 @@ function patchComponentClass(lastVNode, nextVNode, parentDom, mountedQueue) {
         nextVNode.children = instance;
     }
 
-    if (dom !== newDom) {
+    if (dom !== newDom && !newDom.parentNode) {
         replaceChild(parentDom, newDom, dom);
     }
 }
@@ -2079,7 +2086,7 @@ function patchComponentIntance(lastVNode, nextVNode, parentDom, mountedQueue) {
         nextVNode.dom = newDom;
     }
 
-    if (dom !== newDom) {
+    if (dom !== newDom && !newDom.parentNode) {
         replaceChild(parentDom, newDom, dom);
     }
 }
@@ -2381,12 +2388,12 @@ function patchProps(lastVNode, nextVNode) {
     var dom = nextVNode.dom;
     var prop = void 0;
     if (nextProps !== EMPTY_OBJ) {
-        var isSelectElement = (nextVNode.type & Types.SelectElement) > 0;
+        var isFormElement = (nextVNode.type & Types.FormElement) > 0;
         for (prop in nextProps) {
-            patchProp(prop, lastProps[prop], nextProps[prop], dom, isSelectElement);
+            patchProp(prop, lastProps[prop], nextProps[prop], dom, isFormElement);
         }
-        if (isSelectElement) {
-            processSelect(nextVNode, dom, nextProps);
+        if (isFormElement) {
+            processSelect(nextVNode, dom, nextProps, false);
         }
     }
     if (lastProps !== EMPTY_OBJ) {
@@ -2398,9 +2405,9 @@ function patchProps(lastVNode, nextVNode) {
     }
 }
 
-function patchProp(prop, lastValue, nextValue, dom, isSelectElement) {
+function patchProp(prop, lastValue, nextValue, dom, isFormElement) {
     if (lastValue !== nextValue) {
-        if (skipProps[prop] || isSelectElement && prop === 'value') {
+        if (skipProps[prop] || isFormElement && prop === 'value') {
             return;
         } else if (booleanProps[prop]) {
             dom[prop] = !!nextValue;
