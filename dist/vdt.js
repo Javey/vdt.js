@@ -140,7 +140,8 @@ var booleanProps = {
 
 var strictProps = {
     volume: true,
-    defaultChecked: true
+    defaultChecked: true,
+    value: true
 };
 
 function MountedQueue() {
@@ -181,9 +182,7 @@ var setTextContent = browser.isIE8 ? function (dom, text) {
  * @date 15-4-22
  */
 
-var i = 0;
-var Type$1 = {
-    JS: i++,
+var i = 0;var Type$1 = { JS: i++,
     JSXText: i++,
     JSXElement: i++,
     JSXExpressionContainer: i++,
@@ -387,7 +386,7 @@ function setCheckboxModel(data, key, trueValue, falseValue, e) {
         if (checked) {
             value.push(trueValue);
         } else {
-            var index = value.indexOf(trueValue);
+            var index = indexOf(value, trueValue);
             if (~index) {
                 value.splice(index, 1);
             }
@@ -401,7 +400,7 @@ function setCheckboxModel(data, key, trueValue, falseValue, e) {
 function detectCheckboxChecked(data, key, trueValue) {
     var value = Options.getModel(data, key);
     if (isArray(value)) {
-        return ~value.indexOf(trueValue);
+        return indexOf(value, trueValue) > -1;
     } else {
         return value === trueValue;
     }
@@ -447,6 +446,7 @@ var error$1 = function () {
 var utils = (Object.freeze || Object)({
 	isNullOrUndefined: isNullOrUndefined,
 	isArray: isArray,
+	indexOf: indexOf,
 	Type: Type$1,
 	TypeName: TypeName$1,
 	SelfClosingTags: SelfClosingTags,
@@ -1687,6 +1687,73 @@ function updateChildOption(vNode, value, flag) {
     }
 }
 
+function processInput(vNode, dom, nextProps) {
+    var type = nextProps.type;
+    var value = nextProps.value;
+    var checked = nextProps.checked;
+    var defaultValue = nextProps.defaultValue;
+    var multiple = nextProps.multiple;
+    var hasValue = !isNullOrUndefined(value);
+
+    if (multiple && multiple !== dom.multiple) {
+        dom.multiple = multiple;
+    }
+    if (!isNullOrUndefined(defaultValue) && !hasValue) {
+        dom.defaultValue = defaultValue + '';
+    }
+    if (isCheckedType(type)) {
+        if (hasValue) {
+            dom.value = value;
+        }
+        if (!isNullOrUndefined(checked)) {
+            dom.checked = checked;
+        }
+    } else {
+        if (hasValue && dom.value !== value) {
+            dom.value = value;
+        } else if (!isNullOrUndefined(checked)) {
+            dom.checked = checked;
+        }
+    }
+}
+
+function isCheckedType(type) {
+    return type === 'checkbox' || type === 'radio';
+}
+
+function processTextarea(vNode, dom, nextProps, isRender) {
+    var value = nextProps.value;
+    var domValue = dom.value;
+
+    if (isNullOrUndefined(value)) {
+        if (isRender) {
+            var defaultValue = nextProps.defaultValue;
+            if (!isNullOrUndefined(defaultValue)) {
+                if (defaultValue !== domValue) {
+                    dom.value = defaultValue;
+                }
+            } else if (domValue !== '') {
+                dom.value = '';
+            }
+        }
+    } else {
+        if (domValue !== value) {
+            dom.value = value;
+        }
+    }
+}
+
+function processForm(vNode, dom, nextProps, isRender) {
+    var type = vNode.type;
+    if (type & Types.InputElement) {
+        processInput(vNode, dom, nextProps, isRender);
+    } else if (type & Types.TextareaElement) {
+        processTextarea(vNode, dom, nextProps, isRender);
+    } else if (type & Types.SelectElement) {
+        processSelect(vNode, dom, nextProps, isRender);
+    }
+}
+
 function render(vNode, parentDom, mountedQueue) {
     if (isNullOrUndefined(vNode)) return;
     var isTrigger = false;
@@ -1738,12 +1805,12 @@ function createHtmlElement(vNode, parentDom, mountedQueue) {
     }
 
     if (props !== EMPTY_OBJ) {
-        var isFormElement = (nextVNode.type & Types.FormElement) > 0;
+        var isFormElement = (vNode.type & Types.FormElement) > 0;
         for (var prop in props) {
             patchProp(prop, null, props[prop], dom, isFormElement);
         }
         if (isFormElement) {
-            processSelect(vNode, dom, props, true);
+            processForm(vNode, dom, props, true);
         }
     }
 
@@ -2393,7 +2460,7 @@ function patchProps(lastVNode, nextVNode) {
             patchProp(prop, lastProps[prop], nextProps[prop], dom, isFormElement);
         }
         if (isFormElement) {
-            processSelect(nextVNode, dom, nextProps, false);
+            processForm(nextVNode, dom, nextProps, false);
         }
     }
     if (lastProps !== EMPTY_OBJ) {

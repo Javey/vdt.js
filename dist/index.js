@@ -674,7 +674,10 @@ var skipProps = {
     key: true,
     ref: true,
     children: true,
-    className: true
+    className: true,
+    checked: true,
+    multiple: true,
+    defaultValue: true
 };
 
 var booleanProps = {
@@ -701,7 +704,8 @@ var booleanProps = {
 
 var strictProps = {
     volume: true,
-    defaultChecked: true
+    defaultChecked: true,
+    value: true
 };
 
 function MountedQueue() {
@@ -744,9 +748,7 @@ var _typeof$1 = typeof Symbol === "function" && typeof Symbol.iterator === "symb
  * @date 15-4-22
  */
 
-var i = 0;
-var Type$1 = {
-    JS: i++,
+var i = 0;var Type$1 = { JS: i++,
     JSXText: i++,
     JSXElement: i++,
     JSXExpressionContainer: i++,
@@ -942,6 +944,62 @@ function extend() {
     return dest;
 }
 
+function setCheckboxModel(data, key, trueValue, falseValue, e) {
+    var value = Options.getModel(data, key),
+        checked = e.target.checked;
+    if (isArray(value)) {
+        value = value.slice(0);
+        if (checked) {
+            value.push(trueValue);
+        } else {
+            var index = indexOf(value, trueValue);
+            if (~index) {
+                value.splice(index, 1);
+            }
+        }
+    } else {
+        value = checked ? trueValue : falseValue;
+    }
+    Options.setModel(data, key, value);
+}
+
+function detectCheckboxChecked(data, key, trueValue) {
+    var value = Options.getModel(data, key);
+    if (isArray(value)) {
+        return indexOf(value, trueValue) > -1;
+    } else {
+        return value === trueValue;
+    }
+}
+
+function setSelectModel(data, key, e) {
+    var target = e.target,
+        multiple = target.multiple,
+        value,
+        i,
+        opt,
+        options = target.options;
+
+    if (multiple) {
+        value = [];
+        for (i = 0; i < options.length; i++) {
+            opt = options[i];
+            if (opt.selected) {
+                value.push(isNullOrUndefined(opt._value) ? opt.value : opt._value);
+            }
+        }
+    } else {
+        for (i = 0; i < options.length; i++) {
+            opt = options[i];
+            if (opt.selected) {
+                value = isNullOrUndefined(opt._value) ? opt.value : opt._value;
+                break;
+            }
+        }
+    }
+    Options.setModel(data, key, value);
+}
+
 var error = function () {
     var hasConsole = typeof console !== 'undefined';
     return hasConsole ? function (e) {
@@ -952,6 +1010,7 @@ var error = function () {
 var utils = (Object.freeze || Object)({
 	isNullOrUndefined: isNullOrUndefined,
 	isArray: isArray,
+	indexOf: indexOf,
 	Type: Type$1,
 	TypeName: TypeName$1,
 	SelfClosingTags: SelfClosingTags,
@@ -974,6 +1033,9 @@ var utils = (Object.freeze || Object)({
 	isTextTag: isTextTag,
 	isDirective: isDirective,
 	extend: extend,
+	setCheckboxModel: setCheckboxModel,
+	detectCheckboxChecked: detectCheckboxChecked,
+	setSelectModel: setSelectModel,
 	error: error
 });
 
@@ -989,7 +1051,7 @@ var TypeName$$1 = TypeName$1;
 var elementNameRegexp = /^<\w+:?\s*[\w\/>]/;
 
 function isJSXIdentifierPart(ch) {
-    return ch === 58 || ch === 95 || ch === 45 || // : and _ (underscore) and -
+    return ch === 58 || ch === 95 || ch === 45 || ch === 36 || // : and _ (underscore) and - $
     ch >= 65 && ch <= 90 || // A..Z
     ch >= 97 && ch <= 122 || // a..z
     ch >= 48 && ch <= 57; // 0..9
@@ -1756,7 +1818,8 @@ Stringifier.prototype = {
     },
 
     _visitJSXAttributeModel: function _visitJSXAttributeModel(element, value, ret, type, addition) {
-        var valueName, eventName;
+        var valueName = 'value',
+            eventName = 'change';
         if (element.type === Type$2.JSXElement) {
             switch (element.value) {
                 case 'input':
@@ -1772,13 +1835,14 @@ Stringifier.prototype = {
                                 inputValue = addition.value;
                             if (isNullOrUndefined(inputValue)) {
                                 ret.push('checked: _getModel(self, ' + value + ') === ' + trueValue);
-                                ret.push('\'ev-change\': function(e) { _setModel(self, ' + value + ', e.target.checked ? ' + trueValue + ' : ' + falseValue + ') }');
+                                ret.push('\'ev-change\': function(__e) {\n                                    _setModel(self, ' + value + ', __e.target.checked ? ' + trueValue + ' : ' + falseValue + ');\n                                }');
                             } else {
-                                ret.push('checked: _getModel(self, ' + value + ') === ' + inputValue);
                                 if (type === "'radio'") {
-                                    ret.push('\'ev-change\': function(e) { _setModel(self, ' + value + ', e.target.checked ? ' + inputValue + ' : ' + falseValue + ') }');
+                                    ret.push('checked: _getModel(self, ' + value + ') === ' + inputValue);
+                                    ret.push('\'ev-change\': function(__e) { \n                                        _setModel(self, ' + value + ', __e.target.checked ? ' + inputValue + ' : ' + falseValue + ');\n                                    }');
                                 } else {
-                                    ret.push('\'ev-change\': function(e) { \n                                        var value = _getModel(self, ' + value + '),\n                                            checked = e.target.checked,\n                                            input = ' + inputValue + ';\n                                        if (Array.isArray(value)) { \n                                            value = value.slice(0);  \n                                            if (checked) {\n                                                value.push(input); \n                                            } else {\n                                                var i = value.indexOf(input);\n                                                if (~i) {\n                                                    value.splice(i, 1);\n                                                }\n                                            }\n                                        } else {\n                                            value = checked ? input : ' + falseValue + ';\n                                        }\n                                        _setModel(self, ' + value + ', value);\n                                    }');
+                                    ret.push('checked: _detectCheckboxChecked(self, ' + value + ', ' + inputValue + ')');
+                                    ret.push('\'ev-change\': function(__e) { \n                                        _setCheckboxModel(self, ' + value + ', ' + inputValue + ', ' + falseValue + ', __e);\n                                    }');
                                 }
                             }
                             return;
@@ -1787,14 +1851,19 @@ Stringifier.prototype = {
                             break;
                     }
                     break;
+                case 'select':
+                    ret.push('value: _getModel(self, ' + value + ')');
+                    ret.push('\'ev-change\': function(__e) {\n                        _setSelectModel(self, ' + value + ', __e);\n                    }');
+                    return;
                 default:
-                    valueName = 'value';
-                    eventName = 'change';
                     break;
             }
+            ret.push(valueName + ': _getModel(self, ' + value + ')');
+            ret.push('\'ev-' + eventName + '\': function(__e) { _setModel(self, ' + value + ', __e.target.value) }');
+        } else if (element.type === Type$2.JSXWidget) {
+            ret.push('value: _getModel(self, ' + value + ')');
+            ret.push('\'ev-$change:value\': function(__c, __n) { _setModel(self, ' + value + ', __n) }');
         }
-        ret.push(valueName + ': _getModel(self, ' + value + ')');
-        ret.push('\'ev-' + eventName + '\': function(e) { _setModel(self, ' + value + ', e.target.value) }');
     },
 
     _visitJSXAttributeValue: function _visitJSXAttributeValue(value) {
@@ -1853,9 +1922,14 @@ var Types = {
     ComponentFunction: 1 << 3,
     ComponentInstance: 1 << 4,
 
-    HtmlComment: 1 << 5
+    HtmlComment: 1 << 5,
+
+    InputElement: 1 << 6,
+    SelectElement: 1 << 7,
+    TextareaElement: 1 << 8
 };
-Types.Element = Types.HtmlElement;
+Types.FormElement = Types.InputElement | Types.SelectElement | Types.TextareaElement;
+Types.Element = Types.HtmlElement | Types.FormElement;
 Types.ComponentClassOrInstance = Types.ComponentClass | Types.ComponentInstance;
 Types.TextElement = Types.Text | Types.HtmlComment;
 
@@ -1879,7 +1953,15 @@ function createVNode(tag, props, children, className, key, ref) {
     props || (props = EMPTY_OBJ);
     switch (typeof tag === 'undefined' ? 'undefined' : _typeof$4(tag)) {
         case 'string':
-            type = Types.HtmlElement;
+            if (tag === 'input') {
+                type = Types.InputElement;
+            } else if (tag === 'select') {
+                type = Types.SelectElement;
+            } else if (tag === 'textarea') {
+                type = Types.TextareaElement;
+            } else {
+                type = Types.HtmlElement;
+            }
             break;
         case 'function':
             if (tag.prototype.init) {
@@ -2051,6 +2133,12 @@ if ('addEventListener' in doc) {
 var delegatedEvents = {};
 
 function handleEvent(name, lastEvent, nextEvent, dom) {
+    if (name === 'blur') {
+        name = 'focusout';
+    } else if (name === 'focus') {
+        name = 'focusin';
+    }
+
     var delegatedRoots = delegatedEvents[name];
 
     if (nextEvent) {
@@ -2103,6 +2191,135 @@ function attachEventToDocument(name, delegatedRoots) {
     return docEvent;
 }
 
+function processSelect(vNode, dom, nextProps, isRender) {
+    var multiple = nextProps.multiple;
+    if (multiple !== dom.multiple) {
+        dom.multiple = multiple;
+    }
+    var children = vNode.children;
+
+    if (!isNullOrUndefined(children)) {
+        var value = nextProps.value;
+        if (isRender && isNullOrUndefined(value)) {
+            value = nextProps.defaultValue;
+        }
+
+        var flag = { hasSelected: false };
+        if (isArray(children)) {
+            for (var i = 0; i < children.length; i++) {
+                updateChildOptionGroup(children[i], value, flag);
+            }
+        } else {
+            updateChildOptionGroup(children, value, flag);
+        }
+        if (!flag.hasSelected) {
+            dom.value = '';
+        }
+    }
+}
+
+function updateChildOptionGroup(vNode, value, flag) {
+    var tag = vNode.tag;
+
+    if (tag === 'optgroup') {
+        var children = vNode.children;
+
+        if (isArray(children)) {
+            for (var i = 0; i < children.length; i++) {
+                updateChildOption(children[i], value, flag);
+            }
+        } else {
+            updateChildOption(children, value, flag);
+        }
+    } else {
+        updateChildOption(vNode, value, flag);
+    }
+}
+
+function updateChildOption(vNode, value, flag) {
+    // skip text and comment node
+    if (vNode.type & Types.HtmlElement) {
+        var props = vNode.props;
+        var dom = vNode.dom;
+
+        if (isArray(value) && indexOf(value, props.value) !== -1 || props.value === value) {
+            dom.selected = true;
+            if (!flag.hasSelected) flag.hasSelected = true;
+        } else if (!isNullOrUndefined(value) || !isNullOrUndefined(props.selected)) {
+            var selected = !!props.selected;
+            if (!flag.hasSelected && selected) flag.hasSelected = true;
+            dom.selected = selected;
+        }
+    }
+}
+
+function processInput(vNode, dom, nextProps) {
+    var type = nextProps.type;
+    var value = nextProps.value;
+    var checked = nextProps.checked;
+    var defaultValue = nextProps.defaultValue;
+    var multiple = nextProps.multiple;
+    var hasValue = !isNullOrUndefined(value);
+
+    if (multiple && multiple !== dom.multiple) {
+        dom.multiple = multiple;
+    }
+    if (!isNullOrUndefined(defaultValue) && !hasValue) {
+        dom.defaultValue = defaultValue + '';
+    }
+    if (isCheckedType(type)) {
+        if (hasValue) {
+            dom.value = value;
+        }
+        if (!isNullOrUndefined(checked)) {
+            dom.checked = checked;
+        }
+    } else {
+        if (hasValue && dom.value !== value) {
+            dom.value = value;
+        } else if (!isNullOrUndefined(checked)) {
+            dom.checked = checked;
+        }
+    }
+}
+
+function isCheckedType(type) {
+    return type === 'checkbox' || type === 'radio';
+}
+
+function processTextarea(vNode, dom, nextProps, isRender) {
+    var value = nextProps.value;
+    var domValue = dom.value;
+
+    if (isNullOrUndefined(value)) {
+        if (isRender) {
+            var defaultValue = nextProps.defaultValue;
+            if (!isNullOrUndefined(defaultValue)) {
+                if (defaultValue !== domValue) {
+                    dom.value = defaultValue;
+                }
+            } else if (domValue !== '') {
+                dom.value = '';
+            }
+        }
+    } else {
+        if (domValue !== value) {
+            dom.value = value;
+        }
+    }
+}
+
+function processForm(vNode, dom, nextProps, isRender) {
+    var type = vNode.type;
+    if (type & Types.InputElement) {
+        processInput(vNode, dom, nextProps, isRender);
+    } else if (type & Types.TextareaElement) {
+        processTextarea(vNode, dom, nextProps, isRender);
+    } else if (type & Types.SelectElement) {
+        processSelect(vNode, dom, nextProps, isRender);
+    }
+}
+
 function render(vNode, parentDom, mountedQueue) {
     if (isNullOrUndefined(vNode)) return;
     var isTrigger = false;
@@ -2119,7 +2336,7 @@ function render(vNode, parentDom, mountedQueue) {
 
 function createElement(vNode, parentDom, mountedQueue) {
     var type = vNode.type;
-    if (type & Types.HtmlElement) {
+    if (type & Types.Element) {
         return createHtmlElement(vNode, parentDom, mountedQueue);
     } else if (type & Types.Text) {
         return createTextElement(vNode, parentDom);
@@ -2154,8 +2371,12 @@ function createHtmlElement(vNode, parentDom, mountedQueue) {
     }
 
     if (props !== EMPTY_OBJ) {
+        var isFormElement = (vNode.type & Types.FormElement) > 0;
         for (var prop in props) {
-            patchProp(prop, null, props[prop], dom);
+            patchProp(prop, null, props[prop], dom, isFormElement);
+        }
+        if (isFormElement) {
+            processForm(vNode, dom, props, true);
         }
     }
 
@@ -2482,7 +2703,7 @@ function patchComponentClass(lastVNode, nextVNode, parentDom, mountedQueue) {
         nextVNode.children = instance;
     }
 
-    if (dom !== newDom) {
+    if (dom !== newDom && !newDom.parentNode) {
         replaceChild(parentDom, newDom, dom);
     }
 }
@@ -2502,7 +2723,7 @@ function patchComponentIntance(lastVNode, nextVNode, parentDom, mountedQueue) {
         nextVNode.dom = newDom;
     }
 
-    if (dom !== newDom) {
+    if (dom !== newDom && !newDom.parentNode) {
         replaceChild(parentDom, newDom, dom);
     }
 }
@@ -2804,8 +3025,12 @@ function patchProps(lastVNode, nextVNode) {
     var dom = nextVNode.dom;
     var prop = void 0;
     if (nextProps !== EMPTY_OBJ) {
+        var isFormElement = (nextVNode.type & Types.FormElement) > 0;
         for (prop in nextProps) {
-            patchProp(prop, lastProps[prop], nextProps[prop], dom);
+            patchProp(prop, lastProps[prop], nextProps[prop], dom, isFormElement);
+        }
+        if (isFormElement) {
+            processForm(nextVNode, dom, nextProps, false);
         }
     }
     if (lastProps !== EMPTY_OBJ) {
@@ -2817,9 +3042,9 @@ function patchProps(lastVNode, nextVNode) {
     }
 }
 
-function patchProp(prop, lastValue, nextValue, dom) {
+function patchProp(prop, lastValue, nextValue, dom, isFormElement) {
     if (lastValue !== nextValue) {
-        if (skipProps[prop]) {
+        if (skipProps[prop] || isFormElement && prop === 'value') {
             return;
         } else if (booleanProps[prop]) {
             dom[prop] = !!nextValue;
@@ -2827,6 +3052,10 @@ function patchProp(prop, lastValue, nextValue, dom) {
             var value = isNullOrUndefined(nextValue) ? '' : nextValue;
             if (dom[prop] !== value) {
                 dom[prop] = value;
+            }
+            // add a private property _value for select an object
+            if (prop === 'value') {
+                dom._value = value;
             }
         } else if (isNullOrUndefined(nextValue)) {
             removeProp(prop, lastValue, dom);
@@ -3084,7 +3313,7 @@ function compile(source, options) {
             var ast = parser.parse(source, options),
                 hscript = stringifier.stringify(ast, options.autoReturn);
 
-            hscript = ['_Vdt || (_Vdt = Vdt);', 'obj || (obj = {});', 'blocks || (blocks = {});', 'var h = _Vdt.miss.h, hc = _Vdt.miss.hc, widgets = this && this.widgets || {}, _blocks = {}, __blocks = {},', '__u = _Vdt.utils, extend = __u.extend, _e = __u.error, _className = __u.className,', '__o = __u.Options, _getModel = __o.getModel, _setModel = __o.setModel,', (options.server ? 'require = function(file) { return _Vdt.require(file, "' + options.filename.replace(/\\/g, '\\\\') + '") }, ' : '') + 'self = this.data, scope = obj;', options.noWith ? hscript : ['with (obj) {', hscript, '}'].join('\n')].join('\n');
+            hscript = ['_Vdt || (_Vdt = Vdt);', 'obj || (obj = {});', 'blocks || (blocks = {});', 'var h = _Vdt.miss.h, hc = _Vdt.miss.hc, widgets = this && this.widgets || {}, _blocks = {}, __blocks = {},', '__u = _Vdt.utils, extend = __u.extend, _e = __u.error, _className = __u.className,', '__o = __u.Options, _getModel = __o.getModel, _setModel = __o.setModel,', '_setCheckboxModel = __u.setCheckboxModel, _detectCheckboxChecked = __u.detectCheckboxChecked,', '_setSelectModel = __u.setSelectModel,', (options.server ? 'require = function(file) { return _Vdt.require(file, "' + options.filename.replace(/\\/g, '\\\\') + '") }, ' : '') + 'self = this.data, scope = obj;', options.noWith ? hscript : ['with (obj) {', hscript, '}'].join('\n')].join('\n');
             templateFn = options.onlySource ? function () {} : new Function('obj', '_Vdt', 'blocks', hscript);
             templateFn.source = 'function(obj, _Vdt, blocks) {\n' + hscript + '\n}';
             break;

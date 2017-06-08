@@ -4,13 +4,11 @@
  * @date 15-4-22
  */
 
-import {isNullOrUndefined, isArray} from 'miss/src/utils';
+import {isNullOrUndefined, isArray, indexOf} from 'miss/src/utils';
 
-export {isNullOrUndefined, isArray};
+export {isNullOrUndefined, isArray, indexOf};
 
-let i = 0;
-export const Type = {
-    JS: i++,
+let i = 0; export const Type = { JS: i++,
     JSXText: i++,
     JSXElement: i++,
     JSXExpressionContainer: i++,
@@ -212,7 +210,7 @@ export function setCheckboxModel(data, key, trueValue, falseValue, e) {
         if (checked) {
             value.push(trueValue);
         } else {
-            var index = value.indexOf(trueValue);
+            var index = indexOf(value, trueValue);
             if (~index) {
                 value.splice(index, 1);
             }
@@ -226,7 +224,7 @@ export function setCheckboxModel(data, key, trueValue, falseValue, e) {
 export function detectCheckboxChecked(data, key, trueValue) {
     var value = Options.getModel(data, key);
     if (isArray(value)) {
-        return ~value.indexOf(trueValue);
+        return indexOf(value, trueValue) > -1;
     } else {
         return value === trueValue;
     }
