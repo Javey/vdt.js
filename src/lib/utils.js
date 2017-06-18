@@ -72,7 +72,7 @@ export const Options = {
     // whether rendering on server or not
     server: false,
     // skip all whitespaces in template
-    skipWhitespace: false,
+    skipWhitespace: true,
     setModel: function(data, key, value) {
         
         // return function(e) {

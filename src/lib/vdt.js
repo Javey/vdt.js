@@ -18,9 +18,9 @@ export default function Vdt(source, options) {
 Vdt.prototype = {
     constructor: Vdt,
 
-    render(data, parentDom, queue) {
+    render(data, parentDom, queue, parentVNode) {
         this.renderVNode(data);
-        this.node = miss.render(this.vNode, parentDom, queue);
+        this.node = miss.render(this.vNode, parentDom, queue, parentVNode);
 
         return this.node;
     },
@@ -40,10 +40,10 @@ Vdt.prototype = {
         return node.outerHTML || node.toString();
     },
 
-    update(data) {
+    update(data, parentDom, parentVNode) {
         var oldVNode = this.vNode;
         this.renderVNode(data);
-        this.node = miss.patch(oldVNode, this.vNode);
+        this.node = miss.patch(oldVNode, this.vNode, parentDom, parentVNode);
 
         return this.node;
     },
