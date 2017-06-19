@@ -40,10 +40,10 @@ Vdt.prototype = {
         return node.outerHTML || node.toString();
     },
 
-    update(data, parentDom, parentVNode) {
+    update(data, parentDom, queue, parentVNode) {
         var oldVNode = this.vNode;
         this.renderVNode(data);
-        this.node = miss.patch(oldVNode, this.vNode, parentDom, parentVNode);
+        this.node = miss.patch(oldVNode, this.vNode, parentDom, queue, parentVNode);
 
         return this.node;
     },
