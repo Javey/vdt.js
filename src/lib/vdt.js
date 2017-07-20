@@ -38,9 +38,6 @@ Vdt.prototype = {
         this.renderVNode(data);
 
         return miss.renderString(this.vNode, null, Vdt.configure().disableSplitText);
-        // var node = this.render(data);
-
-        // return node.outerHTML || node.toString();
     },
 
     update(data, parentDom, queue, parentVNode) {
