@@ -1,6 +1,8 @@
 should = require('should')
 Vdt = require('../dist/index')
 
+Vdt.configure({skipWhitespace: false})
+
 describe 'Server', ->
     it 'Render file in server', ->
         Vdt.setDefaults({

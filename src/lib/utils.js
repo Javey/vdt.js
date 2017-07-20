@@ -4,9 +4,11 @@
  * @date 15-4-22
  */
 
-import {isNullOrUndefined, isArray, indexOf} from 'miss/src/utils';
+import {isNullOrUndefined, isArray, indexOf, 
+    selfClosingTags as SelfClosingTags
+} from 'miss/src/utils';
 
-export {isNullOrUndefined, isArray, indexOf};
+export {isNullOrUndefined, isArray, indexOf, SelfClosingTags};
 
 let i = 0; export const Type = { JS: i++,
     JSXText: i++,
@@ -26,26 +28,6 @@ export const TypeName = [];
 for (let type in Type) {
     TypeName[Type[type]] = type;
 }
-
-
-export const SelfClosingTags = {
-    'area': true,
-    'base': true,
-    'br': true,
-    'col': true,
-    'embed': true,
-    'hr': true,
-    'img': true,
-    'input': true,
-    'keygen': true,
-    'link': true,
-    'menuitem': true,
-    'meta': true,
-    'param': true,
-    'source': true,
-    'track': true,
-    'wbr': true
-};
 
 // which children must be text
 export const TextTags = {

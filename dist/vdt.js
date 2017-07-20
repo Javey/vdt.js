@@ -144,11 +144,34 @@ var strictProps = {
     value: true
 };
 
+var selfClosingTags = {
+    'area': true,
+    'base': true,
+    'br': true,
+    'col': true,
+    'command': true,
+    'embed': true,
+    'hr': true,
+    'img': true,
+    'input': true,
+    'keygen': true,
+    'link': true,
+    'menuitem': true,
+    'meta': true,
+    'param': true,
+    'source': true,
+    'track': true,
+    'wbr': true
+};
+
 function MountedQueue() {
     this.queue = [];
 }
 MountedQueue.prototype.push = function (fn) {
     this.queue.push(fn);
+};
+MountedQueue.prototype.unshift = function (fn) {
+    this.queue.unshift(fn);
 };
 MountedQueue.prototype.trigger = function () {
     var queue = this.queue;
@@ -200,25 +223,6 @@ var TypeName$1 = [];
 for (var type in Type$1) {
     TypeName$1[Type$1[type]] = type;
 }
-
-var SelfClosingTags = {
-    'area': true,
-    'base': true,
-    'br': true,
-    'col': true,
-    'embed': true,
-    'hr': true,
-    'img': true,
-    'input': true,
-    'keygen': true,
-    'link': true,
-    'menuitem': true,
-    'meta': true,
-    'param': true,
-    'source': true,
-    'track': true,
-    'wbr': true
-};
 
 // which children must be text
 var TextTags = {
@@ -345,7 +349,7 @@ function configure(options) {
 }
 
 function isSelfClosingTag(tag) {
-    return SelfClosingTags[tag];
+    return selfClosingTags[tag];
 }
 
 function isTextTag(tag) {
@@ -447,9 +451,9 @@ var utils = (Object.freeze || Object)({
 	isNullOrUndefined: isNullOrUndefined,
 	isArray: isArray,
 	indexOf: indexOf,
+	SelfClosingTags: selfClosingTags,
 	Type: Type$1,
 	TypeName: TypeName$1,
-	SelfClosingTags: SelfClosingTags,
 	TextTags: TextTags,
 	Directives: Directives,
 	Options: Options,
@@ -1795,11 +1799,11 @@ function createElement(vNode, parentDom, mountedQueue, isRender, parentVNode) {
 function createHtmlElement(vNode, parentDom, mountedQueue, isRender, parentVNode) {
     var dom = doc.createElement(vNode.tag);
     var children = vNode.children;
-    var ref = vNode.ref;
     var props = vNode.props;
     var className = vNode.className;
 
     vNode.dom = dom;
+    vNode.parentVNode = parentVNode;
 
     if (!isNullOrUndefined(children)) {
         createElements(children, dom, mountedQueue, isRender, vNode);
@@ -1819,12 +1823,13 @@ function createHtmlElement(vNode, parentDom, mountedQueue, isRender, parentVNode
         }
     }
 
+    var ref = vNode.ref;
     if (!isNullOrUndefined(ref)) {
         createRef(dom, ref, mountedQueue);
     }
 
-    if (parentDom && !dom.parentNode) {
-        parentDom.appendChild(dom);
+    if (parentDom) {
+        appendChild(parentDom, dom);
     }
 
     return dom;
@@ -1855,7 +1860,7 @@ function createComponentClassOrInstance(vNode, parentDom, mountedQueue, lastVNod
     vNode.children = instance;
 
     if (parentDom) {
-        appendChild(parentDom, vNode);
+        appendChild(parentDom, dom);
         // parentDom.appendChild(dom);
     }
 
@@ -1967,7 +1972,7 @@ function removeComponentClassOrInstance(vNode, parentDom, nextVNode) {
     var ref = vNode.ref;
 
     if (typeof instance.destroy === 'function') {
-        instance.destroy(vNode, nextVNode);
+        instance.destroy(vNode, nextVNode, parentDom);
     }
 
     if (ref) {
@@ -2015,14 +2020,10 @@ function removeChild(parentDom, vNode) {
     }
 }
 
-function appendChild(parentDom, vNode) {
-    var dom = vNode.dom;
+function appendChild(parentDom, dom) {
     // for animation the dom will not be moved
-    if (!dom.parentNode) {
-        parentDom.appendChild(dom);
-    }
-    // if (dom._mount) {
-    // dom._mount(vNode, parentDom);
+    // if (!dom.parentNode) {
+    parentDom.appendChild(dom);
     // }
 }
 
@@ -2036,10 +2037,17 @@ function createRef(dom, ref, mountedQueue) {
     }
 }
 
-function patch(lastVNode, nextVNode, parentDom, parentVNode) {
-    var mountedQueue = new MountedQueue();
+function patch(lastVNode, nextVNode, parentDom, mountedQueue, parentVNode) {
+    var isTrigger = true;
+    if (mountedQueue) {
+        isTrigger = false;
+    } else {
+        mountedQueue = new MountedQueue();
+    }
     var dom = patchVNode(lastVNode, nextVNode, parentDom, mountedQueue, parentVNode);
-    mountedQueue.trigger();
+    if (isTrigger) {
+        mountedQueue.trigger();
+    }
     return dom;
 }
 
@@ -2089,13 +2097,13 @@ function patchElement(lastVNode, nextVNode, parentDom, mountedQueue, parentVNode
     var nextProps = nextVNode.props;
     var lastChildren = lastVNode.children;
     var nextChildren = nextVNode.children;
-    var nextRef = nextVNode.ref;
     var lastClassName = lastVNode.className;
     var nextClassName = nextVNode.className;
 
     nextVNode.dom = dom;
+    nextVNode.parentVNode = parentVNode;
 
-    if (lastVNode.tag !== nextVNode.tag) {
+    if (lastVNode.tag !== nextVNode.tag || lastVNode.key !== nextVNode.key) {
         replaceElement(lastVNode, nextVNode, parentDom, mountedQueue, parentVNode);
     } else {
         if (lastChildren !== nextChildren) {
@@ -2114,6 +2122,7 @@ function patchElement(lastVNode, nextVNode, parentDom, mountedQueue, parentVNode
             }
         }
 
+        var nextRef = nextVNode.ref;
         if (!isNullOrUndefined(nextRef) && lastVNode.ref !== nextRef) {
             createRef(dom, nextRef, mountedQueue);
         }
@@ -2129,15 +2138,19 @@ function patchComponentClass(lastVNode, nextVNode, parentDom, mountedQueue, pare
     var newDom = void 0;
 
     if (lastTag !== nextTag || lastVNode.key !== nextVNode.key) {
-        // we should call this function in component's init method
-        // because it should be destroyed before async component has rendered
+        // we should call this remove function in component's init method
+        // because it should be destroyed until async component has rendered
         // removeComponentClassOrInstance(lastVNode, null, nextVNode);
         newDom = createComponentClassOrInstance(nextVNode, parentDom, mountedQueue, lastVNode, false, parentVNode);
     } else {
         instance = lastVNode.children;
+        instance.mountedQueue = mountedQueue;
+        instance.isRender = false;
+        instance.parentVNode = parentVNode;
         newDom = instance.update(lastVNode, nextVNode);
         nextVNode.dom = newDom;
         nextVNode.children = instance;
+        nextVNode.parentVNode = parentVNode;
     }
 
     // perhaps the dom has be replaced
@@ -2157,8 +2170,12 @@ function patchComponentIntance(lastVNode, nextVNode, parentDom, mountedQueue, pa
         // removeComponentClassOrInstance(lastVNode, null, nextVNode);
         newDom = createComponentClassOrInstance(nextVNode, parentDom, mountedQueue, lastVNode, false, parentVNode);
     } else {
+        lastInstance.mountedQueue = mountedQueue;
+        lastInstance.isRender = false;
+        lastInstance.parentVNode = parentVNode;
         newDom = lastInstance.update(lastVNode, nextVNode);
         nextVNode.dom = newDom;
+        nextVNode.parentVNode = parentVNode;
     }
 
     if (dom !== newDom && dom.parentNode) {
@@ -2188,7 +2205,11 @@ function patchChildren(lastChildren, nextChildren, parentDom, mountedQueue, pare
             createElement(nextChildren, parentDom, mountedQueue, false, parentVNode);
         }
     } else if (isArray(nextChildren)) {
-        removeElement(lastChildren, parentDom);
+        if (isStringOrNumber(lastChildren)) {
+            setTextContent(parentDom, '');
+        } else {
+            removeElement(lastChildren, parentDom);
+        }
         createElements(nextChildren, parentDom, mountedQueue, false, parentVNode);
     } else if (isStringOrNumber(lastChildren)) {
         setTextContent(parentDom, '');
@@ -2263,7 +2284,8 @@ function patchChildrenByKey(a, b, dom, mountedQueue, parentVNode) {
 
     if (aStart > aEnd) {
         while (bStart <= bEnd) {
-            insertOrAppend(bEnd, bLength, createElement(b[bStart], null, mountedQueue, false, parentVNode), b, dom);
+            insertOrAppend(bEnd, bLength, createElement(b[bStart], null, mountedQueue, false, parentVNode), b, dom, true /* detectParent: for animate, if the parentNode exists, then do nothing*/
+            );
             ++bStart;
         }
     } else if (bStart > bEnd) {
@@ -2358,7 +2380,7 @@ function patchChildrenByKey(a, b, dom, mountedQueue, parentVNode) {
                 for (i = bLength - 1; i >= 0; i--) {
                     if (sources[i] === -1) {
                         pos = i + bStart;
-                        insertOrAppend(pos, b.length, createElement(b[pos], null, mountedQueue, false, parentVNode), b, dom);
+                        insertOrAppend(pos, b.length, createElement(b[pos], null, mountedQueue, false, parentVNode), b, dom, true);
                     }
                 }
             }
@@ -2420,8 +2442,11 @@ function lisAlgorithm(arr) {
     return result;
 }
 
-function insertOrAppend(pos, length, newDom, nodes, dom) {
+function insertOrAppend(pos, length, newDom, nodes, dom, detectParent) {
     var nextPos = pos + 1;
+    // if (detectParent && newDom.parentNode) {
+    // return;
+    // } else
     if (nextPos < length) {
         dom.insertBefore(newDom, nodes[nextPos].dom);
     } else {
@@ -2591,9 +2616,10 @@ var patchDataset = browser.isIE ? function patchDataset(prop, lastValue, nextVal
 } : patchObject;
 
 var _cache = {};
+var uppercasePattern = /[A-Z]/g;
 function kebabCase(word) {
     if (!_cache[word]) {
-        _cache[word] = word.replace(/[A-Z]/g, function (item) {
+        _cache[word] = word.replace(uppercasePattern, function (item) {
             return '-' + item.toLowerCase();
         });
     }
@@ -2709,10 +2735,10 @@ Vdt$1.prototype = {
 
         return node.outerHTML || node.toString();
     },
-    update: function update(data, parentDom, parentVNode) {
+    update: function update(data, parentDom, queue, parentVNode) {
         var oldVNode = this.vNode;
         this.renderVNode(data);
-        this.node = patch(oldVNode, this.vNode, parentDom, parentVNode);
+        this.node = patch(oldVNode, this.vNode, parentDom, queue, parentVNode);
 
         return this.node;
     },

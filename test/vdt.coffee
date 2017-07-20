@@ -1,6 +1,8 @@
 Vdt = require('../dist/index')
 should = require('should')
 
+Vdt.configure({skipWhitespace: false})
+
 render = (source, data) ->
     vdt = Vdt(source)
     vdt.renderString(data || {})
@@ -595,33 +597,33 @@ describe 'Vdt', ->
         """
         render(source, {a: 1}).should.eql "<div>1</div>"
 
-    it 'Render v-model', ->
-        source = """
-            <input v-model="a" />
-        """
-        console.log Vdt.compile(source, {onlySource: true}).source
+    # it 'Render v-model', ->
+        # source = """
+            # <input v-model="a" />
+        # """
+        # console.log Vdt.compile(source, {onlySource: true}).source
 
-        source = """
-            <input type="radio" v-model="a" value="1" />
-        """
-        console.log Vdt.compile(source, {onlySource: true}).source
+        # source = """
+            # <input type="radio" v-model="a" value="1" />
+        # """
+        # console.log Vdt.compile(source, {onlySource: true}).source
 
-        source = """
-            <input type="radio" v-model="a" value={a} />
-        """
-        console.log Vdt.compile(source, {onlySource: true}).source
+        # source = """
+            # <input type="radio" v-model="a" value={a} />
+        # """
+        # console.log Vdt.compile(source, {onlySource: true}).source
 
-        source = """
-            <input type="radio" v-model="a" />
-        """
-        console.log Vdt.compile(source, {onlySource: true}).source
+        # source = """
+            # <input type="radio" v-model="a" />
+        # """
+        # console.log Vdt.compile(source, {onlySource: true}).source
 
-        source = """
-            <form>
-                <input type="radio" v-model="a" v-for={list} value={value.value}/>
-            </form>
-        """
-        console.log Vdt.compile(source, {onlySource: true}).source
+        # source = """
+            # <form>
+                # <input type="radio" v-model="a" v-for={list} value={value.value}/>
+            # </form>
+        # """
+        # console.log Vdt.compile(source, {onlySource: true}).source
 
 
 #        render(source, {a: 1}).should.eql """<input type="text" value="1" />"""
