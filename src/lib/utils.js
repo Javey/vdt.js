@@ -63,7 +63,8 @@ export const Options = {
     },
     getModel: function(data, key) {
         return data[key]; 
-    }
+    },
+    disableSplitText: false // split text with <!---->
 };
 
 export const hasOwn = Object.prototype.hasOwnProperty;

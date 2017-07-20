@@ -258,7 +258,8 @@ var Options = {
     },
     getModel: function getModel(data, key) {
         return data[key];
-    }
+    },
+    disableSplitText: false // split text with <!---->
 };
 
 var hasOwn = Object.prototype.hasOwnProperty;
@@ -2690,6 +2691,209 @@ function patchStyle(lastValue, nextValue, dom) {
     }
 }
 
+function toString$1(vNode, parent, disableSplitText, firstChild) {
+    var type = vNode.type;
+    var tag = vNode.tag;
+    var props = vNode.props;
+    var children = vNode.children;
+
+    var html = void 0;
+    if (type & Types.ComponentClass) {
+        var instance = new tag(props);
+        html = instance.init(null, vNode);
+    } else if (type & Types.ComponentInstance) {
+        html = vNode.children.init(null, vNode);
+    } else if (type & Types.Element) {
+        var innerHTML = void 0;
+        html = '<' + tag;
+
+        if (!isNullOrUndefined(vNode.className)) {
+            html += ' class="' + escapeText(vNode.className) + '"';
+        }
+
+        if (props !== EMPTY_OBJ) {
+            for (var prop in props) {
+                var value = props[prop];
+
+                if (prop === 'innerHTML') {
+                    innerHTML = value;
+                } else if (prop === 'style') {
+                    html += ' style="' + renderStylesToString(value) + '"';
+                } else if (prop === 'children') {
+                    // ignore
+                } else if (prop === 'defaultValue') {
+                    if (isNullOrUndefined(props.value)) {
+                        html += ' value="' + escapeText(value) + '"';
+                    }
+                } else if (prop === 'defaultChecked') {
+                    if (isNullOrUndefined(props.checked) && value === true) {
+                        html += ' checked';
+                    }
+                } else if (prop === 'attributes') {
+                    html += renderAttributesToString(value);
+                } else if (prop === 'dataset') {
+                    html += renderDatasetToString(value);
+                } else if (tag === 'option' && prop === 'value') {
+                    html += renderAttributeToString(prop, value);
+                    if (parent && value === parent.props.value) {
+                        html += ' selected';
+                    }
+                } else {
+                    html += renderAttributeToString(prop, value);
+                }
+            }
+        }
+
+        if (selfClosingTags[tag]) {
+            html += ' />';
+        } else {
+            html += '>';
+            if (innerHTML) {
+                html += innerHTML;
+            } else if (children) {
+                if (isString(children)) {
+                    html += children === '' ? ' ' : escapeText(children);
+                } else if (isNumber(children)) {
+                    html += children;
+                } else if (isArray(children)) {
+                    var index = -1;
+                    for (var i = 0; i < children.length; i++) {
+                        var child = children[i];
+                        if (isString(child)) {
+                            html += child === '' ? ' ' : escapeText(child);
+                        } else if (isNumber(child)) {
+                            html += child;
+                        } else {
+                            if (!(child.type & Types.Text)) {
+                                index = -1;
+                            } else {
+                                index++;
+                            }
+                            html += toString$1(child, vNode, disableSplitText, index === 0);
+                        }
+                    }
+                } else {
+                    html += toString$1(children, vNode, true);
+                }
+            }
+
+            html += '</' + tag + '>';
+        }
+    } else if (type & Types.Text) {
+        html = (firstChild || disableSplitText ? '' : '<!---->') + (children === '' ? ' ' : escapeText(children));
+    } else if (type & Types.HtmlComment) {
+        html = '<!--' + children + '-->';
+    } else {
+        throw new Error('Unknown vNode: ' + vNode);
+    }
+
+    return html;
+}
+
+function escapeText(text) {
+    var result = text;
+    var escapeString = "";
+    var start = 0;
+    var i = void 0;
+    for (i = 0; i < text.length; i++) {
+        switch (text.charCodeAt(i)) {
+            case 34:
+                // "
+                escapeString = "&quot;";
+                break;
+            case 39:
+                // \
+                escapeString = "&#039;";
+                break;
+            case 38:
+                // &
+                escapeString = "&amp;";
+                break;
+            case 60:
+                // <
+                escapeString = "&lt;";
+                break;
+            case 62:
+                // >
+                escapeString = "&gt;";
+                break;
+            default:
+                continue;
+        }
+        if (start) {
+            result += text.slice(start, i);
+        } else {
+            result = text.slice(start, i);
+        }
+        result += escapeString;
+        start = i + 1;
+    }
+    if (start && i !== start) {
+        return result + text.slice(start, i);
+    }
+    return result;
+}
+
+function isString(o) {
+    return typeof o === 'string';
+}
+
+function isNumber(o) {
+    return typeof o === 'number';
+}
+
+function renderStylesToString(styles) {
+    if (isStringOrNumber(styles)) {
+        return styles;
+    } else {
+        var renderedString = "";
+        for (var styleName in styles) {
+            var value = styles[styleName];
+
+            if (isStringOrNumber(value)) {
+                renderedString += kebabCase(styleName) + ':' + value + ';';
+            }
+        }
+        return renderedString;
+    }
+}
+
+function renderDatasetToString(dataset) {
+    var renderedString = '';
+    for (var key in dataset) {
+        var dataKey = 'data-' + kebabCase(key);
+        var value = dataset[key];
+        if (isString(value)) {
+            renderedString += ' ' + dataKey + '="' + escapeText(value) + '"';
+        } else if (isNumber(value)) {
+            renderedString += ' ' + dataKey + '="' + value + '"';
+        } else if (value === true) {
+            renderedString += ' ' + dataKey + '="true"';
+        }
+    }
+    return renderedString;
+}
+
+function renderAttributesToString(attributes) {
+    var renderedString = '';
+    for (var key in attributes) {
+        renderedString += renderAttributeToString(key, attributes[key]);
+    }
+    return renderedString;
+}
+
+function renderAttributeToString(key, value) {
+    if (isString(value)) {
+        return ' ' + key + '="' + escapeText(value) + '"';
+    } else if (isNumber(value)) {
+        return ' ' + key + '="' + value + '"';
+    } else if (value === true) {
+        return ' ' + key;
+    } else {
+        return '';
+    }
+}
+
 
 
 var miss = (Object.freeze || Object)({
@@ -2698,7 +2902,8 @@ var miss = (Object.freeze || Object)({
 	render: render,
 	hc: createCommentVNode,
 	remove: removeElement,
-	MountedQueue: MountedQueue
+	MountedQueue: MountedQueue,
+	renderString: toString$1
 });
 
 var parser = new Parser();
@@ -2730,10 +2935,13 @@ Vdt$1.prototype = {
 
         return this.vNode;
     },
-    renderString: function renderString(data) {
-        var node = this.render(data);
+    renderString: function renderString$$1(data) {
+        this.renderVNode(data);
 
-        return node.outerHTML || node.toString();
+        return toString$1(this.vNode, null, Vdt$1.configure().disableSplitText);
+        // var node = this.render(data);
+
+        // return node.outerHTML || node.toString();
     },
     update: function update(data, parentDom, queue, parentVNode) {
         var oldVNode = this.vNode;

@@ -10,41 +10,41 @@ describe 'Server', ->
             views: './test/tpl'
         })
         Vdt.renderFile('index', {test: 1}).should.eql """
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <meta charset="utf-8" />
-                <title>advance-demo</title>
-                <link type="text/css" rel="stylesheet" href="/static/css/test.css" />
-                </head>
-                <body>
-                <h1>index page powered by Advanced uses vdt template engine</h1>
-                <div>{test}</div>
-                <div>AAA</div>
-                <div>BBB</div>
-                <div>&lt;div&gt;{test}&lt;/div&gt;</div>
-                <p>Hello 1</p>
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="utf-8" />
+            <title>advance-demo</title>
+            <link type="text/css" rel="stylesheet" href="/static/css/test.css" />
+            </head>
+            <body>
+            <h1>index page powered by Advanced uses vdt template engine</h1>
+            <div>{<!---->test}</div>
+            <div>AAA</div>
+            <div>BBB</div>
+            <div>&lt;div&gt;{test}&lt;/div&gt;</div>
+            <p>Hello <!---->1</p>
+            <script type="text/javascript">
+                var a = 1
+            </script>
+            <!---->
+                test main
+                <div>&lt;div&gt;test&lt;/div&gt;</div>
+            <!---->
+            <!---->
+                <!---->
+                <script type="text/javascript" src="/node_modules/vdt/dist/vdt.js"></script>
+            <!---->
                 <script type="text/javascript">
-                    var a = 1
+                    var a = 1;
+                    console.log(a);
+                    if (a < 2) {
+                        console.log('less than a');
+                    }
                 </script>
-                
-                    test main
-                    <div>&lt;div&gt;test&lt;/div&gt;</div>
-                
-                
-                    
-                    <script type="text/javascript" src="/node_modules/vdt/dist/vdt.js"></script>
-                
-                    <script type="text/javascript">
-                        var a = 1;
-                        console.log(a);
-                        if (a < 2) {
-                            console.log('less than a');
-                        }
-                    </script>
-                
-                </body>
-            </html>
+            <!---->
+            </body>
+        </html>
         """
         Vdt.setDefaults('delimiters', ['{', '}'])
 

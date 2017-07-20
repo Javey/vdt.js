@@ -1,7 +1,7 @@
 Vdt = require('../dist/index')
 should = require('should')
 
-Vdt.configure({skipWhitespace: false})
+Vdt.configure({skipWhitespace: false, disableSplitText: true})
 
 render = (source, data) ->
     vdt = Vdt(source)
@@ -29,8 +29,8 @@ describe 'Vdt', ->
         """
         render(source).should.eql """
         <div>
-            <input type="text" placeholder="a'a" />
-            <div>a'a</div>
+            <input placeholder="a&#039;a" />
+            <div>a&#039;a</div>
         </div>
         """
 
@@ -78,7 +78,7 @@ describe 'Vdt', ->
             <div name="name a\'b">{"a'b"}{"a\\"b"}</div>
         """
         render(source).should.be.eql """
-            <div name="name a'b">a'ba"b</div>
+            <div name="name a&#039;b">a&#039;ba&quot;b</div>
         """
     it 'Parse source with comment', ->
         source = """
@@ -279,7 +279,7 @@ describe 'Vdt', ->
         """
         delimiters = Vdt.getDelimiters()
         Vdt.setDelimiters(['{{', '}}'])
-        render(source, {className: 'a'}).should.eql """<div style="width:100px;" class="a"></div>"""
+        render(source, {className: 'a'}).should.eql """<div class="a" style="width:100px;"></div>"""
         Vdt.setDelimiters(delimiters)
 
     it 'Render correctly when set delimiters to ["{%", "%}"]', ->
@@ -291,7 +291,7 @@ describe 'Vdt', ->
         delimiters = Vdt.getDelimiters()
         Vdt.setDelimiters(['{%', '%}'])
         render(source, {className: 'a', test: 0}).should.eql """
-        <div style="width:100px;" class="a">
+        <div class="a" style="width:100px;">
             {test} {test}
         </div>
         """
