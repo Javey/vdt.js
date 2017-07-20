@@ -1,13 +1,15 @@
 Vdt = require('../dist/index')
 should = require('should')
 
-Vdt.configure({skipWhitespace: false, disableSplitText: true})
 
 render = (source, data) ->
     vdt = Vdt(source)
     vdt.renderString(data || {})
 
 describe 'Vdt', ->
+    beforeEach ->
+        Vdt.configure({skipWhitespace: false, disableSplitText: true})
+
     it 'Attribute without value should not be rendered', ->
         source = """
         <input type="checkbox" checked />

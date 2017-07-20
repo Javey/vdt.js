@@ -1,9 +1,11 @@
 should = require('should')
 Vdt = require('../dist/index')
 
-Vdt.configure({skipWhitespace: false})
 
 describe 'Server', ->
+    beforeEach ->
+        Vdt.configure({skipWhitespace: false, disableSplitText: false})
+
     it 'Render file in server', ->
         Vdt.setDefaults({
             delimiters: ['{{', '}}'],
