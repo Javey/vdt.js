@@ -48,6 +48,14 @@ Vdt.prototype = {
         return this.node;
     },
 
+    hydrate(data, dom, queue, parentDom, parentVNode) {
+        this.renderVNode(data);
+        miss.hydrate(this.vNode, dom, queue, parentDom, parentVNode);
+        this.node = this.vNode.dom;
+
+        return this.node;
+    },
+
     destroy() {
         miss.remove(this.vNode);
     }
