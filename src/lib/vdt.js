@@ -84,7 +84,7 @@ function compile(source, options) {
                     '__u = _Vdt.utils, extend = __u.extend, _e = __u.error, _className = __u.className,',
                     '__o = __u.Options, _getModel = __o.getModel, _setModel = __o.setModel,',
                     '_setCheckboxModel = __u.setCheckboxModel, _detectCheckboxChecked = __u.detectCheckboxChecked,',
-                    '_setSelectModel = __u.setSelectModel,',
+                    '_setSelectModel = __u.setSelectModel, Animate = this.data.Animate,',
                     (options.server ? 
                         'require = function(file) { return _Vdt.require(file, "' + 
                             options.filename.replace(/\\/g, '\\\\') + 
