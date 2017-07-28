@@ -12,6 +12,7 @@ export {isNullOrUndefined, isArray, indexOf, SelfClosingTags};
 
 let i = 0; export const Type = { JS: i++,
     JSXText: i++,
+    JSXUnescapeText: i++,
     JSXElement: i++,
     JSXExpressionContainer: i++,
     JSXAttribute: i++,
@@ -241,5 +242,5 @@ export function setSelectModel(data, key, e) {
 
 export const error = (function() {
     var hasConsole = typeof console !== 'undefined';
-    return hasConsole ? function(e) {console.error(e);} : noop;
+    return hasConsole ? function(e) {console.error(e.stack);} : noop;
 })();

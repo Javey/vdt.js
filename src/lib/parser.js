@@ -293,6 +293,11 @@ Parser.prototype = {
         this._expect(Delimiters[0]);
         if (this._isExpect(Delimiters[1])) {
             expression = this._parseJSXEmptyExpression();
+        } else if (this._isExpect('=')) {
+            // if the lead char is '=', then treat it as unescape string
+            expression = this._parseJSXUnescapeText();
+            this._expect(Delimiters[1]);
+            return expression;
         } else {
             expression = this._parseExpression();
         }
@@ -307,6 +312,13 @@ Parser.prototype = {
 
     _parseExpression: function() {
         return this._parseTemplate();
+    },
+
+    _parseJSXUnescapeText: function() {
+        this._expect('=');
+        return this._type(Type.JSXUnescapeText, {
+            value: this._parseTemplate()
+        });
     },
 
     _parseJSXChildren: function(element) {

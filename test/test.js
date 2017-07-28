@@ -26,7 +26,7 @@
 //console.log(util.inspect(parser.parse(source), {showHidden: true, depth: null}));
 
 
-var source;
+//var source;
 //source = "\n<ul \nclassName=\"list\">\n    {[list].map(function(item) {\n        return <li id={item}>{item}</li>\n    })}\n</ul>";
 //source = 'var a = "a\\"\\b"; <div class={"a\\" b"} a="a\'b">{a}</div>'
 // source = '<div>{{a}</div>';
@@ -44,4 +44,8 @@ var source;
 // var vdt = Vdt('<option selected={test}></option>');
 // console.log(vdt.renderString({test: 0}));
 
+var Vdt = require('../dist')
+var source = '<div>{= self.content }</div>';
+var vdt = Vdt(source);
+console.log(vdt.renderString({content: '<div>a</div>'}))
 

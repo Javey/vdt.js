@@ -71,6 +71,8 @@ Stringifier.prototype = {
                 return this._visitJSX(element);
             case Type.JSXText:
                 return this._visitJSXText(element);
+            case Type.JSXUnescapeText:
+                return this._visitJSXUnescapeText(element);
             case Type.JSXExpressionContainer:
                 return this._visitJSXExpressionContainer(element.value);
             case Type.JSXWidget:
@@ -367,6 +369,10 @@ Stringifier.prototype = {
             ret = "'" + ret + "'";
         }
         return ret;
+    },
+
+    _visitJSXUnescapeText: function(element) {
+        return 'hu('+ this._visitJSXExpressionContainer(element.value) +')';
     },
 
     _visitJSXWidget: function(element) {

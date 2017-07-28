@@ -80,7 +80,7 @@ function compile(source, options) {
                 '_Vdt || (_Vdt = Vdt);',
                 'obj || (obj = {});',
                 'blocks || (blocks = {});',
-                'var h = _Vdt.miss.h, hc = _Vdt.miss.hc, widgets = this && this.widgets || {}, _blocks = {}, __blocks = {},',
+                'var h = _Vdt.miss.h, hc = _Vdt.miss.hc, hu = _Vdt.miss.hu, widgets = this && this.widgets || {}, _blocks = {}, __blocks = {},',
                     '__u = _Vdt.utils, extend = __u.extend, _e = __u.error, _className = __u.className,',
                     '__o = __u.Options, _getModel = __o.getModel, _setModel = __o.setModel,',
                     '_setCheckboxModel = __u.setCheckboxModel, _detectCheckboxChecked = __u.detectCheckboxChecked,',
