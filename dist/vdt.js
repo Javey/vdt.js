@@ -543,7 +543,7 @@ Parser.prototype = {
 
         while (this.index < this.length) {
             var ch = this._char();
-            if (ch === '\'' || ch === '"') {
+            if (ch === '\'' || ch === '"' || ch === '`') {
                 // skip element(<div>) in quotes
                 this._scanStringLiteral();
             } else if (this._isElementStart()) {
@@ -633,7 +633,7 @@ Parser.prototype = {
 
     _scanJSXStringLiteral: function _scanJSXStringLiteral() {
         var quote = this._char();
-        if (quote !== '\'' && quote !== '"') {
+        if (quote !== '\'' && quote !== '"' && quote !== '`') {
             this._error('String literal must starts with a qoute');
         }
         this._updateIndex();
@@ -2239,7 +2239,11 @@ function patchChildren(lastChildren, nextChildren, parentDom, mountedQueue, pare
             createElements(nextChildren, parentDom, mountedQueue, false, parentVNode);
         }
     } else if (isNullOrUndefined(nextChildren)) {
-        removeElements(lastChildren, parentDom);
+        if (isStringOrNumber(lastChildren)) {
+            setTextContent(parentDom, '');
+        } else {
+            removeElements(lastChildren, parentDom);
+        }
     } else if (isStringOrNumber(nextChildren)) {
         if (isStringOrNumber(lastChildren)) {
             parentDom.firstChild.nodeValue = nextChildren;

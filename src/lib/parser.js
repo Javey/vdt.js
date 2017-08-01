@@ -62,7 +62,7 @@ Parser.prototype = {
 
         while (this.index < this.length) {
             var ch = this._char();
-            if (ch === '\'' || ch === '"') {
+            if (ch === '\'' || ch === '"' || ch === '`') {
                 // skip element(<div>) in quotes
                 this._scanStringLiteral();
             } else if (this._isElementStart()) {
@@ -155,7 +155,7 @@ Parser.prototype = {
 
     _scanJSXStringLiteral: function() {
         var quote = this._char();
-        if (quote !== '\'' && quote !== '"') {
+        if (quote !== '\'' && quote !== '"' && quote !== '`') {
             this._error('String literal must starts with a qoute');
         }
         this._updateIndex();

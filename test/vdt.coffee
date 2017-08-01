@@ -36,6 +36,18 @@ describe 'Vdt', ->
         </div>
         """
 
+    it 'Render string with back quotes', ->
+        source = """
+        <div>
+            {`a'<div>a`}
+        </div>
+        """
+        render(source).should.eql """
+        <div>
+            a&#039;&lt;div&gt;a
+        </div>
+        """
+
     it 'Render without return', ->
         source = """
         return <div></div>
