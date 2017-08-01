@@ -4,27 +4,36 @@
  * @date 15-4-22
  */
 
-var Utils = require('./utils'),
-    Type = Utils.Type,
-    TypeName = Utils.TypeName,
+import * as Utils from './utils';
 
-    attrMap = (function() {
-        var map = {
-            'class': 'className',
-            'for': 'htmlFor'
-        };
-        return function(name) {
-            return map[name] || name;
-        };
-    })();
+const {Type, TypeName} = Utils;
 
-var Stringifier = function() {};
+const attrMap = (function() {
+    var map = {
+        'class': 'className',
+        'for': 'htmlFor'
+    };
+    return function(name) {
+        return map[name] || name;
+    };
+})();
+    
+const normalizeArgs = function(args) {
+    var l = args.length - 1;
+    for (var i = l; i >= 0; i--) {
+        if (args[i] !== 'null') {
+            break;
+        }
+    }
+    return (i === l ? args : args.slice(0, i + 1)).join(', '); 
+};
+
+export default function Stringifier() {}
 
 Stringifier.prototype = {
     constructor: Stringifier,
 
     stringify: function(ast, autoReturn) {
-        //console.log(require('util').inspect(ast, {showHidden: true, depth: null}));
         if (arguments.length === 1) {
             autoReturn = true;
         }
@@ -45,11 +54,9 @@ Stringifier.prototype = {
         }, this);
 
         if (!isRoot && !this.enterStringExpression) {
-            // for 
-            // return (
-            // /* comment */
-            // )
+            // add [][0] for return /* comment */
             str = 'function() {try {return [' + str + '][0]} catch(e) {_e(e)}}.call(this)';
+            // str = 'function() {try {return (' + str + ')} catch(e) {_e(e)}}.call(this)';
         }
 
         return str;
@@ -64,6 +71,8 @@ Stringifier.prototype = {
                 return this._visitJSX(element);
             case Type.JSXText:
                 return this._visitJSXText(element);
+            case Type.JSXUnescapeText:
+                return this._visitJSXUnescapeText(element);
             case Type.JSXExpressionContainer:
                 return this._visitJSXExpressionContainer(element.value);
             case Type.JSXWidget:
@@ -106,8 +115,15 @@ Stringifier.prototype = {
     },
 
     _visitJSXElement: function(element) {
-        return "h('" + element.value + "'," + this._visitJSXAttribute(element.attributes) + ", " + 
-            this._visitJSXChildren(element.children) + ')';
+        var attributes = this._visitJSXAttribute(element, true, true);
+        return "h(" + normalizeArgs([
+            "'" + element.value + "'", 
+            attributes.props, 
+            this._visitJSXChildren(element.children),
+            attributes.className,
+            attributes.key,
+            attributes.ref
+        ]) + ')';
     },
 
     _visitJSXChildren: function(children) {
@@ -118,7 +134,7 @@ Stringifier.prototype = {
             ret.push(this._visit(child));
         }, this);
 
-        return '[' + ret.join(', ') + ']';
+        return ret.length > 1 ? '[' + ret.join(', ') + ']' : (ret[0] || 'null');
     },
 
     _visitJSXDirective: function(element, ret) {
@@ -223,19 +239,124 @@ Stringifier.prototype = {
         return ret.join('+');
     },
 
-    _visitJSXAttribute: function(attributes) {
-        var ret = [];
+    _visitJSXAttribute: function(element, individualClassName, individualKeyAndRef) {
+        var ret = [],
+            attributes = element.attributes,
+            className,
+            key,
+            ref,
+            type = 'text',
+            hasModel = false,
+            addition = {trueValue: true, falseValue: false};
         Utils.each(attributes, function(attr) {
             var name = attrMap(attr.name),
                 value = this._visitJSXAttributeValue(attr.value);
-            if (name === 'className' && attr.value.type === Type.JSXExpressionContainer) {
-                // for class={ {active: true} }
-                value = '_Vdt.utils.className(' + value + ')';
+            if (name === 'widget' && attr.value.type === Type.JSXText) {
+                // for compatility v1.0
+                // convert widget="a" to ref=(i) => widgets.a = i
+                ref = 'function(i) {widgets[' + value + '] = i}';
+                return;
+            } else if (name === 'className') {
+                // process className individually
+                if (attr.value.type === Type.JSXExpressionContainer) {
+                    // for class={ {active: true} }
+                    value = '_className(' + value + ')';
+                }
+                if (individualClassName) {
+                    className = value;
+                    return;
+                }
+            } else if (name === 'key' && individualKeyAndRef) {
+                key = value;
+                return;
+            } else if (name === 'ref' && individualKeyAndRef) {
+                ref = value;
+                return;
+            } else if (name === 'v-model') {
+                hasModel = value;
+                return;
+            } else if (name === 'v-model-true') {
+                addition.trueValue = value;
+                return;
+            } else if (name === 'v-model-false') {
+                addition.falseValue = value;
+                return;
+            } else if (name === 'type') {
+                // save the type value for v-model of input element
+                type = value;
+            } else if (name === 'value') {
+                addition.value = value;
             }
             ret.push("'" + name + "': " + value);
         }, this);
 
-        return ret.length ? '{' + ret.join(', ') + '}' : 'null';
+        if (hasModel) {
+            this._visitJSXAttributeModel(element, hasModel, ret, type, addition);
+        }
+
+        return {
+            props: ret.length ? '{' + ret.join(', ') + '}' : 'null',
+            className: className || 'null',
+            ref: ref || 'null',
+            key: key || 'null'
+        };
+    },
+
+    _visitJSXAttributeModel: function(element, value, ret, type, addition) {
+        var valueName = 'value',
+            eventName = 'change'; 
+        if (element.type === Type.JSXElement) {
+            switch (element.value) {
+                case 'input':
+                    valueName = 'value';
+                    switch (type) {
+                        case "'file'":
+                            eventName = 'change';
+                            break;
+                        case "'radio'":
+                        case "'checkbox'":
+                            var trueValue = addition.trueValue,
+                                falseValue = addition.falseValue,
+                                inputValue = addition.value;
+                            if (Utils.isNullOrUndefined(inputValue)) {
+                                ret.push(`checked: _getModel(self, ${value}) === ${trueValue}`);
+                                ret.push(`'ev-change': function(__e) {
+                                    _setModel(self, ${value}, __e.target.checked ? ${trueValue} : ${falseValue});
+                                }`);
+                            } else {
+                                if (type === "'radio'") {
+                                    ret.push(`checked: _getModel(self, ${value}) === ${inputValue}`);
+                                    ret.push(`'ev-change': function(__e) { 
+                                        _setModel(self, ${value}, __e.target.checked ? ${inputValue} : ${falseValue});
+                                    }`);
+                                } else {
+                                    ret.push(`checked: _detectCheckboxChecked(self, ${value}, ${inputValue})`);
+                                    ret.push(`'ev-change': function(__e) { 
+                                        _setCheckboxModel(self, ${value}, ${inputValue}, ${falseValue}, __e);
+                                    }`);
+                                }
+                            }
+                            return;
+                        default:
+                            eventName = 'input';
+                            break;
+                    }
+                    break;
+                case 'select':
+                    ret.push(`value: _getModel(self, ${value})`);
+                    ret.push(`'ev-change': function(__e) {
+                        _setSelectModel(self, ${value}, __e);
+                    }`);
+                    return;
+                default:
+                    break;
+            }
+            ret.push(`${valueName}: _getModel(self, ${value})`);
+            ret.push(`'ev-${eventName}': function(__e) { _setModel(self, ${value}, __e.target.value) }`);
+        } else if (element.type === Type.JSXWidget) {
+            ret.push(`value: _getModel(self, ${value})`);
+            ret.push(`'ev-$change:value': function(__c, __n) { _setModel(self, ${value}, __n) }`);
+        }
     },
 
     _visitJSXAttributeValue: function(value) {
@@ -250,9 +371,21 @@ Stringifier.prototype = {
         return ret;
     },
 
+    _visitJSXUnescapeText: function(element) {
+        return 'hu('+ this._visitJSXExpressionContainer(element.value) +')';
+    },
+
     _visitJSXWidget: function(element) {
-        element.attributes.push({name: 'children', value: element.children});
-        return this._visitJSXDirective(element, element.value + '(' + this._visitJSXAttribute(element.attributes) + ', widgets)');
+        if (element.children.length) {
+            element.attributes.push({name: 'children', value: element.children});
+        }
+        var attributes = this._visitJSXAttribute(element, false, false);
+        return this._visitJSXDirective(
+            element, 
+            'h(' + normalizeArgs(
+                [element.value, attributes.props, 'null', 'null', attributes.key, attributes.ref]
+            ) + ')'
+        );
     },
 
     _visitJSXBlock: function(element, isAncestor) {
@@ -268,7 +401,8 @@ Stringifier.prototype = {
 
     _visitJSXVdt: function(element, isRoot) {
         var ret = ['(function(blocks) {',
-                'var _blocks = {}, __blocks = extend({}, blocks), _obj = ' + this._visitJSXAttribute(element.attributes) + ' || {};',
+                'var _blocks = {}, __blocks = extend({}, blocks), _obj = ' + 
+                this._visitJSXAttribute(element, false, false).props + ' || {};',
                 'if (_obj.hasOwnProperty("arguments")) { extend(_obj, _obj.arguments === null ? obj : _obj.arguments); delete _obj.arguments; }',
                 'return ' + element.value + '.call(this, _obj, _Vdt, '
             ].join('\n'),
@@ -286,8 +420,6 @@ Stringifier.prototype = {
     },
 
     _visitJSXComment: function(element) {
-        return 'h.c(' + this._visitJSXText(element) + ')';
+        return 'hc(' + this._visitJSXText(element) + ')';
     }
 };
-
-module.exports = Stringifier;

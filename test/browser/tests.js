@@ -1,9 +1,7 @@
 describe('Template Inherit', function() {
     it('should render parent template correctly', function() {
         var parent = Vdt(document.getElementById('parent').innerHTML),
-            $dom = $(parent.render({title: 'parent'})),
-            $children = $dom.children();
-
+            $dom = $(parent.render({title: 'parent'})), $children = $dom.children(); 
         $children.length.should.be.eql(4);
         $children.eq(0).hasClass('head').should.be.eql(true);
         $children.eq(0).text().should.be.eql('parent');
@@ -99,5 +97,186 @@ describe('Template Inherit', function() {
         (style1 === undefined || style1 === '').should.be.true;
         $.trim($dom.children().eq(1).attr('style')).should.eql('display: none;');
         (style2 === undefined || style2 === '').should.be.true;
+    });
+
+    it('should render v-model of text correctly', function() {
+        var vdt = Vdt(document.getElementById('v-model-text').innerHTML),
+            dom = vdt.render({text: ''});
+        $('body').append(dom);
+        dom.value.should.eql('');
+        dom.value = 'test';
+        var event = new Event('input', {
+            'bubbles': true,
+            'cancelable': true
+        });
+        dom.dispatchEvent(event);
+        vdt.data.text.should.eql('test');
+
+        $(dom).remove();
+    });
+
+    it('should render v-model of radio correctly', function() {
+        var vdt = Vdt(document.getElementById('v-model-radio').innerHTML),
+            $dom = $(vdt.render({
+                radioConst: '',
+                radioVar: '2',
+                variable: 2,
+                radioNo: '',
+                radioGroup: '2',
+                list: ['1', '2', '3']
+            }));
+
+        $('body').append($dom);
+
+        var children = $dom.children();
+        var checked = [false, false, false, false, true, false, false];
+
+        checked.forEach(function(checked, index) {
+            children[index].checked.should.eql(checked);
+        });
+
+        children.eq(0).click();
+        vdt.data.radioConst.should.eql('1');
+
+        children.eq(1).click();
+        vdt.data.radioVar.should.eql(2);
+
+
+        children.eq(2).click();
+        vdt.data.radioNo.should.eql(true);
+
+        children.eq(3).click();
+        children[3].checked.should.eql(true);
+        children[4].checked.should.eql(false);
+        vdt.data.radioGroup.should.eql('1');
+
+        children.eq(6).click();
+        vdt.data.radioTrueFalse.should.eql('a');
+
+        $dom.remove();
+    });
+
+    it('should render v-model of checkbox correctly', function() {
+        var vdt = Vdt(document.getElementById('v-model-checkbox').innerHTML),
+            $dom = $(vdt.render({
+                checkboxConst: '',
+                checkboxVar: '2',
+                variable: 2,
+                checkboxNo: '',
+                checkboxGroup: ['2'],
+                list: ['1', '2', '3']
+            }));
+
+        $('body').append($dom);
+
+        var children = $dom.children();
+        var checked = [false, false, false, false, true, false];
+
+        checked.forEach(function(checked, index) {
+            children[index].checked.should.eql(checked);
+        });
+
+        children.eq(0).click();
+        vdt.data.checkboxConst.should.eql('1');
+        children.eq(0).click();
+        vdt.data.checkboxConst.should.eql(false);
+
+        children.eq(1).click();
+        vdt.data.checkboxVar.should.eql(2);
+        children.eq(1).click();
+        vdt.data.checkboxVar.should.eql(false);
+
+        children.eq(2).click();
+        vdt.data.checkboxNo.should.eql(true);
+        children.eq(2).click();
+        vdt.data.checkboxNo.should.eql(false);
+
+        children.eq(3).click();
+        vdt.data.checkboxGroup.should.eql(['2', '1']);
+        children.eq(5).click();
+        vdt.data.checkboxGroup.should.eql(['2', '1', '3']);
+        children.eq(3).click();
+        vdt.data.checkboxGroup.should.eql(['2', '3']);
+        children.eq(3).click();
+        vdt.data.checkboxGroup.should.eql(['2', '3', '1']);
+        children.eq(3).click();
+        children.eq(4).click();
+        children.eq(5).click();
+        vdt.data.checkboxGroup.should.eql([]);
+
+        children.eq(6).click();
+        vdt.data.checkboxTrueFalse.should.eql('a');
+        children.eq(6).click();
+        vdt.data.checkboxTrueFalse.should.eql(vdt.data.variable);
+
+        $dom.remove();
+    });
+
+    it('should render v-model of select correctly', function() {
+        var vdt = Vdt(document.getElementById('v-model-select').innerHTML),
+            dom = vdt.render({
+                list: ['1', 2, '3']
+            });
+
+        $('body').append(dom);
+        // dom.value.should.eql('');
+        dom.value = '2';
+        var event = new Event('change', {
+            'bubbles': true,
+            'cancelable': true
+        });
+        dom.dispatchEvent(event);
+        vdt.data.test.should.eql(2);
+
+        $(dom).remove();
+
+        vdt = Vdt(document.getElementById('v-model-select').innerHTML);
+        dom = vdt.render({
+            test: '2',
+            list: ['1', '2', '3']
+        });
+
+        dom.value.should.eql('2');
+    });
+
+    it('should render v-model of multiple select correctly', function() {
+        var vdt = Vdt(document.getElementById('v-model-multiple-select').innerHTML),
+            dom = vdt.render({
+                list: ['1', 2, '3']
+            });
+
+        $('body').append(dom);
+        dom.value.should.eql('');
+        vdt.data.test = [2];
+        vdt.update();
+        
+        [false, true, false].forEach(function(item, index) {
+            dom.options[index].selected.should.eql(item);
+        });
+
+        vdt.data.test = ['1', 2, '3'];
+        vdt.update();
+
+        [true, true, true].forEach(function(item, index) {
+            dom.options[index].selected.should.eql(item);
+        });
+
+        vdt.data.test = [];
+        vdt.update();
+
+        [false, false, false].forEach(function(item, index) {
+            dom.options[index].selected.should.eql(item);
+        });
+
+        dom.options[1].selected = true;
+        dom.options[2].selected = true;
+        var event = new Event('change', {
+            'bubbles': true,
+            'cancelable': true
+        });
+        dom.dispatchEvent(event);
+        vdt.data.test.should.eql([2, '3']);
+
+        $(dom).remove();
     });
 });

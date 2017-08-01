@@ -1,24 +1,25 @@
-var fs = require('fs'),
-    Path = require('path');
+import fs from 'fs';
+import Path from 'path';
+import Vdt from './vdt';
+import {getDefaults} from './options';
 
-var cache = {};
+const cache = {};
 
-module.exports = function(file, baseFile) {
-    var Vdt = require('../index');
+export default function(file, baseFile) {
     if (!Path.isAbsolute(file)) {
         if (file[0] === '.' && baseFile != undefined) {
             file = Path.resolve(Path.dirname(baseFile), file);
-        } else if (Vdt.getDefaults('views') != null) {
-            file = Path.join(Vdt.getDefaults('views'), file);
+        } else if (getDefaults('views') != null) {
+            file = Path.join(getDefaults('views'), file);
         } else {
             file = Path.resolve(file);
         }
     }
-    if (Path.extname(file).substring(1) !== Vdt.getDefaults('extname')) {
-        file += '.' + Vdt.getDefaults('extname');
+    if (Path.extname(file).substring(1) !== getDefaults('extname')) {
+        file += '.' + getDefaults('extname');
     }
 
-    return Vdt.getDefaults('force') ? compile(0) : stat();
+    return getDefaults('force') ? compile(0) : stat();
 
     function compile(mtime) {
         try {
@@ -56,4 +57,4 @@ module.exports = function(file, baseFile) {
             return compile(stats.mtime);
         }
     }
-};
+}

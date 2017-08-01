@@ -1,14 +1,12 @@
-(function (global, factory) {
-	typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory() :
-	typeof define === 'function' && define.amd ? define(factory) :
-	(global.Vdt = factory());
-}(this, (function () { 'use strict';
+'use strict';
 
-var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) {
-  return typeof obj;
-} : function (obj) {
-  return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj;
-};
+function _interopDefault (ex) { return (ex && (typeof ex === 'object') && 'default' in ex) ? ex['default'] : ex; }
+
+var fs = _interopDefault(require('fs'));
+var Path = _interopDefault(require('path'));
+var url = _interopDefault(require('url'));
+
+var _typeof$2 = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
 
 var toString = Object.prototype.toString;
 
@@ -19,11 +17,11 @@ var isArray = Array.isArray || function (arr) {
 };
 
 function isObject$1(o) {
-    return (typeof o === 'undefined' ? 'undefined' : _typeof(o)) === 'object' && o !== null;
+    return (typeof o === 'undefined' ? 'undefined' : _typeof$2(o)) === 'object' && o !== null;
 }
 
 function isStringOrNumber(o) {
-    var type = typeof o === 'undefined' ? 'undefined' : _typeof(o);
+    var type = typeof o === 'undefined' ? 'undefined' : _typeof$2(o);
     return type === 'string' || type === 'number';
 }
 
@@ -197,6 +195,8 @@ var setTextContent = browser.isIE8 ? function (dom, text) {
     dom.textContent = text;
 };
 
+var _typeof$1 = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
+
 /** 
  * @fileoverview utility methods
  * @author javey
@@ -285,7 +285,7 @@ function each(obj, iter, thisArg) {
 }
 
 function isObject$$1(obj) {
-    var type = typeof obj === 'undefined' ? 'undefined' : _typeof(obj);
+    var type = typeof obj === 'undefined' ? 'undefined' : _typeof$1(obj);
     return type === 'function' || type === 'object' && !!obj;
 }
 
@@ -438,14 +438,12 @@ function setSelectModel(data, key, e) {
     Options.setModel(data, key, value);
 }
 
-var error$1 = function () {
+var error = function () {
     var hasConsole = typeof console !== 'undefined';
     return hasConsole ? function (e) {
         console.error(e.stack);
     } : noop;
 }();
-
-
 
 var utils = (Object.freeze || Object)({
 	isNullOrUndefined: isNullOrUndefined,
@@ -476,7 +474,7 @@ var utils = (Object.freeze || Object)({
 	setCheckboxModel: setCheckboxModel,
 	detectCheckboxChecked: detectCheckboxChecked,
 	setSelectModel: setSelectModel,
-	error: error$1
+	error: error
 });
 
 /**
@@ -1370,6 +1368,8 @@ Stringifier.prototype = {
     }
 };
 
+var _typeof$3 = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
+
 var Types = {
     Text: 1,
     HtmlElement: 1 << 1,
@@ -1392,7 +1392,7 @@ Types.ComponentClassOrInstance = Types.ComponentClass | Types.ComponentInstance;
 Types.TextElement = Types.Text | Types.HtmlComment;
 
 var EMPTY_OBJ = {};
-if ("production" !== 'production' && !browser.isIE) {
+if (process.env.NODE_ENV !== 'production' && !browser.isIE) {
     Object.freeze(EMPTY_OBJ);
 }
 
@@ -1409,7 +1409,7 @@ function VNode(type, tag, props, children, className, key, ref) {
 function createVNode(tag, props, children, className, key, ref) {
     var type = void 0;
     props || (props = EMPTY_OBJ);
-    switch (typeof tag === 'undefined' ? 'undefined' : _typeof(tag)) {
+    switch (typeof tag === 'undefined' ? 'undefined' : _typeof$3(tag)) {
         case 'string':
             if (tag === 'input') {
                 type = Types.InputElement;
@@ -2950,6 +2950,8 @@ function renderAttributeToString(key, value) {
     }
 }
 
+var _typeof$4 = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
+
 function hydrateRoot(vNode, parentDom, mountedQueue) {
     if (!isNullOrUndefined(parentDom)) {
         var dom = parentDom.firstChild;
@@ -3165,7 +3167,7 @@ function normalizeChildren$1(parentDom) {
     }
 }
 
-var warning = (typeof console === 'undefined' ? 'undefined' : _typeof(console)) === 'object' ? function (message) {
+var warning = (typeof console === 'undefined' ? 'undefined' : _typeof$4(console)) === 'object' ? function (message) {
     console.warn(message);
 } : function () {};
 
@@ -3183,6 +3185,8 @@ var miss = (Object.freeze || Object)({
 	hydrateRoot: hydrateRoot,
 	hydrate: hydrate
 });
+
+var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
 
 var parser = new Parser();
 var stringifier = new Stringifier();
@@ -3278,6 +3282,196 @@ Vdt$1.configure = configure;
 // for compatibility v1.0
 Vdt$1.virtualDom = miss;
 
-return Vdt$1;
+var defaultOptions = Options;
+extend(defaultOptions, {
+    doctype: '<!DOCTYPE html>',
+    force: false,
+    autoReturn: true,
+    extname: 'vdt',
+    views: 'views',
+    delimiters: getDelimiters()
+});
 
-})));
+function setDefaults(key, value) {
+    var options = {};
+    if (typeof key === 'string') {
+        options[key] = value;
+    } else {
+        options = key;
+    }
+    if (options.hasOwnProperty('delimiters')) {
+        setDelimiters(options['delimiters']);
+    }
+    return extend(defaultOptions, options);
+}
+
+function getDefaults(key) {
+    if (key == null) {
+        return defaultOptions;
+    } else {
+        return defaultOptions[key];
+    }
+}
+
+var cache = {};
+
+var compile$1 = function (file, baseFile) {
+    if (!Path.isAbsolute(file)) {
+        if (file[0] === '.' && baseFile != undefined) {
+            file = Path.resolve(Path.dirname(baseFile), file);
+        } else if (getDefaults('views') != null) {
+            file = Path.join(getDefaults('views'), file);
+        } else {
+            file = Path.resolve(file);
+        }
+    }
+    if (Path.extname(file).substring(1) !== getDefaults('extname')) {
+        file += '.' + getDefaults('extname');
+    }
+
+    return getDefaults('force') ? compile(0) : stat();
+
+    function compile(mtime) {
+        try {
+            var contents = fs.readFileSync(file).toString();
+            cache[file] = Vdt$1.compile(contents, {
+                server: true,
+                filename: file
+            });
+            cache[file].mtime = mtime;
+            return function () {
+                try {
+                    return cache[file].apply(this, arguments);
+                } catch (e) {
+                    e.source || (e.source = []);
+                    e.source.push('/* file: ' + file + ' */\n' + cache[file].source);
+                    throw e;
+                }
+            };
+        } catch (e) {
+            e.message += ' in file: ' + file;
+            throw e;
+        }
+    }
+
+    function stat() {
+        var stats = fs.statSync(file);
+        var obj = cache[file];
+        if (obj && obj.mtime) {
+            if (obj.mtime < stats.mtime) {
+                return compile(stats.mtime);
+            } else {
+                return obj;
+            }
+        } else {
+            return compile(stats.mtime);
+        }
+    }
+};
+
+var middleware = function (options) {
+    options = options || {};
+
+    if (typeof options === 'string') {
+        options = {
+            src: options
+        };
+    }
+
+    options = extend({
+        src: process.cwd(),
+        amd: true,
+        force: false,
+        autoReturn: true,
+        onlySource: true,
+        delimiters: getDelimiters(),
+        filterSource: function filterSource(source) {
+            return source;
+        }
+    }, options);
+
+    var cache = {};
+
+    return function (req, res, next) {
+        if ('GET' != req.method && 'HEAD' != req.method) return next();
+
+        var path = url.parse(req.url).pathname;
+        if (!/\.js/.test(path)) return next();
+
+        var vdtFile = Path.join(options.src, path.replace(/\.js$/, '.vdt'));
+
+        options.force ? compile(0) : stat();
+
+        function error$$1(err) {
+            next(err.code === 'ENOENT' ? null : err);
+        }
+
+        function compile(mtime) {
+            fs.readFile(vdtFile, 'utf-8', function (err, contents) {
+                if (err) return error$$1(err);
+                try {
+                    var obj = cache[vdtFile] = Vdt$1.compile(contents, options);
+                    if (options.amd) {
+                        obj.source = 'define(function(require) {\n return ' + obj.source + '\n})';
+                    }
+                    obj.mtime = mtime;
+                    obj.source = options.filterSource(obj.source);
+                    return send(obj.source);
+                } catch (e) {
+                    return error$$1(e);
+                }
+            });
+        }
+
+        function send(source) {
+            res.set('Content-Type', 'application/x-javascript').send(source);
+        }
+
+        function stat() {
+            fs.stat(vdtFile, function (err, stats) {
+                if (err) return error$$1(err);
+
+                var obj = cache[vdtFile];
+                if (obj && obj.mtime) {
+                    if (obj.mtime < stats.mtime) {
+                        compile(stats.mtime);
+                    } else {
+                        send(obj.source);
+                    }
+                } else {
+                    compile(stats.mtime);
+                }
+            });
+        }
+    };
+};
+
+function renderFile(file, options) {
+    options || (options = {});
+    extend(defaultOptions, options.settings);
+    var template = compile$1(file),
+        vdt = Vdt$1(template);
+    return defaultOptions.doctype + '\n' + vdt.renderString(options);
+}
+
+function __express(file, options, callback) {
+    extend(options.settings, {
+        extname: options.settings['view engine'],
+        views: options.settings['views'],
+        force: !options.settings['view cache']
+    });
+    try {
+        return callback(null, renderFile(file, options));
+    } catch (e) {
+        return callback(e);
+    }
+}
+
+Vdt$1.renderFile = renderFile;
+Vdt$1.__express = __express;
+Vdt$1.setDefaults = setDefaults;
+Vdt$1.getDefaults = getDefaults;
+Vdt$1.middleware = middleware;
+Vdt$1.require = compile$1;
+
+module.exports = Vdt$1;

@@ -1,70 +1,64 @@
-var parser = new (require('./parser')),
-    stringifier = new (require('./stringifier')),
-    virtualDom = require('virtual-domx'),
-    utils = require('./utils');
+import Parser from './parser';
+import Stringifier from './stringifier';
+import * as utils from './utils';
+import * as miss from 'miss';
 
-var Vdt = function(source, options) {
-    var vdt = {
-        render: function(data) {
-            vdt.renderTree.apply(vdt, arguments); 
-            vdt.node = virtualDom.create(vdt.tree);
-            return vdt.node;
-        },
+const parser = new Parser();
+const stringifier = new Stringifier();
 
-        renderTree: function(data) {
-            if (arguments.length) {
-                vdt.data = data;
-            }
-            vdt.data.vdt = vdt;
-            // pass vdt as `this`, does not dirty data.
-            vdt.tree = vdt.template.call(vdt, vdt.data, Vdt);
-            return vdt.tree;
-        },
+export default function Vdt(source, options) {
+    if (!(this instanceof Vdt)) return new Vdt(source, options);
 
-        renderString: function(data) {
-            var node = vdt.render.apply(vdt, arguments);
-            return node.outerHTML || node.toString();
-        },
+    this.template = compile(source, options);
+    this.data = null;
+    this.vNode = null;
+    this.node = null;
+    this.widgets = {};
+}
+Vdt.prototype = {
+    constructor: Vdt,
 
-        update: function(data) {
-            var oldTree = vdt.tree;
-            vdt.renderTree.apply(vdt, arguments);
-            vdt.patches = virtualDom.diff(oldTree, vdt.tree);
-            vdt.node = virtualDom.patch(vdt.node, vdt.patches);
-            return vdt.node;
-        },
+    render(data, parentDom, queue, parentVNode) {
+        this.renderVNode(data);
+        this.node = miss.render(this.vNode, parentDom, queue, parentVNode);
 
-        /**
-         * Restore the data, so you can modify it directly.
-         */
-        data: {},
-        tree: {},
-        patches: {},
-        widgets: {},
-        node: null,
-        template: compile(source, options),
+        return this.node;
+    },
 
-        getTree: function() {
-            return vdt.tree;
-        },
-
-        setTree: function(tree) {
-            vdt.tree = tree;
-        },
-
-        getNode: function() {
-            return vdt.node;
-        },
-
-        setNode: function(node) {
-            vdt.node = node;
+    renderVNode(data) {
+        if (data !== undefined) {
+            this.data = data;
         }
-    };
+        this.vNode = this.template(this.data, Vdt);
 
-    // reference cycle vdt
-    // vdt.data.vdt = vdt;
+        return this.vNode;
+    },
 
-    return vdt;
+    renderString(data) {
+        this.renderVNode(data);
+
+        return miss.renderString(this.vNode, null, Vdt.configure().disableSplitText);
+    },
+
+    update(data, parentDom, queue, parentVNode) {
+        var oldVNode = this.vNode;
+        this.renderVNode(data);
+        this.node = miss.patch(oldVNode, this.vNode, parentDom, queue, parentVNode);
+
+        return this.node;
+    },
+
+    hydrate(data, dom, queue, parentDom, parentVNode) {
+        this.renderVNode(data);
+        miss.hydrate(this.vNode, dom, queue, parentDom, parentVNode);
+        this.node = this.vNode.dom;
+
+        return this.node;
+    },
+
+    destroy() {
+        miss.remove(this.vNode);
+    }
 };
 
 function compile(source, options) {
@@ -75,34 +69,29 @@ function compile(source, options) {
         options = {autoReturn: options};
     }
 
-    options = utils.extend({
-        autoReturn: true,
-        onlySource: false,
-        delimiters: utils.getDelimiters(),
-        // remove `with` statement
-        noWith: false,
-        // whether rendering on server or not
-        server: false
-    }, options);
+    options = utils.extend({}, utils.configure(), options);
 
     switch (typeof source) {
         case 'string':
-            var ast = parser.parse(source, {delimiters: options.delimiters}),
+            var ast = parser.parse(source, options),
                 hscript = stringifier.stringify(ast, options.autoReturn);
 
             hscript = [
                 '_Vdt || (_Vdt = Vdt);',
                 'obj || (obj = {});',
                 'blocks || (blocks = {});',
-                'var h = _Vdt.virtualDom.h, widgets = this && this.widgets || {}, _blocks = {}, __blocks = {},',
-                    'extend = _Vdt.utils.extend, _e = _Vdt.utils.error,' +
+                'var h = _Vdt.miss.h, hc = _Vdt.miss.hc, hu = _Vdt.miss.hu, widgets = this && this.widgets || {}, _blocks = {}, __blocks = {},',
+                    '__u = _Vdt.utils, extend = __u.extend, _e = __u.error, _className = __u.className,',
+                    '__o = __u.Options, _getModel = __o.getModel, _setModel = __o.setModel,',
+                    '_setCheckboxModel = __u.setCheckboxModel, _detectCheckboxChecked = __u.detectCheckboxChecked,',
+                    '_setSelectModel = __u.setSelectModel,',
                     (options.server ? 
-                        'require = function(file) { return _Vdt.utils.require(file, "' + 
+                        'require = function(file) { return _Vdt.require(file, "' + 
                             options.filename.replace(/\\/g, '\\\\') + 
                         '") }, ' : 
                         ''
                     ) +
-                    'self = this.data, scope = obj;',
+                    'self = this.data, scope = obj, Animate = self && self.Animate;',
                 options.noWith ? hscript : [
                     'with (obj) {',
                         hscript,
@@ -124,10 +113,12 @@ function compile(source, options) {
 
 Vdt.parser = parser;
 Vdt.stringifier = stringifier;
-Vdt.virtualDom = virtualDom;
+Vdt.miss = miss;
 Vdt.compile = compile;
 Vdt.utils = utils;
 Vdt.setDelimiters = utils.setDelimiters;
 Vdt.getDelimiters = utils.getDelimiters;
+Vdt.configure = utils.configure;
 
-module.exports = Vdt;
+// for compatibility v1.0
+Vdt.virtualDom = miss; 

@@ -101,6 +101,39 @@
     </div>
 </script>
 
+<script type="text/vdt" id="v-model-text">
+    <input name="text" v-model="text" />
+</script>
+<script type="text/vdt" id="v-model-radio">
+    <div>
+        <input name="radio-with-constant-value" type="radio" v-model="radioConst" value="1" />
+        <input name="radio-with-variable-value" type="radio" v-model="radioVar" value={variable} />
+        <input name="radio-with-no-value" type="radio" v-model="radioNo" />
+        <input name="radio-groups" type="radio" v-model="radioGroup" v-for={list} value={value} />
+        <input name="radio-with-true-false" type="radio" v-model="radioTrueFalse" v-model-true="a" />
+    </div>
+</script>
+<script type="text/vdt" id="v-model-checkbox">
+    <div>
+        <input name="checkbox-with-constant-value" type="checkbox" v-model="checkboxConst" value="1" />
+        <input name="checkbox-with-variable-value" type="checkbox" v-model="checkboxVar" value={variable} />
+        <input name="checkbox-with-no-value" type="checkbox" v-model="checkboxNo" />
+        <input name="checkbox-groups" type="checkbox" v-model="checkboxGroup" v-for={list} value={value} />
+        <input name="checkbox-with-true-false" type="checkbox" v-model="checkboxTrueFalse" v-model-true="a" v-model-false={variable} />
+    </div>
+</script>
+<script type="text/vdt" id="v-model-select">
+    <select v-model="test">
+        <option v-for={list} value={value}>{value}</option>
+    </select>
+</script>
+<script type="text/vdt" id="v-model-multiple-select">
+    <select v-model="test" multiple={true}>
+        <option v-for={list} value={value}>{value}</option>
+    </select>
+</script>
+
+
 <script src="mocha.js"></script>
 <script src="should.js"></script>
 <script src="../../dist/vdt.js"></script>

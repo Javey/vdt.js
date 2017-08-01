@@ -1,11 +1,15 @@
-Vdt = require('../src/index')
+Vdt = require('../dist/index')
 should = require('should')
+
 
 render = (source, data) ->
     vdt = Vdt(source)
     vdt.renderString(data || {})
 
 describe 'Vdt', ->
+    beforeEach ->
+        Vdt.configure({skipWhitespace: false, disableSplitText: true})
+
     it 'Attribute without value should not be rendered', ->
         source = """
         <input type="checkbox" checked />
@@ -27,8 +31,20 @@ describe 'Vdt', ->
         """
         render(source).should.eql """
         <div>
-            <input type="text" placeholder="a'a" />
-            <div>a'a</div>
+            <input placeholder="a&#039;a" />
+            <div>a&#039;a</div>
+        </div>
+        """
+
+    it 'Render string with back quotes', ->
+        source = """
+        <div>
+            {`a'<div>a`}
+        </div>
+        """
+        render(source).should.eql """
+        <div>
+            a&#039;&lt;div&gt;a
         </div>
         """
 
@@ -76,7 +92,7 @@ describe 'Vdt', ->
             <div name="name a\'b">{"a'b"}{"a\\"b"}</div>
         """
         render(source).should.be.eql """
-            <div name="name a'b">a'ba"b</div>
+            <div name="name a&#039;b">a&#039;ba&quot;b</div>
         """
     it 'Parse source with comment', ->
         source = """
@@ -277,7 +293,7 @@ describe 'Vdt', ->
         """
         delimiters = Vdt.getDelimiters()
         Vdt.setDelimiters(['{{', '}}'])
-        render(source, {className: 'a'}).should.eql """<div style="width:100px;" class="a"></div>"""
+        render(source, {className: 'a'}).should.eql """<div class="a" style="width:100px;"></div>"""
         Vdt.setDelimiters(delimiters)
 
     it 'Render correctly when set delimiters to ["{%", "%}"]', ->
@@ -289,7 +305,7 @@ describe 'Vdt', ->
         delimiters = Vdt.getDelimiters()
         Vdt.setDelimiters(['{%', '%}'])
         render(source, {className: 'a', test: 0}).should.eql """
-        <div style="width:100px;" class="a">
+        <div class="a" style="width:100px;">
             {test} {test}
         </div>
         """
@@ -413,6 +429,29 @@ describe 'Vdt', ->
 
         vdt.renderString({test: 1}).should.eql('<div name="1"></div>')
 
+    it 'Render with skip whitespace', ->
+        vdt = Vdt("""
+            <div>
+                <div>a</div>
+            </div>
+        """, {skipWhitespace: true})
+
+        vdt.renderString().should.eql('<div><div>a</div></div>')
+
+    it 'Whitepsace between strings should not be skipped', ->
+        vdt = Vdt("""
+            <div> aa b <div>c </div> </div>
+        """, {skipWhitespace: true})
+
+        vdt.renderString().should.eql('<div> aa b <div>c </div></div>')
+
+    it 'Whitespace between string and expression should not be skipped', ->
+        vdt = Vdt("""
+            <div> aa {value} b <div>{c} </div> </div>
+        """, {skipWhitespace: true})
+
+        vdt.renderString({value: 1, c: 'c'}).should.eql('<div> aa 1 b <div>c </div></div>')
+
     it 'Render v-if v-else-if v-else', ->
         vdt = Vdt("""
             <div>
@@ -455,6 +494,21 @@ describe 'Vdt', ->
             <div>
                 
             </div>
+        """)
+
+    it 'Render v-if v-else-if v-else with whiteline and skip whitespace', ->
+        vdt = Vdt("""
+            <div>
+                <div v-if={test === 1}>1</div>
+
+                <div v-else-if={test === 2}>2</div>
+            </div>
+        """, {skipWhitespace: true})
+        vdt.renderString({test: 2}).should.eql("""
+            <div><div>2</div></div>
+        """)
+        vdt.renderString({test: 3}).should.eql("""
+            <div></div>
         """)
 
     it 'Should throw error when render v-if v-else-if v-else with not whiteline', ->
@@ -556,3 +610,34 @@ describe 'Vdt', ->
         }</div>
         """
         render(source, {a: 1}).should.eql "<div>1</div>"
+
+    # it 'Render v-model', ->
+        # source = """
+            # <input v-model="a" />
+        # """
+        # console.log Vdt.compile(source, {onlySource: true}).source
+
+        # source = """
+            # <input type="radio" v-model="a" value="1" />
+        # """
+        # console.log Vdt.compile(source, {onlySource: true}).source
+
+        # source = """
+            # <input type="radio" v-model="a" value={a} />
+        # """
+        # console.log Vdt.compile(source, {onlySource: true}).source
+
+        # source = """
+            # <input type="radio" v-model="a" />
+        # """
+        # console.log Vdt.compile(source, {onlySource: true}).source
+
+        # source = """
+            # <form>
+                # <input type="radio" v-model="a" v-for={list} value={value.value}/>
+            # </form>
+        # """
+        # console.log Vdt.compile(source, {onlySource: true}).source
+
+
+#        render(source, {a: 1}).should.eql """<input type="text" value="1" />"""

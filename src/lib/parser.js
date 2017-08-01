@@ -4,24 +4,23 @@
  * @date 15-4-22
  */
 
-var Utils = require('./utils'),
-    Type = Utils.Type,
-    TypeName = Utils.TypeName;
+import * as Utils from './utils';
 
-var elementNameRegexp = /^<\w+:?\s*[\w\/>]/;
+const {Type, TypeName} = Utils;
+const elementNameRegexp = /^<\w+:?\s*[\w\/>]/;
 
 function isJSXIdentifierPart(ch) {
-    return (ch === 58) || (ch === 95) || (ch === 45) ||  // : and _ (underscore) and -
+    return (ch === 58) || (ch === 95) || (ch === 45) || ch === 36 ||  // : and _ (underscore) and - $
         (ch >= 65 && ch <= 90) ||         // A..Z
         (ch >= 97 && ch <= 122) ||        // a..z
         (ch >= 48 && ch <= 57);         // 0..9
 }
 
-var Parser = function() {
+export default function Parser() {
     this.source = '';
     this.index = 0;
     this.length = 0;
-};
+}
 
 Parser.prototype = {
     constructor: Parser,
@@ -33,9 +32,7 @@ Parser.prototype = {
         this.column = 1;
         this.length = this.source.length;
 
-        this.options = Utils.extend({
-            delimiters: Utils.getDelimiters()
-        }, options);
+        this.options = Utils.extend({}, Utils.configure(), options);
 
         return this._parseTemplate();
     },
@@ -65,7 +62,7 @@ Parser.prototype = {
 
         while (this.index < this.length) {
             var ch = this._char();
-            if (ch === '\'' || ch === '"') {
+            if (ch === '\'' || ch === '"' || ch === '`') {
                 // skip element(<div>) in quotes
                 this._scanStringLiteral();
             } else if (this._isElementStart()) {
@@ -129,17 +126,23 @@ Parser.prototype = {
     _scanJSXText: function(stopChars) {
         var start = this.index,
             l = stopChars.length,
-            i;
+            i,
+            charCode;
+
         loop:
         while (this.index < this.length) {
-            if (this._charCode() === 10) {
-                this._updateLine();
-            }
-            for (i = 0; i < l; i++) {
-                if (typeof stopChars[i] === 'function' && stopChars[i].call(this) || 
-                    this._isExpect(stopChars[i])
-                ) {
-                    break loop;
+            charCode = this._charCode();
+            if (Utils.isWhiteSpace(charCode)) {
+                if (charCode === 10) {
+                    this._updateLine();
+                }
+            } else {
+                for (i = 0; i < l; i++) {
+                    if (typeof stopChars[i] === 'function' && stopChars[i].call(this) || 
+                        this._isExpect(stopChars[i])
+                    ) {
+                        break loop;
+                    }
                 }
             }
             this._updateIndex();
@@ -152,7 +155,7 @@ Parser.prototype = {
 
     _scanJSXStringLiteral: function() {
         var quote = this._char();
-        if (quote !== '\'' && quote !== '"') {
+        if (quote !== '\'' && quote !== '"' && quote !== '`') {
             this._error('String literal must starts with a qoute');
         }
         this._updateIndex();
@@ -290,6 +293,11 @@ Parser.prototype = {
         this._expect(Delimiters[0]);
         if (this._isExpect(Delimiters[1])) {
             expression = this._parseJSXEmptyExpression();
+        } else if (this._isExpect('=')) {
+            // if the lead char is '=', then treat it as unescape string
+            expression = this._parseJSXUnescapeText();
+            this._expect(Delimiters[1]);
+            return expression;
         } else {
             expression = this._parseExpression();
         }
@@ -304,6 +312,13 @@ Parser.prototype = {
 
     _parseExpression: function() {
         return this._parseTemplate();
+    },
+
+    _parseJSXUnescapeText: function() {
+        this._expect('=');
+        return this._type(Type.JSXUnescapeText, {
+            value: this._parseTemplate()
+        });
     },
 
     _parseJSXChildren: function(element) {
@@ -324,6 +339,7 @@ Parser.prototype = {
                 break;
         }
 
+        this._skipWhitespaceBetweenElements(endTag);
         while (this.index < this.length) {
             if (this._isExpect(endTag)) {
                 break;
@@ -345,6 +361,7 @@ Parser.prototype = {
             ret = this._scanJSXText([endTag, Delimiters[0]]);
         } else if (this._isElementStart()) {
             ret = this._parseJSXElement();
+            this._skipWhitespaceBetweenElements(endTag);
         } else {
             ret = this._scanJSXText([function() {
                 return this._isExpect(endTag) || this._isElementStart();
@@ -357,7 +374,7 @@ Parser.prototype = {
             prev.next = ret;
             ret.prev = prev;
         }
-
+        
         return ret;
     },
 
@@ -394,14 +411,29 @@ Parser.prototype = {
         return ret;
     },
 
-    _char: function(index) {
-        arguments.length === 0 && (index = this.index);
+    _char: function(index = this.index) {
         return this.source.charAt(index);
     },
 
-    _charCode: function(index) {
-         arguments.length === 0 && (index = this.index);
+    _charCode: function(index = this.index) {
          return this.source.charCodeAt(index);
+    },
+
+    _skipWhitespaceBetweenElements: function(endTag) {
+        if (!this.options.skipWhitespace) return;
+
+        let start = this.index;
+        while (start < this.length) {
+            const code = this._charCode(start);
+            if (Utils.isWhiteSpace(code)) {
+                start++;
+            } else if (this._isExpect(endTag, start) || this._isElementStart(start)) {
+                this._skipWhitespace();
+                break;
+            } else {
+                break;
+            }
+        }
     },
 
     _skipWhitespace: function() {
@@ -424,15 +456,15 @@ Parser.prototype = {
         this._updateIndex(str.length);
     },
 
-    _isExpect: function(str) {
-        return this.source.slice(this.index, this.index + str.length) === str;
+    _isExpect: function(str, index = this.index) {
+        return this.source.slice(index, index + str.length) === str;
     },
 
-    _isElementStart: function() {
-        return this._char() === '<' && 
+    _isElementStart: function(index = this.index) {
+        return this._char(index) === '<' && 
             (
                 this._isExpect('<!--') || 
-                elementNameRegexp.test(this.source.slice(this.index))
+                elementNameRegexp.test(this.source.slice(index))
             );
     },
 
@@ -465,5 +497,3 @@ Parser.prototype = {
         );
     }
 };
-
-module.exports = Parser;

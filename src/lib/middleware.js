@@ -1,10 +1,10 @@
-var url = require('url'),
-    Vdt = require('./vdt'),
-    fs = require('fs'),
-    Utils = require('./utils'),
-    Path = require('path');
+import url from 'url';
+import Vdt from './vdt';
+import fs from 'fs';
+import * as Utils from './utils';
+import Path from 'path';
 
-module.exports = function(options) {
+export default function(options) {
     options = options || {};
 
     if (typeof options === 'string') {
@@ -80,4 +80,4 @@ module.exports = function(options) {
             });
         }
     };
-};
+}
