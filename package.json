@@ -49,5 +49,8 @@
     "todomvc-app-css": "^2.0.1",
     "todomvc-common": "^1.0.1",
     "underscore": "^1.8.3"
+  },
+  "dependencies": {
+    "misstime": "^0.1.0"
   }
 }

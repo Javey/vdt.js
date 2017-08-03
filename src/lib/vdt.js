@@ -1,7 +1,7 @@
 import Parser from './parser';
 import Stringifier from './stringifier';
 import * as utils from './utils';
-import * as miss from 'miss';
+import * as miss from 'misstime';
 
 const parser = new Parser();
 const stringifier = new Stringifier();

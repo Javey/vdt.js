@@ -6,7 +6,7 @@
 
 import {isNullOrUndefined, isArray, indexOf, 
     selfClosingTags as SelfClosingTags
-} from 'miss/src/utils';
+} from 'misstime/src/utils';
 
 export {isNullOrUndefined, isArray, indexOf, SelfClosingTags};
 

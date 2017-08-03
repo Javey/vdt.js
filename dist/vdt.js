@@ -2246,7 +2246,7 @@ function patchChildren(lastChildren, nextChildren, parentDom, mountedQueue, pare
         }
     } else if (isStringOrNumber(nextChildren)) {
         if (isStringOrNumber(lastChildren)) {
-            parentDom.firstChild.nodeValue = nextChildren;
+            setTextContent(parentDom, nextChildren);
         } else {
             removeElements(lastChildren, parentDom);
             setTextContent(parentDom, nextChildren);
