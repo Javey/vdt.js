@@ -4,3 +4,6 @@ test
 .idea
 benchmark
 npm-debug.log
+gulpfile.js
+publish.js
+rollup*
