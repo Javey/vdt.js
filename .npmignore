@@ -8,3 +8,4 @@ gulpfile.js
 publish.js
 rollup*
 coverage
+.babelrc

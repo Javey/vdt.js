@@ -24,10 +24,6 @@ module.exports = {
             babelrc: false
         }),
         nodeResolve({module: true, jsnext: true, main: true}),
-        commonjs({
-            namedExports: {
-                'min-document/serialize': ['a', 'b']
-            }
-        })
+        commonjs()
     ]
 };
