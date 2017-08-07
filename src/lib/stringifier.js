@@ -348,6 +348,9 @@ Stringifier.prototype = {
                         _setSelectModel(self, ${value}, __e);
                     }`);
                     return;
+                case 'textarea':
+                    eventName = 'input';
+                    break;
                 default:
                     break;
             }

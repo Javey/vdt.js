@@ -279,4 +279,20 @@ describe('Template Inherit', function() {
 
         $(dom).remove();
     });
+
+    it('should render v-model of textarea correctly', function() {
+        var vdt = Vdt(document.getElementById('v-model-textarea').innerHTML),
+            dom = vdt.render({test: ''});
+        $('body').append(dom);
+        dom.value.should.eql('');
+        dom.value = 'test';
+        var event = new Event('input', {
+            'bubbles': true,
+            'cancelable': true
+        });
+        dom.dispatchEvent(event);
+        vdt.data.text.should.eql('test');
+
+        $(dom).remove();
+    });
 });

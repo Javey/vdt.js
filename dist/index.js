@@ -1307,6 +1307,9 @@ Stringifier.prototype = {
                     ret.push('value: _getModel(self, ' + value + ')');
                     ret.push('\'ev-change\': function(__e) {\n                        _setSelectModel(self, ' + value + ', __e);\n                    }');
                     return;
+                case 'textarea':
+                    eventName = 'input';
+                    break;
                 default:
                     break;
             }
