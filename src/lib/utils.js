@@ -149,9 +149,15 @@ export function getDelimiters() {
     return Options.delimiters;
 }
 
-export function configure(options) {
-    if (options !== undefined) {
-        extend(Options, options);
+export function configure(key, value) {
+    if (typeof key === 'string') {
+        if (value === undefined) {
+            return Options[key];
+        } else {
+            Options[key] = value;
+        }
+    } else if (isObject(key)) {
+        extend(Options, key);
     } 
     return Options;
 }

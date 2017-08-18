@@ -291,7 +291,7 @@ describe('Template Inherit', function() {
             'cancelable': true
         });
         dom.dispatchEvent(event);
-        vdt.data.text.should.eql('test');
+        vdt.data.test.should.eql('test');
 
         $(dom).remove();
     });

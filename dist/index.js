@@ -341,9 +341,15 @@ function getDelimiters() {
     return Options.delimiters;
 }
 
-function configure(options) {
-    if (options !== undefined) {
-        extend(Options, options);
+function configure(key, value) {
+    if (typeof key === 'string') {
+        if (value === undefined) {
+            return Options[key];
+        } else {
+            Options[key] = value;
+        }
+    } else if (isObject$$1(key)) {
+        extend(Options, key);
     }
     return Options;
 }
