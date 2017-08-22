@@ -236,7 +236,8 @@ var Directives = {
     'v-else': true,
     'v-for': true,
     'v-for-value': true,
-    'v-for-key': true
+    'v-for-key': true,
+    'v-raw': true
 };
 
 var Options = {
@@ -711,7 +712,7 @@ Parser.prototype = {
             this._expect('>');
         } else {
             this._expect('>');
-            ret.children = this._parseJSXChildren(ret);
+            ret.children = this._parseJSXChildren(ret, attrs.hasVRaw);
         }
 
         return ret;
@@ -720,7 +721,8 @@ Parser.prototype = {
     _parseJSXAttribute: function _parseJSXAttribute() {
         var ret = {
             attributes: [],
-            directives: []
+            directives: [],
+            hasVRaw: false
         };
         while (this.index < this.length) {
             this._skipWhitespace();
@@ -728,9 +730,16 @@ Parser.prototype = {
                 break;
             } else {
                 var attr = this._parseJSXAttributeName();
+                if (attr.name === 'v-raw') {
+                    ret.hasVRaw = true;
+                    continue;
+                }
                 if (this._char() === '=') {
                     this._updateIndex();
                     attr.value = this._parseJSXAttributeValue();
+                } else {
+                    // treat no-value attribute as true
+                    attr.value = this._type(Type$$1.JSXExpressionContainer, { value: [this._type(Type$$1.JS, { value: 'true' })] });
                 }
                 ret[attr.type === Type$$1.JSXAttribute ? 'attributes' : 'directives'].push(attr);
             }
@@ -805,7 +814,7 @@ Parser.prototype = {
         });
     },
 
-    _parseJSXChildren: function _parseJSXChildren(element) {
+    _parseJSXChildren: function _parseJSXChildren(element, hasVRaw) {
         var children = [],
             endTag = element.value + '>',
             current = null;
@@ -823,13 +832,22 @@ Parser.prototype = {
                 break;
         }
 
-        this._skipWhitespaceBetweenElements(endTag);
-        while (this.index < this.length) {
-            if (this._isExpect(endTag)) {
-                break;
+        if (hasVRaw) {
+            while (this.index < this.length) {
+                if (this._isExpect(endTag)) {
+                    break;
+                }
+                children.push(this._scanJSXText([endTag]));
             }
-            current = this._parseJSXChild(element, endTag, current);
-            children.push(current);
+        } else {
+            this._skipWhitespaceBetweenElements(endTag);
+            while (this.index < this.length) {
+                if (this._isExpect(endTag)) {
+                    break;
+                }
+                current = this._parseJSXChild(element, endTag, current);
+                children.push(current);
+            }
         }
         this._parseJSXClosingElement();
         return children;

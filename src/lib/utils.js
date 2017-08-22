@@ -43,7 +43,8 @@ export const Directives = {
     'v-else': true,
     'v-for': true,
     'v-for-value': true,
-    'v-for-key': true
+    'v-for-key': true,
+    'v-raw': true
 };
 
 export const Options = {
