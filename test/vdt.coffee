@@ -10,11 +10,11 @@ describe 'Vdt', ->
     beforeEach ->
         Vdt.configure({skipWhitespace: false, disableSplitText: true})
 
-    it 'Attribute without value should not be rendered', ->
+    it 'Attribute without value should be rendered', ->
         source = """
         <input type="checkbox" checked />
         """
-        render(source).should.be.eql('<input type="checkbox" />')
+        render(source).should.be.eql('<input type="checkbox" checked />')
 
     it 'Render class and className', ->
         source = """
@@ -623,10 +623,3 @@ describe 'Vdt', ->
         """
 
         render(source).should.eql "<div> {a}&lt;span&gt;&lt;/span&gt;</div>"
-
-    it 'Render no-value attribute', ->
-        source = """
-        <div disabled></div>
-        """
-
-        render(source).should.eql "<div disabled></div>"

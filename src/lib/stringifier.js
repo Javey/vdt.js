@@ -406,7 +406,7 @@ Stringifier.prototype = {
         var ret = ['(function(blocks) {',
                 'var _blocks = {}, __blocks = extend({}, blocks), _obj = ' + 
                 this._visitJSXAttribute(element, false, false).props + ' || {};',
-                'if (_obj.hasOwnProperty("arguments")) { extend(_obj, _obj.arguments === null ? obj : _obj.arguments); delete _obj.arguments; }',
+                'if (_obj.hasOwnProperty("arguments")) { extend(_obj, _obj.arguments === true ? obj : _obj.arguments); delete _obj.arguments; }',
                 'return ' + element.value + '.call(this, _obj, _Vdt, '
             ].join('\n'),
             blocks = [];
