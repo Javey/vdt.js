@@ -17,9 +17,9 @@
     "test": "mocha --compilers coffee:coffee-script/register test/*.coffee; mocha-phantomjs -p ~/.nvm/versions/node/v4.6.1/bin/phantomjs test/browser/index.html",
     "cover": "istanbul cover _mocha -- --compilers coffee:coffee-script/register test/*.coffee",
     "release": "npm run release-patch",
-    "release-patch": "git checkout master && npm version patch && bower version patch 2>/dev/null; git push origin master --tags && npm publish",
-    "release-minor": "git checkout master && npm version minor && bower version minor 2>/dev/null; git push origin master --tags && npm publish",
-    "release-major": "git checkout master && npm version major && bower version major 2>/dev/null; git push origin master --tags && npm publish"
+    "release-patch": "git checkout master && npm version patch && git push origin master --tags && npm publish",
+    "release-minor": "git checkout master && npm version minor && git push origin master --tags && npm publish",
+    "release-major": "git checkout master && npm version major && git push origin master --tags && npm publish"
   },
   "devDependencies": {
     "babel-plugin-external-helpers": "^6.22.0",
