@@ -10,7 +10,7 @@ const {Type, TypeName} = Utils;
 const elementNameRegexp = /^<\w+:?\s*[\w\/>]/;
 
 function isJSXIdentifierPart(ch) {
-    return (ch === 58) || (ch === 95) || (ch === 45) || ch === 36 ||  // : and _ (underscore) and - $
+    return (ch === 58) || (ch === 95) || (ch === 45) || ch === 36 || ch === 46 ||  // : _ (underscore) - $ .
         (ch >= 65 && ch <= 90) ||         // A..Z
         (ch >= 97 && ch <= 122) ||        // a..z
         (ch >= 48 && ch <= 57);         // 0..9
