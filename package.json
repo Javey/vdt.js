@@ -34,7 +34,6 @@
     "handlebars": "^3.0.2",
     "istanbul": "^0.4.5",
     "jquery": "^2.1.3",
-    "miss": "*",
     "mocha": "^2.2.4",
     "mocha-phantomjs": "^4.0.1",
     "mustache": "^2.0.0",
@@ -51,6 +50,6 @@
     "underscore": "^1.8.3"
   },
   "dependencies": {
-    "misstime": "^0.1.0"
+    "misstime": "^0.1.2"
   }
 }
