@@ -1464,7 +1464,7 @@ function createVNode(tag, props, children, className, key, ref) {
             throw new Error('unknown vNode type: ' + tag);
     }
 
-    if (type & Types.ComponentClass && props.children) {
+    if (props.children) {
         props.children = normalizeChildren(props.children);
     }
 
@@ -1615,37 +1615,25 @@ if ('addEventListener' in doc) {
     };
 } else {
     addEventListener = function addEventListener(dom, name, fn) {
-        fn.cb = function (e) {
-            e = proxyEvent(e);
-            fn(e);
-        };
-        dom.attachEvent("on" + name, fn.cb);
+        dom.attachEvent("on" + name, fn);
     };
 
     removeEventListener = function removeEventListener(dom, name, fn) {
-        dom.detachEvent("on" + name, fn.cb || fn);
+        dom.detachEvent("on" + name, fn);
     };
 }
 
 var delegatedEvents = {};
 var unDelegatesEvents = {
     'mouseenter': true,
-    'mouseleave': true,
-    'propertychange': true
+    'mouseleave': true
 };
-
-// change event can not be deletegated in IE8 
-if (browser.isIE8) {
-    unDelegatesEvents.change = true;
-}
 
 function handleEvent(name, lastEvent, nextEvent, dom) {
     if (name === 'blur') {
         name = 'focusout';
     } else if (name === 'focus') {
         name = 'focusin';
-    } else if (browser.isIE8 && name === 'input') {
-        name = 'propertychange';
     }
 
     if (!unDelegatesEvents[name]) {
@@ -1890,14 +1878,13 @@ function createHtmlElement(vNode, parentDom, mountedQueue, isRender, parentVNode
         dom.className = className;
     }
 
-    // in IE8, the select value will be set to the first option's value forcely
-    // when it is appended to parent dom. We change its value in processForm does not
-    // work. So processForm after it has be appended to parent dom.
-    var isFormElement = void 0;
     if (props !== EMPTY_OBJ) {
-        isFormElement = (vNode.type & Types.FormElement) > 0;
+        var isFormElement = (vNode.type & Types.FormElement) > 0;
         for (var prop in props) {
             patchProp(prop, null, props[prop], dom, isFormElement);
+        }
+        if (isFormElement) {
+            processForm(vNode, dom, props, true);
         }
     }
 
@@ -1908,10 +1895,6 @@ function createHtmlElement(vNode, parentDom, mountedQueue, isRender, parentVNode
 
     if (parentDom) {
         appendChild(parentDom, dom);
-    }
-
-    if (isFormElement) {
-        processForm(vNode, dom, props, true);
     }
 
     return dom;
@@ -2103,10 +2086,7 @@ function removeChild(parentDom, vNode) {
 }
 
 function appendChild(parentDom, dom) {
-    // in IE8, when a element has appendChild,
-    // then its parentNode will be HTMLDocument object,
-    // so check the tagName for this case
-    if (!dom.parentNode || !dom.parentNode.tagName) {
+    if (!dom.parentNode) {
         parentDom.appendChild(dom);
     }
 }
@@ -2246,9 +2226,7 @@ function patchComponentClass(lastVNode, nextVNode, parentDom, mountedQueue, pare
     }
 
     // perhaps the dom has be replaced
-    if (dom !== newDom && dom.parentNode &&
-    // when dom has be replaced, its parentNode maybe be fragment in IE8
-    dom.parentNode.nodeName !== '#document-fragment') {
+    if (dom !== newDom && dom.parentNode) {
         replaceChild(parentDom, lastVNode, nextVNode);
     }
 }
@@ -2277,9 +2255,7 @@ function patchComponentIntance(lastVNode, nextVNode, parentDom, mountedQueue, pa
         }
     }
 
-    if (dom !== newDom && dom.parentNode &&
-    // when dom has be replaced, its parentNode maybe be fragment in IE8
-    dom.parentNode.nodeName !== '#document-fragment') {
+    if (dom !== newDom && dom.parentNode) {
         replaceChild(parentDom, lastVNode, nextVNode);
     }
 }
@@ -2606,9 +2582,7 @@ function patchProp(prop, lastValue, nextValue, dom, isFormElement) {
             dom[prop] = !!nextValue;
         } else if (strictProps[prop]) {
             var value = isNullOrUndefined(nextValue) ? '' : nextValue;
-            // IE8 the value of option is equal to its text as default
-            // so set it forcely
-            if (dom[prop] !== value || browser.isIE8) {
+            if (dom[prop] !== value) {
                 dom[prop] = value;
             }
             // add a private property _value for select an object
@@ -3305,7 +3279,7 @@ function compile(source, options) {
             var ast = parser.parse(source, options),
                 hscript = stringifier.stringify(ast, options.autoReturn);
 
-            hscript = ['_Vdt || (_Vdt = Vdt);', 'obj || (obj = {});', 'blocks || (blocks = {});', 'var h = _Vdt.miss.h, hc = _Vdt.miss.hc, hu = _Vdt.miss.hu, widgets = this && this.widgets || {}, _blocks = {}, __blocks = {},', '__u = _Vdt.utils, extend = __u.extend, _e = __u.error, _className = __u.className,', '__o = __u.Options, _getModel = __o.getModel, _setModel = __o.setModel,', '_setCheckboxModel = __u.setCheckboxModel, _detectCheckboxChecked = __u.detectCheckboxChecked,', '_setSelectModel = __u.setSelectModel,', (options.server ? 'require = function(file) { return _Vdt.require(file, "' + options.filename.replace(/\\/g, '\\\\') + '") }, ' : '') + 'self = this.data, scope = obj, Animate = self && self.Animate, parent = self && self._parentTemplate', options.noWith ? hscript : ['with (obj) {', hscript, '}'].join('\n')].join('\n');
+            hscript = ['_Vdt || (_Vdt = Vdt);', 'obj || (obj = {});', 'blocks || (blocks = {});', 'var h = _Vdt.miss.h, hc = _Vdt.miss.hc, hu = _Vdt.miss.hu, widgets = this && this.widgets || {}, _blocks = {}, __blocks = {},', '__u = _Vdt.utils, extend = __u.extend, _e = __u.error, _className = __u.className,', '__o = __u.Options, _getModel = __o.getModel, _setModel = __o.setModel,', '_setCheckboxModel = __u.setCheckboxModel, _detectCheckboxChecked = __u.detectCheckboxChecked,', '_setSelectModel = __u.setSelectModel,', (options.server ? 'require = function(file) { return _Vdt.require(file, "' + options.filename.replace(/\\/g, '\\\\') + '") }, ' : '') + 'self = this.data, scope = obj, Animate = self && self.Animate, parent = this._super', options.noWith ? hscript : ['with (obj) {', hscript, '}'].join('\n')].join('\n');
             templateFn = options.onlySource ? function () {} : new Function('obj', '_Vdt', 'blocks', hscript);
             templateFn.source = 'function(obj, _Vdt, blocks) {\n' + hscript + '\n}';
             break;
