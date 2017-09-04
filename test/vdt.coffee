@@ -477,6 +477,28 @@ describe 'Vdt', ->
             </div>
         """)
 
+    it 'Render v-if v-else-if v-else for <t:template>', ->
+        vdt = Vdt("""
+            var a = function() { return <div>a</div> }
+            var b = function() { return <div>b</div> }
+            <div>
+                <t:a v-if={test === 1} />
+                <t:b v-else />
+            </div>
+        """)
+        
+        vdt.renderString({test: 1}).should.eql("""
+            <div>
+                <div>a</div>
+            </div>
+        """)
+
+        vdt.renderString({test: 2}).should.eql("""
+            <div>
+                <div>b</div>
+            </div>
+        """)
+
     it 'Render v-if v-else-if v-else with whiteline', ->
         vdt = Vdt("""
             <div>
@@ -574,6 +596,19 @@ describe 'Vdt', ->
         <ul>
             <li>2</li>
         </ul>
+        """
+
+    it 'Render v-if and v-for in <t:template>', ->
+        source = """
+            var a = function(scope) { return <div>{scope.value}</div> }
+            <div>
+                <t:a v-if={key % 2} v-for={data} value={value} />
+            </div>
+        """
+        render(source, {data: [1, 2, 3]}).should.eql """
+            <div>
+                <div>2</div>
+            </div>
         """
 
     it 'Render object className', ->

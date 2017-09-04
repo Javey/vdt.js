@@ -68,7 +68,7 @@ Stringifier.prototype = {
             case Type.JS:
                 return this._visitJS(element, isRoot);
             case Type.JSXElement:
-                return this._visitJSX(element);
+                return this._visitJSXElement(element);
             case Type.JSXText:
                 return this._visitJSXText(element);
             case Type.JSXUnescapeText:
@@ -94,7 +94,7 @@ Stringifier.prototype = {
             element.value; 
     },
 
-    _visitJSX: function(element) {
+    _visitJSXElement: function(element) {
         if (element.value === 'script' || element.value === 'style') {
             if (element.children.length) {
                 element.attributes.push({
@@ -111,12 +111,8 @@ Stringifier.prototype = {
             }
         }
 
-        return this._visitJSXDirective(element, this._visitJSXElement(element));
-    },
-
-    _visitJSXElement: function(element) {
         var attributes = this._visitJSXAttribute(element, true, true);
-        return "h(" + normalizeArgs([
+        var ret = "h(" + normalizeArgs([
             "'" + element.value + "'", 
             attributes.props, 
             this._visitJSXChildren(element.children),
@@ -124,6 +120,8 @@ Stringifier.prototype = {
             attributes.key,
             attributes.ref
         ]) + ')';
+
+        return this._visitJSXDirective(element, ret);
     },
 
     _visitJSXChildren: function(children) {
@@ -192,7 +190,10 @@ Stringifier.prototype = {
                 if (!/^\s*$/.test(next.value)) break;
                 // is not the last text node, mark as handled
                 else emptyTextNodes.push(next);
-            } else if (next.type === Utils.Type.JSXElement || next.type === Utils.Type.JSXWidget) {
+            } else if (next.type === Utils.Type.JSXElement ||
+                next.type === Utils.Type.JSXWidget ||
+                next.type === Utils.Type.JSXVdt
+            ) {
                 if (!next.directives || !next.directives.length) break;
                 var isContinue = false;
                 for (var i = 0, l = next.directives.length; i < l; i++) {
@@ -419,7 +420,7 @@ Stringifier.prototype = {
 
         ret += (blocks.length ? blocks.join(' && ') + ' && __blocks)' : '__blocks)') + ('}).call(this, ') + (isRoot ? 'blocks)' : '{})');
 
-        return ret;
+        return this._visitJSXDirective(element, ret);
     },
 
     _visitJSXComment: function(element) {

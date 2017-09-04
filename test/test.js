@@ -1,6 +1,6 @@
 //var Parser = require('../src/lib/parser');
 //var Stringifier = require('../src/lib/stringifier');
-//var util = require('util');
+var util = require('util');
 //var Utils = require('../src/lib/utils');
 //var Vdt = require('../src/index');
 //
@@ -44,8 +44,13 @@
 // var vdt = Vdt('<option selected={test}></option>');
 // console.log(vdt.renderString({test: 0}));
 
-var Vdt = require('../dist')
-var source = '<div>{= self.content }</div>';
-var vdt = Vdt(source);
-console.log(vdt.renderString({content: '<div>a</div>'}))
+//var Vdt = require('../dist')
+//var source = '<div>{= self.content }</div>';
+//var vdt = Vdt(source);
+//console.log(vdt.renderString({content: '<div>a</div>'}))
 
+var Vdt = require('../dist');
+var source = '<div><t:a v-if={true} /> <t:b v-else /></div>';
+var ast = Vdt.parser.parse(source);
+console.log(util.inspect(ast, {showHidden: true, depth: null}));
+console.log(Vdt.stringifier.stringify(Vdt.parser.parse(source)));

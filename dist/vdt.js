@@ -1074,7 +1074,7 @@ Stringifier.prototype = {
             case Type$2.JS:
                 return this._visitJS(element, isRoot);
             case Type$2.JSXElement:
-                return this._visitJSX(element);
+                return this._visitJSXElement(element);
             case Type$2.JSXText:
                 return this._visitJSXText(element);
             case Type$2.JSXUnescapeText:
@@ -1098,7 +1098,7 @@ Stringifier.prototype = {
         return this.enterStringExpression ? '(' + element.value + ')' : element.value;
     },
 
-    _visitJSX: function _visitJSX(element) {
+    _visitJSXElement: function _visitJSXElement(element) {
         if (element.value === 'script' || element.value === 'style') {
             if (element.children.length) {
                 element.attributes.push({
@@ -1115,12 +1115,10 @@ Stringifier.prototype = {
             }
         }
 
-        return this._visitJSXDirective(element, this._visitJSXElement(element));
-    },
-
-    _visitJSXElement: function _visitJSXElement(element) {
         var attributes = this._visitJSXAttribute(element, true, true);
-        return "h(" + normalizeArgs(["'" + element.value + "'", attributes.props, this._visitJSXChildren(element.children), attributes.className, attributes.key, attributes.ref]) + ')';
+        var ret = "h(" + normalizeArgs(["'" + element.value + "'", attributes.props, this._visitJSXChildren(element.children), attributes.className, attributes.key, attributes.ref]) + ')';
+
+        return this._visitJSXDirective(element, ret);
     },
 
     _visitJSXChildren: function _visitJSXChildren(children) {
@@ -1187,7 +1185,7 @@ Stringifier.prototype = {
                 if (!/^\s*$/.test(next.value)) break;
                 // is not the last text node, mark as handled
                 else emptyTextNodes.push(next);
-            } else if (next.type === Type$1.JSXElement || next.type === Type$1.JSXWidget) {
+            } else if (next.type === Type$1.JSXElement || next.type === Type$1.JSXWidget || next.type === Type$1.JSXVdt) {
                 if (!next.directives || !next.directives.length) break;
                 var isContinue = false;
                 for (var i = 0, l = next.directives.length; i < l; i++) {
@@ -1389,7 +1387,7 @@ Stringifier.prototype = {
 
         ret += (blocks.length ? blocks.join(' && ') + ' && __blocks)' : '__blocks)') + '}).call(this, ' + (isRoot ? 'blocks)' : '{})');
 
-        return ret;
+        return this._visitJSXDirective(element, ret);
     },
 
     _visitJSXComment: function _visitJSXComment(element) {
@@ -1464,7 +1462,7 @@ function createVNode(tag, props, children, className, key, ref) {
             throw new Error('unknown vNode type: ' + tag);
     }
 
-    if (props.children) {
+    if (type & Types.ComponentClass && props.children) {
         props.children = normalizeChildren(props.children);
     }
 
@@ -1615,25 +1613,37 @@ if ('addEventListener' in doc) {
     };
 } else {
     addEventListener = function addEventListener(dom, name, fn) {
-        dom.attachEvent("on" + name, fn);
+        fn.cb = function (e) {
+            e = proxyEvent(e);
+            fn(e);
+        };
+        dom.attachEvent("on" + name, fn.cb);
     };
 
     removeEventListener = function removeEventListener(dom, name, fn) {
-        dom.detachEvent("on" + name, fn);
+        dom.detachEvent("on" + name, fn.cb || fn);
     };
 }
 
 var delegatedEvents = {};
 var unDelegatesEvents = {
     'mouseenter': true,
-    'mouseleave': true
+    'mouseleave': true,
+    'propertychange': true
 };
+
+// change event can not be deletegated in IE8 
+if (browser.isIE8) {
+    unDelegatesEvents.change = true;
+}
 
 function handleEvent(name, lastEvent, nextEvent, dom) {
     if (name === 'blur') {
         name = 'focusout';
     } else if (name === 'focus') {
         name = 'focusin';
+    } else if (browser.isIE8 && name === 'input') {
+        name = 'propertychange';
     }
 
     if (!unDelegatesEvents[name]) {
@@ -1878,13 +1888,14 @@ function createHtmlElement(vNode, parentDom, mountedQueue, isRender, parentVNode
         dom.className = className;
     }
 
+    // in IE8, the select value will be set to the first option's value forcely
+    // when it is appended to parent dom. We change its value in processForm does not
+    // work. So processForm after it has be appended to parent dom.
+    var isFormElement = void 0;
     if (props !== EMPTY_OBJ) {
-        var isFormElement = (vNode.type & Types.FormElement) > 0;
+        isFormElement = (vNode.type & Types.FormElement) > 0;
         for (var prop in props) {
             patchProp(prop, null, props[prop], dom, isFormElement);
-        }
-        if (isFormElement) {
-            processForm(vNode, dom, props, true);
         }
     }
 
@@ -1895,6 +1906,10 @@ function createHtmlElement(vNode, parentDom, mountedQueue, isRender, parentVNode
 
     if (parentDom) {
         appendChild(parentDom, dom);
+    }
+
+    if (isFormElement) {
+        processForm(vNode, dom, props, true);
     }
 
     return dom;
@@ -2086,7 +2101,10 @@ function removeChild(parentDom, vNode) {
 }
 
 function appendChild(parentDom, dom) {
-    if (!dom.parentNode) {
+    // in IE8, when a element has appendChild,
+    // then its parentNode will be HTMLDocument object,
+    // so check the tagName for this case
+    if (!dom.parentNode || !dom.parentNode.tagName) {
         parentDom.appendChild(dom);
     }
 }
@@ -2226,7 +2244,9 @@ function patchComponentClass(lastVNode, nextVNode, parentDom, mountedQueue, pare
     }
 
     // perhaps the dom has be replaced
-    if (dom !== newDom && dom.parentNode) {
+    if (dom !== newDom && dom.parentNode &&
+    // when dom has be replaced, its parentNode maybe be fragment in IE8
+    dom.parentNode.nodeName !== '#document-fragment') {
         replaceChild(parentDom, lastVNode, nextVNode);
     }
 }
@@ -2255,7 +2275,9 @@ function patchComponentIntance(lastVNode, nextVNode, parentDom, mountedQueue, pa
         }
     }
 
-    if (dom !== newDom && dom.parentNode) {
+    if (dom !== newDom && dom.parentNode &&
+    // when dom has be replaced, its parentNode maybe be fragment in IE8
+    dom.parentNode.nodeName !== '#document-fragment') {
         replaceChild(parentDom, lastVNode, nextVNode);
     }
 }
@@ -2582,7 +2604,9 @@ function patchProp(prop, lastValue, nextValue, dom, isFormElement) {
             dom[prop] = !!nextValue;
         } else if (strictProps[prop]) {
             var value = isNullOrUndefined(nextValue) ? '' : nextValue;
-            if (dom[prop] !== value) {
+            // IE8 the value of option is equal to its text as default
+            // so set it forcely
+            if (dom[prop] !== value || browser.isIE8) {
                 dom[prop] = value;
             }
             // add a private property _value for select an object
