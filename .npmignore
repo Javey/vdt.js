@@ -9,3 +9,7 @@ publish.js
 rollup*
 coverage
 .babelrc
+.jshintrc
+.eshintrc
+rollup*
+bower.json
