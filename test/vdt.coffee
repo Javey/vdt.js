@@ -658,3 +658,12 @@ describe 'Vdt', ->
         """
 
         render(source).should.eql "<div> {a}&lt;span&gt;&lt;/span&gt;</div>"
+
+    it 'Stringify dynamic attributes', ->
+        source = """
+        <div {...a} b="1"></div>
+        """
+        
+        Vdt.stringifier.stringify(Vdt.parser.parse(source)).should.eql """
+        return h('div', {function() {try {return [...a][0]} catch(e) {_e(e)}}.call(this), 'b': '1'})
+        """

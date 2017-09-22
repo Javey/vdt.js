@@ -52,4 +52,11 @@ describe 'Server', ->
         """
 
     it 'Render unescape text', ->
-        console.log Vdt.renderFile('tpl/unescape.vdt', {style: '<style>a {color: red;}</style>'})
+        Vdt.renderFile('tpl/unescape.vdt', {
+            style: '<style>a {color: red;}</style>'
+        }).should.eql """
+        <!DOCTYPE html>
+        <head>
+            <style>a {color: red;}</style>
+        </head>
+        """

@@ -244,6 +244,12 @@ Parser.prototype = {
             if (this._char() === '/' || this._char() === '>') {
                 break;
             } else {
+                var Delimiters = this.options.delimiters;
+                if (this._isExpect(Delimiters[0])) {
+                    // support dynamic attributes
+                    ret.attributes.push(this._parseJSXExpressionContainer());
+                    continue;
+                }
                 var attr = this._parseJSXAttributeName();
                 if (attr.name === 'v-raw') {
                     ret.hasVRaw = true;

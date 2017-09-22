@@ -50,7 +50,8 @@ var util = require('util');
 //console.log(vdt.renderString({content: '<div>a</div>'}))
 
 var Vdt = require('../dist');
-var source = '<div><t:a v-if={true} /> <t:b v-else /></div>';
+// var source = '<div><t:a v-if={true} /> <t:b v-else /></div>';
+var source = '<div {...a} b="1"></div>';
 var ast = Vdt.parser.parse(source);
 console.log(util.inspect(ast, {showHidden: true, depth: null}));
 console.log(Vdt.stringifier.stringify(Vdt.parser.parse(source)));

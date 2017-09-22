@@ -10,7 +10,9 @@ import {isNullOrUndefined, isArray, indexOf,
 
 export {isNullOrUndefined, isArray, indexOf, SelfClosingTags};
 
-let i = 0; export const Type = { JS: i++,
+let i = 0;
+export const Type = { 
+    JS: i++,
     JSXText: i++,
     JSXUnescapeText: i++,
     JSXElement: i++,
@@ -23,7 +25,7 @@ let i = 0; export const Type = { JS: i++,
     JSXBlock: i++,
     JSXComment: i++,
 
-    JSXDirective: i++
+    JSXDirective: i++,
 };
 export const TypeName = [];
 for (let type in Type) {

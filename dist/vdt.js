@@ -203,7 +203,9 @@ var setTextContent = browser.isIE8 ? function (dom, text) {
  * @date 15-4-22
  */
 
-var i = 0;var Type$1 = { JS: i++,
+var i = 0;
+var Type$1 = {
+    JS: i++,
     JSXText: i++,
     JSXUnescapeText: i++,
     JSXElement: i++,
@@ -731,6 +733,12 @@ Parser.prototype = {
             if (this._char() === '/' || this._char() === '>') {
                 break;
             } else {
+                var Delimiters = this.options.delimiters;
+                if (this._isExpect(Delimiters[0])) {
+                    // support dynamic attributes
+                    ret.attributes.push(this._parseJSXExpressionContainer());
+                    continue;
+                }
                 var attr = this._parseJSXAttributeName();
                 if (attr.name === 'v-raw') {
                     ret.hasVRaw = true;
@@ -1240,6 +1248,9 @@ Stringifier.prototype = {
             hasModel = false,
             addition = { trueValue: true, falseValue: false };
         each(attributes, function (attr) {
+            if (attr.type === Type$2.JSXExpressionContainer) {
+                return ret.push(this._visitJSXAttributeValue(attr));
+            }
             var name = attrMap(attr.name),
                 value = this._visitJSXAttributeValue(attr.value);
             if (name === 'widget' && attr.value.type === Type$2.JSXText) {

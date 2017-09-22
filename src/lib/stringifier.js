@@ -250,6 +250,9 @@ Stringifier.prototype = {
             hasModel = false,
             addition = {trueValue: true, falseValue: false};
         Utils.each(attributes, function(attr) {
+            if (attr.type === Type.JSXExpressionContainer) {
+                return ret.push(this._visitJSXAttributeValue(attr));
+            }
             var name = attrMap(attr.name),
                 value = this._visitJSXAttributeValue(attr.value);
             if (name === 'widget' && attr.value.type === Type.JSXText) {
