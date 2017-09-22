@@ -1057,7 +1057,8 @@ Stringifier.prototype = {
 
     _visitJSXExpressionContainer: function _visitJSXExpressionContainer(ast, isRoot) {
         var str = '',
-            length = ast.length;
+            length = ast.length,
+            hasDestructuring = false;
         each(ast, function (element, i) {
             // if is root, add `return` keyword
             if (this.autoReturn && isRoot && i === length - 1) {
@@ -1068,9 +1069,18 @@ Stringifier.prototype = {
         }, this);
 
         if (!isRoot && !this.enterStringExpression) {
+            // special for ... syntaxt
+            str = trimLeft(str);
+            if (str[0] === '.' && str[1] === '.' && str[2] === '.') {
+                hasDestructuring = true;
+                str = str.substr(3);
+            }
             // add [][0] for return /* comment */
             str = 'function() {try {return [' + str + '][0]} catch(e) {_e(e)}}.call(this)';
             // str = 'function() {try {return (' + str + ')} catch(e) {_e(e)}}.call(this)';
+            if (hasDestructuring) {
+                str = '...' + str;
+            }
         }
 
         return str;

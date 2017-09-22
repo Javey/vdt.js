@@ -665,5 +665,5 @@ describe 'Vdt', ->
         """
         
         Vdt.stringifier.stringify(Vdt.parser.parse(source)).should.eql """
-        return h('div', {function() {try {return [...a][0]} catch(e) {_e(e)}}.call(this), 'b': '1'})
+        return h('div', {...function() {try {return [a][0]} catch(e) {_e(e)}}.call(this), 'b': '1'})
         """
