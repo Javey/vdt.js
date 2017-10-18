@@ -18,9 +18,9 @@ export default function Vdt(source, options) {
 Vdt.prototype = {
     constructor: Vdt,
 
-    render(data, parentDom, queue, parentVNode) {
+    render(data, parentDom, queue, parentVNode, isSVG) {
         this.renderVNode(data);
-        this.node = miss.render(this.vNode, parentDom, queue, parentVNode);
+        this.node = miss.render(this.vNode, parentDom, queue, parentVNode, isSVG);
 
         return this.node;
     },
@@ -40,17 +40,17 @@ Vdt.prototype = {
         return miss.renderString(this.vNode, null, Vdt.configure().disableSplitText);
     },
 
-    update(data, parentDom, queue, parentVNode) {
+    update(data, parentDom, queue, parentVNode, isSVG) {
         var oldVNode = this.vNode;
         this.renderVNode(data);
-        this.node = miss.patch(oldVNode, this.vNode, parentDom, queue, parentVNode);
+        this.node = miss.patch(oldVNode, this.vNode, parentDom, queue, parentVNode, isSVG);
 
         return this.node;
     },
 
-    hydrate(data, dom, queue, parentDom, parentVNode) {
+    hydrate(data, dom, queue, parentDom, parentVNode, isSVG) {
         this.renderVNode(data);
-        miss.hydrate(this.vNode, dom, queue, parentDom, parentVNode);
+        miss.hydrate(this.vNode, dom, queue, parentDom, parentVNode, isSVG);
         this.node = this.vNode.dom;
 
         return this.node;
