@@ -50,6 +50,6 @@
     "underscore": "^1.8.3"
   },
   "dependencies": {
-    "misstime": "^0.1.2"
+    "misstime": "^0.2.0"
   }
 }
