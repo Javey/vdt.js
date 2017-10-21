@@ -1505,11 +1505,13 @@ function createVNode(tag, props, children, className, key, ref) {
 
     if (type & Types.ComponentClass) {
         if (!isNullOrUndefined(children)) {
-            children = normalizeChildren(children);
+            if (props === EMPTY_OBJ) {
+                props = {};
+            }
+            props.children = normalizeChildren(children);
         } else if (!isNullOrUndefined(props.children)) {
-            children = normalizeChildren(props.children);
+            props.children = normalizeChildren(props.children);
         }
-        props.children = children;
     } else {
         children = normalizeChildren(children);
     }
