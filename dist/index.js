@@ -2053,14 +2053,14 @@ function removeElements(vNodes, parentDom) {
     }
 }
 
-function removeElement(vNode, parentDom) {
+function removeElement(vNode, parentDom, nextVNode) {
     var type = vNode.type;
     if (type & Types.Element) {
         return removeHtmlElement(vNode, parentDom);
     } else if (type & Types.TextElement) {
         return removeText(vNode, parentDom);
     } else if (type & Types.ComponentClassOrInstance) {
-        return removeComponentClassOrInstance(vNode, parentDom);
+        return removeComponentClassOrInstance(vNode, parentDom, nextVNode);
     } else if (type & Types.ComponentFunction) {
         return removeComponentFunction(vNode, parentDom);
     }
@@ -2129,7 +2129,9 @@ function removeComponentClassOrInstance(vNode, parentDom, nextVNode) {
 function replaceChild(parentDom, lastVNode, nextVNode) {
     var lastDom = lastVNode.dom;
     var nextDom = nextVNode.dom;
-    if (!parentDom) parentDom = lastDom.parentNode;
+    var parentNode = lastDom.parentNode;
+    // maybe the lastDom has be moved
+    if (!parentDom || parentNode !== parentDom) parentDom = parentNode;
     if (lastDom._unmount) {
         lastDom._unmount(lastVNode, parentDom);
         if (!nextDom.parentNode) {
@@ -2638,7 +2640,7 @@ function insertOrAppend(pos, length, newDom, nodes, dom, detectParent) {
 }
 
 function replaceElement(lastVNode, nextVNode, parentDom, mountedQueue, parentVNode, isSVG) {
-    removeElement(lastVNode, null);
+    removeElement(lastVNode, null, nextVNode);
     createElement(nextVNode, null, mountedQueue, false, parentVNode, isSVG);
     replaceChild(parentDom, lastVNode, nextVNode);
 }
