@@ -210,6 +210,17 @@ describe 'Vdt', ->
         </div>
         """
 
+    it 'Render children for template inherit', ->
+        parent = """
+        <div>{scope.children}</div>
+        """
+        source = """
+        <t:parent>test</t:parent>
+        """
+        render(source, {parent: Vdt.compile(parent)}).should.eql """
+        <div>test</div>
+        """
+
     it 'Render template include', ->
         parent = """
         <div>

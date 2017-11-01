@@ -1436,32 +1436,11 @@ Stringifier.prototype = {
     },
 
     _visitJSXVdt: function _visitJSXVdt(element, isRoot) {
-        // var ret = [
-        // '(function(blocks) {' +
-        // 'var _blocks = {}, __blocks = extend({}, blocks), _obj = ' + 
-        // this._visitJSXAttribute(element, false, false).props + ' || {};',
-        // 'if (_obj.hasOwnProperty("arguments")) { extend(_obj, _obj.arguments === true ? obj : _obj.arguments); delete _obj.arguments; }',
-        // 'return ' + element.value + '.call(this, _obj, _Vdt, '
-        // ].join('\n');
-
-        // var blocks = [];
-
-        // Utils.each(element.children, function(child) {
-        // if (child.type === Type.JSXBlock) {
-        // blocks.push(this._visitJSXBlock(child, false));
-        // }
-        // }, this);
-
-        // ret += (blocks.length ? blocks.join(' && ') + ' && __blocks)' : '__blocks)') + 
-        // '}).call(this, ' + 
-        // (isRoot ? 'blocks)' : '{})');
-
         var _visitJSXBlocks2 = this._visitJSXBlocks(element, isRoot),
             blocks = _visitJSXBlocks2.blocks,
             children = _visitJSXBlocks2.children;
 
         element.attributes.push({ name: 'children', value: children });
-
         var ret = ['(function() {', '    var _obj = ' + this._visitJSXAttribute(element, false, false).props + ';', '    if (_obj.hasOwnProperty("arguments")) {', '        extend(_obj, _obj.arguments === true ? obj : _obj.arguments);', '        delete _obj.arguments;', '    }', '    return ' + element.value + '.call(this, _obj, _Vdt, ' + this._visitJS(blocks) + ')', '}).call(this)'].join('\n');
 
         return this._visitJSXDirective(element, ret);
