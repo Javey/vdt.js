@@ -14,42 +14,46 @@ export default function Vdt(source, options) {
     this.vNode = null;
     this.node = null;
     this.widgets = {};
+    this.blocks = {};
 }
 Vdt.prototype = {
     constructor: Vdt,
 
-    render(data, parentDom, queue, parentVNode, isSVG) {
-        this.renderVNode(data);
+    render(data, parentDom, queue, parentVNode, isSVG, blocks) {
+        this.renderVNode(data, blocks);
         this.node = miss.render(this.vNode, parentDom, queue, parentVNode, isSVG);
 
         return this.node;
     },
 
-    renderVNode(data) {
+    renderVNode(data, blocks) {
         if (data !== undefined) {
             this.data = data;
         }
-        this.vNode = this.template(this.data, Vdt);
+        if (blocks !== undefined) {
+            this.blocks = blocks;
+        }
+        this.vNode = this.template(this.data, Vdt, this.blocks);
 
         return this.vNode;
     },
 
-    renderString(data) {
-        this.renderVNode(data);
+    renderString(data, blocks) {
+        this.renderVNode(data, blocks);
 
         return miss.renderString(this.vNode, null, Vdt.configure().disableSplitText);
     },
 
-    update(data, parentDom, queue, parentVNode, isSVG) {
+    update(data, parentDom, queue, parentVNode, isSVG, blocks) {
         var oldVNode = this.vNode;
-        this.renderVNode(data);
+        this.renderVNode(data, blocks);
         this.node = miss.patch(oldVNode, this.vNode, parentDom, queue, parentVNode, isSVG);
 
         return this.node;
     },
 
-    hydrate(data, dom, queue, parentDom, parentVNode, isSVG) {
-        this.renderVNode(data);
+    hydrate(data, dom, queue, parentDom, parentVNode, isSVG, blocks) {
+        this.renderVNode(data, blocks);
         miss.hydrate(this.vNode, dom, queue, parentDom, parentVNode, isSVG);
         this.node = this.vNode.dom;
 
