@@ -1,6 +1,6 @@
 {
   "name": "vdt",
-  "version": "0.10.3",
+  "version": "0.10.4",
   "description": "A template engine based on virtual-dom",
   "main": "src/index",
   "browser": {
@@ -23,7 +23,7 @@
   },
   "dependencies": {
     "dom-delegator": "^13.1.0",
-    "virtual-domx": "^2.1.10"
+    "virtual-domx": "^2.1.11"
   },
   "devDependencies": {
     "benchmark": "^1.0.0",
