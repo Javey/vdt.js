@@ -264,9 +264,10 @@ Stringifier.prototype = {
             }
             var name = attrMap(attr.name),
                 value = this._visitJSXAttributeValue(attr.value);
-            if (name === 'widget' && attr.value.type === Type.JSXText) {
+            if ((name === 'widget' || name === 'ref') && attr.value.type === Type.JSXText) {
                 // for compatility v1.0
                 // convert widget="a" to ref=(i) => widgets.a = i
+                // convert ref="a" to ref=(i) => widgets.a = i. For Intact
                 ref = 'function(i) {widgets[' + value + '] = i}';
                 return;
             } else if (name === 'className') {

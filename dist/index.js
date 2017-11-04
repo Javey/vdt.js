@@ -1278,9 +1278,10 @@ Stringifier.prototype = {
             }
             var name = attrMap(attr.name),
                 value = this._visitJSXAttributeValue(attr.value);
-            if (name === 'widget' && attr.value.type === Type$2.JSXText) {
+            if ((name === 'widget' || name === 'ref') && attr.value.type === Type$2.JSXText) {
                 // for compatility v1.0
                 // convert widget="a" to ref=(i) => widgets.a = i
+                // convert ref="a" to ref=(i) => widgets.a = i. For Intact
                 ref = 'function(i) {widgets[' + value + '] = i}';
                 return;
             } else if (name === 'className') {
@@ -1505,9 +1506,7 @@ function createVNode(tag, props, children, className, key, ref) {
 
     if (type & Types.ComponentClass) {
         if (!isNullOrUndefined(children)) {
-            if (props === EMPTY_OBJ) {
-                props = {};
-            }
+            if (props === EMPTY_OBJ) props = {};
             props.children = normalizeChildren(children);
         } else if (!isNullOrUndefined(props.children)) {
             props.children = normalizeChildren(props.children);
@@ -1821,12 +1820,11 @@ function updateChildOption(vNode, value, flag) {
 
 function processInput(vNode, dom, nextProps) {
     var type = nextProps.type;
-    // const value = nextProps.value;
+    var value = nextProps.value;
     var checked = nextProps.checked;
     var defaultValue = nextProps.defaultValue;
     var multiple = nextProps.multiple;
-    var hasValue = nextProps.hasOwnProperty('value');
-    var value = hasValue ? nextProps.value || '' : undefined;
+    var hasValue = !isNullOrUndefined(value);
 
     if (multiple && multiple !== dom.multiple) {
         dom.multiple = multiple;
@@ -2055,14 +2053,14 @@ function removeElements(vNodes, parentDom) {
     }
 }
 
-function removeElement(vNode, parentDom) {
+function removeElement(vNode, parentDom, nextVNode) {
     var type = vNode.type;
     if (type & Types.Element) {
         return removeHtmlElement(vNode, parentDom);
     } else if (type & Types.TextElement) {
         return removeText(vNode, parentDom);
     } else if (type & Types.ComponentClassOrInstance) {
-        return removeComponentClassOrInstance(vNode, parentDom);
+        return removeComponentClassOrInstance(vNode, parentDom, nextVNode);
     } else if (type & Types.ComponentFunction) {
         return removeComponentFunction(vNode, parentDom);
     }
@@ -2122,15 +2120,7 @@ function removeComponentClassOrInstance(vNode, parentDom, nextVNode) {
     // removeElements(vNode.props.children, null);
 
     if (parentDom) {
-        // if (typeof instance.unmount === 'function') {
-        // if (!instance.unmount(vNode, nextVNode, parentDom)) {
-        // parentDom.removeChild(vNode.dom); 
-        // }
-        // } else {
-        // parentDom.removeChild(vNode.dom); 
         removeChild(parentDom, vNode);
-        // }
-        // parentDom.removeChild(vNode.dom);
     }
 }
 
@@ -2139,7 +2129,9 @@ function removeComponentClassOrInstance(vNode, parentDom, nextVNode) {
 function replaceChild(parentDom, lastVNode, nextVNode) {
     var lastDom = lastVNode.dom;
     var nextDom = nextVNode.dom;
-    if (!parentDom) parentDom = lastDom.parentNode;
+    var parentNode = lastDom.parentNode;
+    // maybe the lastDom has be moved
+    if (!parentDom || parentNode !== parentDom) parentDom = parentNode;
     if (lastDom._unmount) {
         lastDom._unmount(lastVNode, parentDom);
         if (!nextDom.parentNode) {
@@ -2648,7 +2640,7 @@ function insertOrAppend(pos, length, newDom, nodes, dom, detectParent) {
 }
 
 function replaceElement(lastVNode, nextVNode, parentDom, mountedQueue, parentVNode, isSVG) {
-    removeElement(lastVNode, null);
+    removeElement(lastVNode, null, nextVNode);
     createElement(nextVNode, null, mountedQueue, false, parentVNode, isSVG);
     replaceChild(parentDom, lastVNode, nextVNode);
 }
@@ -2698,7 +2690,7 @@ function patchProp(prop, lastValue, nextValue, dom, isFormElement, isSVG) {
             if (dom[prop] !== value || browser.isIE8) {
                 dom[prop] = value;
             }
-            // add a private property _value for select an object
+            // add a private property _value for selecting an non-string value 
             if (prop === 'value') {
                 dom._value = value;
             }
@@ -3100,12 +3092,12 @@ function hydrateRoot(vNode, parentDom, mountedQueue) {
     if (!isNullOrUndefined(parentDom)) {
         var dom = parentDom.firstChild;
         var newDom = hydrate(vNode, dom, mountedQueue, parentDom, null, false);
-        dom = parentDom.firstChild;
-        if (dom !== null) {
-            // should only one entry
-            while (dom = dom.nextSibling) {
-                parentDom.removeChild(dom);
-            }
+        dom = dom.nextSibling;
+        // should only one entry
+        while (dom) {
+            var next = dom.nextSibling;
+            parentDom.removeChild(dom);
+            dom = next;
         }
         return newDom;
     }
