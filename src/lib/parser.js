@@ -7,7 +7,7 @@
 import * as Utils from './utils';
 
 const {Type, TypeName} = Utils;
-const elementNameRegexp = /^<\w+:?\s*[\w\/>]/;
+const elementNameRegexp = /^<\w+:?\s*[\{\w\/>]/;
 
 function isJSXIdentifierPart(ch) {
     return (ch === 58) || (ch === 95) || (ch === 45) || ch === 36 || ch === 46 ||  // : _ (underscore) - $ .

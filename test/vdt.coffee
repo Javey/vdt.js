@@ -670,11 +670,18 @@ describe 'Vdt', ->
 
         render(source).should.eql "<div> {a}&lt;span&gt;&lt;/span&gt;</div>"
 
-    it 'Stringify dynamic attributes', ->
+    it 'Stringify attributes of destruction', ->
         source = """
         <div {...a} b="1"></div>
         """
         
         Vdt.stringifier.stringify(Vdt.parser.parse(source)).should.eql """
         return h('div', {...function() {try {return [a][0]} catch(e) {_e(e)}}.call(this), 'b': '1'})
+        """
+
+        source = """
+        var a = {a: 1}; <a {...a}></a>
+        """
+        Vdt.stringifier.stringify(Vdt.parser.parse(source)).should.eql """
+        var a = {a: 1}; return h('a', {...function() {try {return [a][0]} catch(e) {_e(e)}}.call(this)})
         """

@@ -56,13 +56,16 @@ var Vdt = require('../dist');
 // console.log(util.inspect(ast, {showHidden: true, depth: null}));
 // console.log(Vdt.stringifier.stringify(Vdt.parser.parse(source)));
 
-var source = '<div><b:test>aa</b:test></div>';
-console.log(Vdt.stringifier.stringify(Vdt.parser.parse(source)), "\n-------------\n")
-source = '<Widget><b:test>aa</b:test></Widget>';
-console.log(Vdt.stringifier.stringify(Vdt.parser.parse(source)), "\n-------------\n")
-source = '<Widget><b:test1>aa</b:test1><b:test2>bb</b:test2>sdsdf</Widget>';
-console.log(Vdt.stringifier.stringify(Vdt.parser.parse(source)), "\n-------------\n")
-source = '<t:layout><b:test>aa</b:test></t:layout>';
-console.log(Vdt.stringifier.stringify(Vdt.parser.parse(source)), "\n-------------\n")
-source = '<t:layout></t:layout>';
-console.log(Vdt.stringifier.stringify(Vdt.parser.parse(source)), "\n-------------\n")
+// var source = '<div><b:test>aa</b:test></div>';
+// console.log(Vdt.stringifier.stringify(Vdt.parser.parse(source)), "\n-------------\n")
+// source = '<Widget><b:test>aa</b:test></Widget>';
+// console.log(Vdt.stringifier.stringify(Vdt.parser.parse(source)), "\n-------------\n")
+// source = '<Widget><b:test1>aa</b:test1><b:test2>bb</b:test2>sdsdf</Widget>';
+// console.log(Vdt.stringifier.stringify(Vdt.parser.parse(source)), "\n-------------\n")
+// source = '<t:layout><b:test>aa</b:test></t:layout>';
+// console.log(Vdt.stringifier.stringify(Vdt.parser.parse(source)), "\n-------------\n")
+// source = '<t:layout></t:layout>';
+// console.log(Vdt.stringifier.stringify(Vdt.parser.parse(source)), "\n-------------\n")
+
+var source = 'var a = {a: 1}; <a {...a}></a>';
+console.log(Vdt.stringifier.stringify(Vdt.parser.parse(source)));
