@@ -30,9 +30,9 @@ Vdt.prototype = {
         if (data !== undefined) {
             this.data = data;
         }
-        if (blocks !== undefined) {
-            this.blocks = blocks;
-        }
+        // if (blocks !== undefined) {
+        this.blocks = blocks;
+        // }
         this.vNode = this.template(this.data, Vdt, this.blocks);
 
         return this.vNode;
