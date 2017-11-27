@@ -1415,10 +1415,13 @@ Stringifier.prototype = {
     _visitJSXWidget: function _visitJSXWidget(element) {
         var _visitJSXBlocks = this._visitJSXBlocks(element, false),
             blocks = _visitJSXBlocks.blocks,
-            children = _visitJSXBlocks.children;
+            children = _visitJSXBlocks.children,
+            hasBlock = _visitJSXBlocks.hasBlock;
 
         element.attributes.push({ name: 'children', value: children });
-        element.attributes.push({ name: '_blocks', value: blocks });
+        if (hasBlock) {
+            element.attributes.push({ name: '_blocks', value: blocks });
+        }
 
         var attributes = this._visitJSXAttribute(element, false, false);
         return this._visitJSXDirective(element, 'h(' + normalizeArgs([element.value, attributes.props, 'null', 'null', attributes.key, attributes.ref]) + ')');
@@ -1444,7 +1447,7 @@ Stringifier.prototype = {
             value: blocks.length ? ['function(blocks) {', '    var _blocks = {}, __blocks = extend({}, blocks);', '    return ' + blocks.join(' && ') + ' && __blocks;', '}.call(this, ' + (isRoot ? 'blocks' : '{}') + ')'].join('\n') : isRoot ? 'blocks' : 'null'
         };
 
-        return { blocks: _blocks, children: children.length ? children : null };
+        return { blocks: _blocks, children: children.length ? children : null, hasBlock: blocks.length };
     },
 
     _visitJSXVdt: function _visitJSXVdt(element, isRoot) {
@@ -2026,6 +2029,7 @@ function createComponentClassOrInstance(vNode, parentDom, mountedQueue, lastVNod
 
     vNode.dom = dom;
     vNode.children = instance;
+    vNode.parentVNode = parentVNode;
 
     if (parentDom) {
         appendChild(parentDom, dom);
@@ -3177,6 +3181,7 @@ function hydrateComponentClassOrInstance(vNode, dom, mountedQueue, parentDom, pa
 
     vNode.dom = newDom;
     vNode.children = instance;
+    vNode.parentVNode = parentVNode;
 
     if (typeof instance.mount === 'function') {
         mountedQueue.push(function () {
