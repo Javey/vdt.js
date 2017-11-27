@@ -396,6 +396,10 @@ Stringifier.prototype = {
         const {blocks, children, hasBlock} = this._visitJSXBlocks(element, false);
 
         element.attributes.push({name: 'children', value: children});
+        element.attributes.push({name: '_context', value: {
+            type: Type.JS,
+            value: 'this'
+        }});
         if (hasBlock) {
             element.attributes.push({name: '_blocks', value: blocks});
         }

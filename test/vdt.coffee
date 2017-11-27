@@ -162,6 +162,18 @@ describe 'Vdt', ->
         """
         render(source).should.eql "<div><a></a></div>"
 
+    it 'Widget should have _context prop', ->
+        source = """
+        var C = function(props) {
+            self.context = props._context;
+            return <div></div>
+        }
+        <C />
+        """
+        vdt = Vdt(source)
+        vdt.renderString({})
+        vdt.data.context.should.eql(vdt)
+
     it 'Render block', ->
         source = """
         <div>
