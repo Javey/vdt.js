@@ -393,10 +393,12 @@ Stringifier.prototype = {
     },
 
     _visitJSXWidget: function(element) {
-        const {blocks, children} = this._visitJSXBlocks(element, false);
+        const {blocks, children, hasBlock} = this._visitJSXBlocks(element, false);
 
         element.attributes.push({name: 'children', value: children});
-        element.attributes.push({name: '_blocks', value: blocks});
+        if (hasBlock) {
+            element.attributes.push({name: '_blocks', value: blocks});
+        }
 
         var attributes = this._visitJSXAttribute(element, false, false);
         return this._visitJSXDirective(
@@ -441,7 +443,7 @@ Stringifier.prototype = {
             ].join('\n') : isRoot ? 'blocks' : 'null'
         };
     
-        return {blocks: _blocks, children: children.length ? children : null};
+        return {blocks: _blocks, children: children.length ? children : null, hasBlock: blocks.length};
     },
 
     _visitJSXVdt: function(element, isRoot) {
