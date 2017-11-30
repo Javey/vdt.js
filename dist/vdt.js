@@ -145,7 +145,8 @@ var booleanProps = {
 var strictProps = {
     volume: true,
     defaultChecked: true,
-    value: true
+    value: true,
+    htmlFor: true
 };
 
 var selfClosingTags = {
@@ -1234,7 +1235,7 @@ Stringifier.prototype = {
                 if (!/^\s*$/.test(next.value)) break;
                 // is not the last text node, mark as handled
                 else emptyTextNodes.push(next);
-            } else if (next.type === Type$1.JSXElement || next.type === Type$1.JSXWidget || next.type === Type$1.JSXVdt) {
+            } else if (next.type === Type$1.JSXElement || next.type === Type$1.JSXWidget || next.type === Type$1.JSXVdt || next.type === Type$1.JSXBlock) {
                 if (!next.directives || !next.directives.length) break;
                 var isContinue = false;
                 for (var i = 0, l = next.directives.length; i < l; i++) {
@@ -1434,7 +1435,7 @@ Stringifier.prototype = {
     },
 
     _visitJSXBlock: function _visitJSXBlock(element, isAncestor) {
-        return '(_blocks.' + element.value + ' = function(parent) {return ' + this._visitJSXChildren(element.children) + ';}) && (__blocks.' + element.value + ' = function(parent) {\n' + 'var self = this;\n' + 'return blocks.' + element.value + ' ? blocks.' + element.value + '.call(this, function() {\n' + 'return _blocks.' + element.value + '.call(self, parent);\n' + '}) : _blocks.' + element.value + '.call(this, parent);\n' + '})' + (isAncestor ? ' && __blocks.' + element.value + '.call(this)' : '');
+        return this._visitJSXDirective(element, '(_blocks.' + element.value + ' = function(parent) {return ' + this._visitJSXChildren(element.children) + ';}) && (__blocks.' + element.value + ' = function(parent) {\n' + 'var self = this;\n' + 'return blocks.' + element.value + ' ? blocks.' + element.value + '.call(this, function() {\n' + 'return _blocks.' + element.value + '.call(self, parent);\n' + '}) : _blocks.' + element.value + '.call(this, parent);\n' + '})' + (isAncestor ? ' && __blocks.' + element.value + '.call(this)' : ''));
     },
 
     _visitJSXBlocks: function _visitJSXBlocks(element, isRoot) {
@@ -1545,10 +1546,12 @@ function createVNode(tag, props, children, className, key, ref) {
     if (type & Types.ComponentClass) {
         if (!isNullOrUndefined(children)) {
             if (props === EMPTY_OBJ) props = {};
-            props.children = normalizeChildren(children);
-        } else if (!isNullOrUndefined(props.children)) {
-            props.children = normalizeChildren(props.children);
+            // props.children = normalizeChildren(children);
+            props.children = children;
         }
+        // else if (!isNullOrUndefined(props.children)) {
+        // props.children = normalizeChildren(props.children);
+        // }
     } else {
         children = normalizeChildren(children);
     }
@@ -1586,7 +1589,9 @@ function normalizeChildren(vNodes) {
 }
 
 function applyKey(vNode, reference) {
-    if (isNullOrUndefined(vNode.key)) {
+    // start with '.' means the vNode has been set key by index
+    // we will reset the key when it coomes back again
+    if (isNullOrUndefined(vNode.key) || vNode.key[0] === '.') {
         vNode.key = '.$' + reference.index++;
     }
     return vNode;

@@ -67,5 +67,9 @@ var Vdt = require('../dist');
 // source = '<t:layout></t:layout>';
 // console.log(Vdt.stringifier.stringify(Vdt.parser.parse(source)), "\n-------------\n")
 
-var source = 'var a = {a: 1}; <a {...a}></a>';
+// var source = 'var a = {a: 1}; <a {...a}></a>';
+// console.log(Vdt.stringifier.stringify(Vdt.parser.parse(source)));
+
+source = "<div>\n    <b:show v-if={show}>show</b:show>\n    <b:hide v-else>hide</b:hide>\n</div>";
 console.log(Vdt.stringifier.stringify(Vdt.parser.parse(source)));
+

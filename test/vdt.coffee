@@ -190,6 +190,20 @@ describe 'Vdt', ->
         </div>
         """
 
+    it 'Render block with v-if', ->
+        source = """
+        <div>
+            <b:show v-if={show}>show</b:show>
+            <b:hide v-else>hide</b:hide>
+        </div>
+        """
+
+        render(source, {show: false}).should.eql """
+        <div>
+            hide
+        </div>
+        """
+
     it 'Render template inherit', ->
         parent = """
         <div>
