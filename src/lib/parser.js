@@ -8,6 +8,7 @@ import * as Utils from './utils';
 
 const {Type, TypeName} = Utils;
 const elementNameRegexp = /^<\w+:?\s*[\{\w\/>]/;
+const importRegexp = /\bimport\b/;
 
 function isJSXIdentifierPart(ch) {
     return (ch === 58) || (ch === 95) || (ch === 45) || ch === 36 || ch === 46 ||  // : _ (underscore) - $ .
@@ -58,9 +59,11 @@ Parser.prototype = {
 
     _scanJS: function(braces) {
         var start = this.index,
+            tmp,
             Delimiters = this.options.delimiters;
 
         while (this.index < this.length) {
+            this._skipJSComment();
             var ch = this._char();
             if (ch === '\'' || ch === '"' || ch === '`') {
                 // skip element(<div>) in quotes
@@ -477,6 +480,34 @@ Parser.prototype = {
                 this._updateLine();
             }
             this._updateIndex();
+        }
+    },
+
+    _skipJSComment: function() {
+        if (this._char() === '/') {
+            var ch = this._char(this.index + 1);
+            if (ch === '/') {
+                this._updateIndex(2);
+                while (this.index < this.length) {
+                    if (this._charCode() === 10) {
+                        // is \n
+                        this._updateLine();
+                        break;
+                    }
+                    this._updateIndex();
+                }
+            } else if (ch === '*') {
+                this._updateIndex(2);
+                while (this.index < this.length) {
+                    if (this._isExpect('*/')) {
+                        this._updateIndex(2);
+                        break;
+                    } else if (this._charCode() === 10) {
+                        this._updateLine();
+                    }
+                    this._updateIndex();
+                }
+            }
         }
     },
 

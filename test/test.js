@@ -70,6 +70,9 @@ var Vdt = require('../dist');
 // var source = 'var a = {a: 1}; <a {...a}></a>';
 // console.log(Vdt.stringifier.stringify(Vdt.parser.parse(source)));
 
-source = "<div>\n    <b:show v-if={show}>show</b:show>\n    <b:hide v-else>hide</b:hide>\n</div>";
+// source = "<div>\n    <b:show v-if={show}>show</b:show>\n    <b:hide v-else>hide</b:hide>\n</div>";
+
+source = "// comment\nvar a = 1; // comment\n/* comment */\n/*\n * comment\n */\n//<div>\n<div className=\"div\">\n    {/* comment in element */}\n    {a}\n</div>";
 console.log(Vdt.stringifier.stringify(Vdt.parser.parse(source)));
+// console.log(util.inspect(Vdt.parser.parse(source), {showHidden: true, depth: null}));
 

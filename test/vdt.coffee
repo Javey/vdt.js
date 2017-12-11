@@ -102,6 +102,7 @@ describe 'Vdt', ->
         /*
          * comment
          */
+        // <div>
 
         <div className="div">
             {/* comment in element */}

@@ -238,6 +238,8 @@ var namespaces = {
 var i = 0;
 var Type$1 = {
     JS: i++,
+    JSImport: i++,
+
     JSXText: i++,
     JSXUnescapeText: i++,
     JSXElement: i++,
@@ -530,7 +532,6 @@ var Type$$1 = Type$1;
 var TypeName$$1 = TypeName$1;
 
 var elementNameRegexp = /^<\w+:?\s*[\{\w\/>]/;
-
 function isJSXIdentifierPart(ch) {
     return ch === 58 || ch === 95 || ch === 45 || ch === 36 || ch === 46 || // : _ (underscore) - $ .
     ch >= 65 && ch <= 90 || // A..Z
@@ -580,9 +581,11 @@ Parser.prototype = {
 
     _scanJS: function _scanJS(braces) {
         var start = this.index,
+            tmp,
             Delimiters = this.options.delimiters;
 
         while (this.index < this.length) {
+            this._skipJSComment();
             var ch = this._char();
             if (ch === '\'' || ch === '"' || ch === '`') {
                 // skip element(<div>) in quotes
@@ -994,6 +997,34 @@ Parser.prototype = {
                 this._updateLine();
             }
             this._updateIndex();
+        }
+    },
+
+    _skipJSComment: function _skipJSComment() {
+        if (this._char() === '/') {
+            var ch = this._char(this.index + 1);
+            if (ch === '/') {
+                this._updateIndex(2);
+                while (this.index < this.length) {
+                    if (this._charCode() === 10) {
+                        // is \n
+                        this._updateLine();
+                        break;
+                    }
+                    this._updateIndex();
+                }
+            } else if (ch === '*') {
+                this._updateIndex(2);
+                while (this.index < this.length) {
+                    if (this._isExpect('*/')) {
+                        this._updateIndex(2);
+                        break;
+                    } else if (this._charCode() === 10) {
+                        this._updateLine();
+                    }
+                    this._updateIndex();
+                }
+            }
         }
     },
 

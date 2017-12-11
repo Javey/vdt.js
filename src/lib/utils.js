@@ -13,6 +13,8 @@ export {isNullOrUndefined, isArray, indexOf, SelfClosingTags};
 let i = 0;
 export const Type = { 
     JS: i++,
+    JSImport: i++,
+
     JSXText: i++,
     JSXUnescapeText: i++,
     JSXElement: i++,
