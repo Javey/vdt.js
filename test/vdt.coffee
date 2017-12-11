@@ -712,3 +712,13 @@ describe 'Vdt', ->
         Vdt.stringifier.stringify(Vdt.parser.parse(source)).should.eql """
         var a = {a: 1}; return h('a', {...function() {try {return [a][0]} catch(e) {_e(e)}}.call(this)})
         """
+
+    it 'Stringify es6 import should be hoisted', ->
+        source = """
+        import a from './a'
+        import {b} from "./b"; import "c"
+
+        <div>{test}</div>
+        """
+
+        console.log Vdt.stringifier.stringify(Vdt.parser.parse(source))

@@ -39,17 +39,24 @@ Stringifier.prototype = {
         }
         this.autoReturn = !!autoReturn;
         this.enterStringExpression = false;
+        this.head = ''; // save import syntax
         return this._visitJSXExpressionContainer(ast, true);
     },
 
     _visitJSXExpressionContainer: function(ast, isRoot) {
-        var str = '', length = ast.length, hasDestructuring = false;
+        var str = '',
+            length = ast.length,
+            hasDestructuring = false;
         Utils.each(ast, function(element, i) {
             // if is root, add `return` keyword
             if (this.autoReturn && isRoot && i === length - 1) {
-                str += 'return ' + this._visit(element, isRoot);
+                str += 'return ';
+            }
+            var tmp = this._visit(element, isRoot);
+            if (isRoot && element.type === Type.JSImport) {
+                this.head += tmp;
             } else {
-                str += this._visit(element, isRoot);
+                str += tmp;
             }
         }, this);
 
@@ -75,7 +82,8 @@ Stringifier.prototype = {
         element = element || {};
         switch (element.type) {
             case Type.JS:
-                return this._visitJS(element, isRoot);
+            case Type.JSImport:
+                return this._visitJS(element);
             case Type.JSXElement:
                 return this._visitJSXElement(element);
             case Type.JSXText:

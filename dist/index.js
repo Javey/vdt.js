@@ -530,6 +530,8 @@ var Type$$1 = Type$1;
 var TypeName$$1 = TypeName$1;
 
 var elementNameRegexp = /^<\w+:?\s*[\{\w\/>]/;
+// const importRegexp = /^\s*\bimport\b/;
+
 function isJSXIdentifierPart(ch) {
     return ch === 58 || ch === 95 || ch === 45 || ch === 36 || ch === 46 || // : _ (underscore) - $ .
     ch >= 65 && ch <= 90 || // A..Z
@@ -555,29 +557,31 @@ Parser.prototype = {
 
         this.options = extend({}, configure(), options);
 
-        return this._parseTemplate();
+        return this._parseTemplate(true);
     },
 
-    _parseTemplate: function _parseTemplate() {
+    _parseTemplate: function _parseTemplate(isRoot) {
         var elements = [],
             braces = { count: 0 };
         while (this.index < this.length && braces.count >= 0) {
-            elements.push(this._advance(braces));
+            elements.push(this._advance(braces, isRoot));
         }
 
         return elements;
     },
 
-    _advance: function _advance(braces) {
+    _advance: function _advance(braces, isRoot) {
         var ch = this._char();
-        if (ch !== '<') {
-            return this._scanJS(braces);
+        if (isRoot && this._isJSImport()) {
+            return this._scanJSImport();
+        } else if (ch !== '<') {
+            return this._scanJS(braces, isRoot);
         } else {
             return this._scanJSX();
         }
     },
 
-    _scanJS: function _scanJS(braces) {
+    _scanJS: function _scanJS(braces, isRoot) {
         var start = this.index,
             tmp,
             Delimiters = this.options.delimiters;
@@ -589,6 +593,8 @@ Parser.prototype = {
                 // skip element(<div>) in quotes
                 this._scanStringLiteral();
             } else if (this._isElementStart()) {
+                break;
+            } else if (isRoot && this._isJSImport()) {
                 break;
             } else {
                 if (ch === '{') {
@@ -610,6 +616,27 @@ Parser.prototype = {
             value: this.source.slice(start, this.index)
         });
     },
+
+    _scanJSImport: function _scanJSImport() {
+        var start = this.index;
+        this._updateIndex(7); // 'import '.length
+        while (this.index < this.length) {
+            var ch = this._char();
+            this._updateIndex();
+            if ((ch === '\'' || ch === '"') && ((ch = this._char()) === ';' || ch === '\n')) {
+                if (ch === '\n') {
+                    this._updateLine();
+                }
+                this._updateIndex();
+                break;
+            }
+        }
+
+        return this._type(Type$$1.JSImport, {
+            value: this.source.slice(start, this.index)
+        });
+    },
+
 
     _scanStringLiteral: function _scanStringLiteral() {
         var quote = this._char(),
@@ -1045,6 +1072,10 @@ Parser.prototype = {
         return this._char(index) === '<' && (this._isExpect('<!--') || elementNameRegexp.test(this.source.slice(index)));
     },
 
+    _isJSImport: function _isJSImport() {
+        return this._isExpect('import ');
+    },
+
     _type: function _type(type, ret) {
         ret || (ret = {});
         ret.type = type;
@@ -1113,6 +1144,7 @@ Stringifier.prototype = {
         }
         this.autoReturn = !!autoReturn;
         this.enterStringExpression = false;
+        this.head = ''; // save import syntax
         return this._visitJSXExpressionContainer(ast, true);
     },
 
@@ -1123,9 +1155,13 @@ Stringifier.prototype = {
         each(ast, function (element, i) {
             // if is root, add `return` keyword
             if (this.autoReturn && isRoot && i === length - 1) {
-                str += 'return ' + this._visit(element, isRoot);
+                str += 'return ';
+            }
+            var tmp = this._visit(element, isRoot);
+            if (isRoot && element.type === Type$2.JSImport) {
+                this.head += tmp;
             } else {
-                str += this._visit(element, isRoot);
+                str += tmp;
             }
         }, this);
 
@@ -1151,7 +1187,8 @@ Stringifier.prototype = {
         element = element || {};
         switch (element.type) {
             case Type$2.JS:
-                return this._visitJS(element, isRoot);
+            case Type$2.JSImport:
+                return this._visitJS(element);
             case Type$2.JSXElement:
                 return this._visitJSXElement(element);
             case Type$2.JSXText:
@@ -3484,6 +3521,7 @@ function compile(source, options) {
             hscript = ['_Vdt || (_Vdt = Vdt);', 'obj || (obj = {});', 'blocks || (blocks = {});', 'var h = _Vdt.miss.h, hc = _Vdt.miss.hc, hu = _Vdt.miss.hu, widgets = this && this.widgets || {}, _blocks = {}, __blocks = {},', '__u = _Vdt.utils, extend = __u.extend, _e = __u.error, _className = __u.className,', '__o = __u.Options, _getModel = __o.getModel, _setModel = __o.setModel,', '_setCheckboxModel = __u.setCheckboxModel, _detectCheckboxChecked = __u.detectCheckboxChecked,', '_setSelectModel = __u.setSelectModel,', (options.server ? 'require = function(file) { return _Vdt.require(file, "' + options.filename.replace(/\\/g, '\\\\') + '") }, ' : '') + 'self = this.data, scope = obj, Animate = self && self.Animate, parent = this._super', options.noWith ? hscript : ['with (obj) {', hscript, '}'].join('\n')].join('\n');
             templateFn = options.onlySource ? function () {} : new Function('obj', '_Vdt', 'blocks', hscript);
             templateFn.source = 'function(obj, _Vdt, blocks) {\n' + hscript + '\n}';
+            templateFn.head = stringifier.head;
             break;
         case 'function':
             templateFn = source;

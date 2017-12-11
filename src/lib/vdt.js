@@ -104,6 +104,7 @@ function compile(source, options) {
             ].join('\n');
             templateFn = options.onlySource ? function() {} : new Function('obj', '_Vdt', 'blocks', hscript);
             templateFn.source = 'function(obj, _Vdt, blocks) {\n' + hscript + '\n}';
+            templateFn.head = stringifier.head;
             break;
         case 'function':
             templateFn = source;
