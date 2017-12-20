@@ -473,7 +473,7 @@ Stringifier.prototype = {
             '        extend(_obj, _obj.arguments === true ? obj : _obj.arguments);',
             '        delete _obj.arguments;',
             '    }',
-            '    return ' + element.value + '.call(this, _obj, _Vdt, ' + this._visitJS(blocks) + ')',
+            '    return ' + element.value + '.call(this, _obj, _Vdt, ' + this._visitJS(blocks) + ', ' + element.value + ')',
             '}).call(this)'
         ].join('\n');
 
