@@ -95,15 +95,15 @@ function compile(source, options) {
                         '") }, ' : 
                         ''
                     ) +
-                    'self = this.data, scope = obj, Animate = self && self.Animate, parent = (callee || {})._super',
+                    'self = this.data, scope = obj, Animate = self && self.Animate, parent = ($callee || {})._super',
                 options.noWith ? hscript : [
                     'with (obj) {',
                         hscript,
                     '}'
                 ].join('\n')
             ].join('\n');
-            templateFn = options.onlySource ? function() {} : new Function('obj', '_Vdt', 'blocks', 'callee', hscript);
-            templateFn.source = 'function(obj, _Vdt, blocks, callee) {\n' + hscript + '\n}';
+            templateFn = options.onlySource ? function() {} : new Function('obj', '_Vdt', 'blocks', '$callee', hscript);
+            templateFn.source = 'function(obj, _Vdt, blocks, $callee) {\n' + hscript + '\n}';
             templateFn.head = stringifier.head;
             break;
         case 'function':
