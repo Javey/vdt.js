@@ -17,7 +17,7 @@
     "test": "mocha --compilers coffee:coffee-script/register test/*.coffee; mocha-phantomjs -p ~/.nvm/versions/node/v4.6.1/bin/phantomjs test/browser/index.html",
     "cover": "istanbul cover _mocha -- --compilers coffee:coffee-script/register test/*.coffee",
     "release": "npm run release-patch",
-    "prerelease": "npm version prerelease && git push --tags --force && npm publish",
+    "prelease": "npm version prerelease && git push --tags --force && npm publish",
     "release-patch": "git checkout master && npm version patch && git push origin master --tags && npm publish",
     "release-minor": "git checkout master && npm version minor && git push origin master --tags && npm publish",
     "release-major": "git checkout master && npm version major && git push origin master --tags && npm publish"
