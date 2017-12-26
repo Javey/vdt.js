@@ -33,7 +33,7 @@ Vdt.prototype = {
         // if (blocks !== undefined) {
         this.blocks = blocks;
         // }
-        this.vNode = this.template(this.data, Vdt, this.blocks, this.template);
+        this.vNode = this.template(this.data, Vdt, this.blocks, this.template) || miss.hc('empty');
 
         return this.vNode;
     },
