@@ -1599,8 +1599,8 @@ function createVNode(tag, props, children, className, key, ref) {
             if (tag.prototype.init) {
                 type = Types.ComponentClass;
             } else {
-                return tag(props);
-                // type = Types.ComponentFunction;
+                // return tag(props);
+                type = Types.ComponentFunction;
             }
             break;
         case 'object':
@@ -1611,13 +1611,21 @@ function createVNode(tag, props, children, className, key, ref) {
             throw new Error('unknown vNode type: ' + tag);
     }
 
-    if (type & Types.ComponentClass) {
+    if (type & (Types.ComponentClass | Types.ComponentFunction)) {
         if (!isNullOrUndefined(children)) {
             if (props === EMPTY_OBJ) props = {};
             props.children = normalizeChildren(children, false);
             // props.children = children;
         } else if (!isNullOrUndefined(props.children)) {
             props.children = normalizeChildren(props.children, false);
+        }
+        if (type & Types.ComponentFunction) {
+            if (key || ref) {
+                if (props === EMPTY_OBJ) props = {};
+                if (key) props.key = key;
+                if (ref) props.ref = ref;
+            }
+            return tag(props);
         }
     } else {
         children = normalizeChildren(children, true);
@@ -1789,7 +1797,8 @@ var delegatedEvents = {};
 var unDelegatesEvents = {
     'mouseenter': true,
     'mouseleave': true,
-    'propertychange': true
+    'propertychange': true,
+    'scroll': true
 };
 
 // change event can not be deletegated in IE8 
@@ -2101,6 +2110,7 @@ function createComponentClassOrInstance(vNode, parentDom, mountedQueue, lastVNod
     instance.isRender = isRender;
     instance.parentVNode = parentVNode;
     instance.isSVG = isSVG;
+    instance.vNode = vNode;
     var dom = instance.init(lastVNode, vNode);
     var ref = vNode.ref;
 
@@ -2407,6 +2417,7 @@ function patchComponentClass(lastVNode, nextVNode, parentDom, mountedQueue, pare
         instance.mountedQueue = mountedQueue;
         instance.isRender = false;
         instance.parentVNode = parentVNode;
+        instance.vNode = nextVNode;
         instance.isSVG = isSVG;
         newDom = instance.update(lastVNode, nextVNode);
         nextVNode.dom = newDom;
@@ -2841,6 +2852,9 @@ function removeProp(prop, lastValue, dom) {
             case 'dataset':
                 removeDataset(lastValue, dom);
                 return;
+            case 'innerHTML':
+                dom.innerHTML = '';
+                return;
             default:
                 break;
         }
@@ -3075,7 +3089,7 @@ function toString$1(vNode, parent, disableSplitText, firstChild) {
                         }
                     }
                 } else {
-                    html += toString$1(children, vNode, true);
+                    html += toString$1(children, vNode, disableSplitText, true);
                 }
             }
 
@@ -3255,6 +3269,7 @@ function hydrateComponentClassOrInstance(vNode, dom, mountedQueue, parentDom, pa
     instance.isRender = true;
     instance.parentVNode = parentVNode;
     instance.isSVG = isSVG;
+    instance.vNode = vNode;
     var newDom = instance.hydrate(vNode, dom);
 
     vNode.dom = newDom;
