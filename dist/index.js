@@ -3456,7 +3456,8 @@ var miss = (Object.freeze || Object)({
 	MountedQueue: MountedQueue,
 	renderString: toString$1,
 	hydrateRoot: hydrateRoot,
-	hydrate: hydrate
+	hydrate: hydrate,
+	Types: Types
 });
 
 var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
