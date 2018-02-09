@@ -455,7 +455,7 @@ Stringifier.prototype = {
             value: blocks.length ? [
                 'function(blocks) {',
                 '    var _blocks = {}, __blocks = extend({}, blocks);',
-                `    return ${blocks.join(' && ')} && __blocks;`,
+                `    return (${blocks.join(' && ')}, __blocks);`,
                 `}.call(this, ${isRoot ? 'blocks' : '{}'})`
             ].join('\n') : isRoot ? 'blocks' : 'null'
         };
