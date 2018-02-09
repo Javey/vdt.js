@@ -191,6 +191,18 @@ describe 'Vdt', ->
         </div>
         """
 
+    it 'Render block with hyphen', ->
+        source = """
+        <div>
+            <b:a-b>aaa</b:a-b>
+        </div>
+        """
+        render(source).should.eql """
+        <div>
+            aaa
+        </div>
+        """
+
     it 'Render block with v-if', ->
         source = """
         <div>

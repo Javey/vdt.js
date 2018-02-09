@@ -1503,7 +1503,7 @@ Stringifier.prototype = {
     },
 
     _visitJSXBlock: function _visitJSXBlock(element, isAncestor) {
-        return this._visitJSXDirective(element, '(_blocks.' + element.value + ' = function(parent) {return ' + this._visitJSXChildren(element.children) + ';}) && (__blocks.' + element.value + ' = function(parent) {\n' + 'var self = this;\n' + 'return blocks.' + element.value + ' ? blocks.' + element.value + '.call(this, function() {\n' + 'return _blocks.' + element.value + '.call(self, parent);\n' + '}) : _blocks.' + element.value + '.call(this, parent);\n' + '})' + (isAncestor ? ' && __blocks.' + element.value + '.call(this)' : ''));
+        return this._visitJSXDirective(element, '(_blocks["' + element.value + '"] = function(parent) {return ' + this._visitJSXChildren(element.children) + ';}) && (__blocks["' + element.value + '"] = function(parent) {\n' + 'var self = this;\n' + 'return blocks["' + element.value + '"] ? blocks["' + element.value + '"].call(this, function() {\n' + 'return _blocks["' + element.value + '"].call(self, parent);\n' + '}) : _blocks["' + element.value + '"].call(this, parent);\n' + '})' + (isAncestor ? ' && __blocks["' + element.value + '"].call(this)' : ''));
     },
 
     _visitJSXBlocks: function _visitJSXBlocks(element, isRoot) {
