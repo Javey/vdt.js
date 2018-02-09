@@ -1519,7 +1519,7 @@ Stringifier.prototype = {
 
         var _blocks = {
             type: Type$2.JS,
-            value: blocks.length ? ['function(blocks) {', '    var _blocks = {}, __blocks = extend({}, blocks);', '    return ' + blocks.join(' && ') + ' && __blocks;', '}.call(this, ' + (isRoot ? 'blocks' : '{}') + ')'].join('\n') : isRoot ? 'blocks' : 'null'
+            value: blocks.length ? ['function(blocks) {', '    var _blocks = {}, __blocks = extend({}, blocks);', '    return (' + blocks.join(' && ') + ', __blocks);', '}.call(this, ' + (isRoot ? 'blocks' : '{}') + ')'].join('\n') : isRoot ? 'blocks' : 'null'
         };
 
         return { blocks: _blocks, children: children.length ? children : null, hasBlock: blocks.length };
