@@ -62,10 +62,7 @@ export const Options = {
     // skip all whitespaces in template
     skipWhitespace: true,
     setModel: function(data, key, value) {
-        
-        // return function(e) {
-            data[key] = value; //typeof e === 'boolean' ? e : e.target.value;
-        // };
+        data[key] = value;
     },
     getModel: function(data, key) {
         return data[key]; 

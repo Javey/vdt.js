@@ -287,10 +287,7 @@ var Options = {
     // skip all whitespaces in template
     skipWhitespace: true,
     setModel: function setModel(data, key, value) {
-
-        // return function(e) {
-        data[key] = value; //typeof e === 'boolean' ? e : e.target.value;
-        // };
+        data[key] = value;
     },
     getModel: function getModel(data, key) {
         return data[key];
@@ -1385,7 +1382,8 @@ Stringifier.prototype = {
                 return;
             } else if (name === 'v-model') {
                 hasModel = value;
-                return;
+                // pass v-model to element, sometimes it is useful
+                // return;
             } else if (name === 'v-model-true') {
                 addition.trueValue = value;
                 return;

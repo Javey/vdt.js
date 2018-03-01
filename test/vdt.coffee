@@ -733,4 +733,8 @@ describe 'Vdt', ->
         <div>{test}</div>
         """
 
-        console.log Vdt.stringifier.stringify(Vdt.parser.parse(source))
+        Vdt.stringifier.stringify(Vdt.parser.parse(source)).should.eql """
+         
+        return h('div', null, function() {try {return [test][0]} catch(e) {_e(e)}}.call(this))
+        """
+

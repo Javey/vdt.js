@@ -298,7 +298,8 @@ Stringifier.prototype = {
                 return;
             } else if (name === 'v-model') {
                 hasModel = value;
-                return;
+                // pass v-model to element, sometimes it is useful
+                // return;
             } else if (name === 'v-model-true') {
                 addition.trueValue = value;
                 return;
