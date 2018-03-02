@@ -199,10 +199,12 @@ export function setCheckboxModel(data, key, trueValue, falseValue, e) {
         checked = e.target.checked;
     if (isArray(value)) {
         value = value.slice(0);
+        var index = indexOf(value, trueValue);
         if (checked) {
-            value.push(trueValue);
+            if (!~index) {
+                value.push(trueValue);
+            }
         } else {
-            var index = indexOf(value, trueValue);
             if (~index) {
                 value.splice(index, 1);
             }
