@@ -95,7 +95,7 @@ function compile(source, options) {
                         '") }, ' : 
                         ''
                     ) +
-                    'self = this.data, scope = obj, Animate = self && self.Animate, parent = ($callee || {})._super',
+                    'self = this.data, $this = this, scope = obj, Animate = self && self.Animate, parent = ($callee || {})._super',
                 options.noWith ? hscript : [
                     'with (obj) {',
                         hscript,

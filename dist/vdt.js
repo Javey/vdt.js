@@ -111,7 +111,8 @@ var skipProps = {
     className: true,
     checked: true,
     multiple: true,
-    defaultValue: true
+    defaultValue: true,
+    'v-model': true
 };
 
 function isSkipProp(prop) {
@@ -427,10 +428,12 @@ function setCheckboxModel(data, key, trueValue, falseValue, e) {
         checked = e.target.checked;
     if (isArray(value)) {
         value = value.slice(0);
+        var index = indexOf(value, trueValue);
         if (checked) {
-            value.push(trueValue);
+            if (!~index) {
+                value.push(trueValue);
+            }
         } else {
-            var index = indexOf(value, trueValue);
             if (~index) {
                 value.splice(index, 1);
             }
@@ -1490,7 +1493,7 @@ Stringifier.prototype = {
         element.attributes.push({ name: 'children', value: children });
         element.attributes.push({ name: '_context', value: {
                 type: Type$2.JS,
-                value: 'this'
+                value: '$this'
             } });
         if (hasBlock) {
             element.attributes.push({ name: '_blocks', value: blocks });
@@ -1664,7 +1667,7 @@ function normalizeChildren(vNodes, isAddKey) {
 function applyKey(vNode, reference, isAddKey) {
     if (!isAddKey) return vNode;
     // start with '.' means the vNode has been set key by index
-    // we will reset the key when it coomes back again
+    // we will reset the key when it comes back again
     if (isNullOrUndefined(vNode.key) || vNode.key[0] === '.') {
         vNode.key = '.$' + reference.index++;
     }
@@ -3529,7 +3532,7 @@ function compile(source, options) {
             var ast = parser.parse(source, options),
                 hscript = stringifier.stringify(ast, options.autoReturn);
 
-            hscript = ['_Vdt || (_Vdt = Vdt);', 'obj || (obj = {});', 'blocks || (blocks = {});', 'var h = _Vdt.miss.h, hc = _Vdt.miss.hc, hu = _Vdt.miss.hu, widgets = this && this.widgets || {}, _blocks = {}, __blocks = {},', '__u = _Vdt.utils, extend = __u.extend, _e = __u.error, _className = __u.className,', '__o = __u.Options, _getModel = __o.getModel, _setModel = __o.setModel,', '_setCheckboxModel = __u.setCheckboxModel, _detectCheckboxChecked = __u.detectCheckboxChecked,', '_setSelectModel = __u.setSelectModel,', (options.server ? 'require = function(file) { return _Vdt.require(file, "' + options.filename.replace(/\\/g, '\\\\') + '") }, ' : '') + 'self = this.data, scope = obj, Animate = self && self.Animate, parent = ($callee || {})._super', options.noWith ? hscript : ['with (obj) {', hscript, '}'].join('\n')].join('\n');
+            hscript = ['_Vdt || (_Vdt = Vdt);', 'obj || (obj = {});', 'blocks || (blocks = {});', 'var h = _Vdt.miss.h, hc = _Vdt.miss.hc, hu = _Vdt.miss.hu, widgets = this && this.widgets || {}, _blocks = {}, __blocks = {},', '__u = _Vdt.utils, extend = __u.extend, _e = __u.error, _className = __u.className,', '__o = __u.Options, _getModel = __o.getModel, _setModel = __o.setModel,', '_setCheckboxModel = __u.setCheckboxModel, _detectCheckboxChecked = __u.detectCheckboxChecked,', '_setSelectModel = __u.setSelectModel,', (options.server ? 'require = function(file) { return _Vdt.require(file, "' + options.filename.replace(/\\/g, '\\\\') + '") }, ' : '') + 'self = this.data, $this = this, scope = obj, Animate = self && self.Animate, parent = ($callee || {})._super', options.noWith ? hscript : ['with (obj) {', hscript, '}'].join('\n')].join('\n');
             templateFn = options.onlySource ? function () {} : new Function('obj', '_Vdt', 'blocks', '$callee', hscript);
             templateFn.source = 'function(obj, _Vdt, blocks, $callee) {\n' + hscript + '\n}';
             templateFn.head = stringifier.head;

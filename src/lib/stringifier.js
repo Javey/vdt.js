@@ -409,7 +409,7 @@ Stringifier.prototype = {
         element.attributes.push({name: 'children', value: children});
         element.attributes.push({name: '_context', value: {
             type: Type.JS,
-            value: 'this'
+            value: '$this'
         }});
         if (hasBlock) {
             element.attributes.push({name: '_blocks', value: blocks});
