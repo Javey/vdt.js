@@ -39,17 +39,24 @@ Stringifier.prototype = {
         }
         this.autoReturn = !!autoReturn;
         this.enterStringExpression = false;
+        this.head = ''; // save import syntax
         return this._visitJSXExpressionContainer(ast, true);
     },
 
     _visitJSXExpressionContainer: function(ast, isRoot) {
-        var str = '', length = ast.length, hasDestructuring = false;
+        var str = '',
+            length = ast.length,
+            hasDestructuring = false;
         Utils.each(ast, function(element, i) {
             // if is root, add `return` keyword
             if (this.autoReturn && isRoot && i === length - 1) {
-                str += 'return ' + this._visit(element, isRoot);
+                str += 'return ';
+            }
+            var tmp = this._visit(element, isRoot);
+            if (isRoot && element.type === Type.JSImport) {
+                this.head += tmp;
             } else {
-                str += this._visit(element, isRoot);
+                str += tmp;
             }
         }, this);
 
@@ -75,7 +82,8 @@ Stringifier.prototype = {
         element = element || {};
         switch (element.type) {
             case Type.JS:
-                return this._visitJS(element, isRoot);
+            case Type.JSImport:
+                return this._visitJS(element);
             case Type.JSXElement:
                 return this._visitJSXElement(element);
             case Type.JSXText:
@@ -87,7 +95,7 @@ Stringifier.prototype = {
             case Type.JSXWidget:
                 return this._visitJSXWidget(element);
             case Type.JSXBlock:
-                return this._visitJSXBlock(element);
+                return this._visitJSXBlock(element, true);
             case Type.JSXVdt:
                 return this._visitJSXVdt(element, isRoot);
             case Type.JSXComment:
@@ -199,9 +207,11 @@ Stringifier.prototype = {
                 if (!/^\s*$/.test(next.value)) break;
                 // is not the last text node, mark as handled
                 else emptyTextNodes.push(next);
-            } else if (next.type === Utils.Type.JSXElement ||
+            } else if (
+                next.type === Utils.Type.JSXElement ||
                 next.type === Utils.Type.JSXWidget ||
-                next.type === Utils.Type.JSXVdt
+                next.type === Utils.Type.JSXVdt ||
+                next.type === Utils.Type.JSXBlock
             ) {
                 if (!next.directives || !next.directives.length) break;
                 var isContinue = false;
@@ -288,7 +298,8 @@ Stringifier.prototype = {
                 return;
             } else if (name === 'v-model') {
                 hasModel = value;
-                return;
+                // pass v-model to element, sometimes it is useful
+                // return;
             } else if (name === 'v-model-true') {
                 addition.trueValue = value;
                 return;
@@ -393,45 +404,79 @@ Stringifier.prototype = {
     },
 
     _visitJSXWidget: function(element) {
-        if (element.children.length) {
-            element.attributes.push({name: 'children', value: element.children});
+        const {blocks, children, hasBlock} = this._visitJSXBlocks(element, false);
+
+        element.attributes.push({name: 'children', value: children});
+        element.attributes.push({name: '_context', value: {
+            type: Type.JS,
+            value: '$this'
+        }});
+        if (hasBlock) {
+            element.attributes.push({name: '_blocks', value: blocks});
         }
+
         var attributes = this._visitJSXAttribute(element, false, false);
         return this._visitJSXDirective(
             element, 
-            'h(' + normalizeArgs(
-                [element.value, attributes.props, 'null', 'null', attributes.key, attributes.ref]
-            ) + ')'
+            'h(' + normalizeArgs([
+                element.value, 
+                attributes.props, 
+                'null', 'null',
+                attributes.key, 
+                attributes.ref
+            ]) + ')'
         );
     },
 
     _visitJSXBlock: function(element, isAncestor) {
-        arguments.length === 1 && (isAncestor = true);
-
-        return '(_blocks.' + element.value + ' = function(parent) {return ' + this._visitJSXChildren(element.children) + ';}) && (__blocks.' + element.value + ' = function(parent) {\n' +
-            'var self = this;\n' +
-            'return blocks.' + element.value + ' ? blocks.' + element.value + '.call(this, function() {\n' +
-                'return _blocks.' + element.value + '.call(self, parent);\n' +
-            '}) : _blocks.' + element.value + '.call(this, parent);\n' +
-        '})' + (isAncestor ? ' && __blocks.' + element.value + '.call(this)' : '');
+        return this._visitJSXDirective(
+            element,
+           '(_blocks["' + element.value + '"] = function(parent) {return ' + this._visitJSXChildren(element.children) + ';}) && (__blocks["' + element.value + '"] = function(parent) {\n' +
+                'var self = this;\n' +
+                'return blocks["' + element.value + '"] ? blocks["' + element.value + '"].call(this, function() {\n' +
+                    'return _blocks["' + element.value + '"].call(self, parent);\n' +
+                '}) : _blocks["' + element.value + '"].call(this, parent);\n' +
+            '})' + (isAncestor ? ' && __blocks["' + element.value + '"].call(this)' : '')
+        );
     },
 
-    _visitJSXVdt: function(element, isRoot) {
-        var ret = ['(function(blocks) {',
-                'var _blocks = {}, __blocks = extend({}, blocks), _obj = ' + 
-                this._visitJSXAttribute(element, false, false).props + ' || {};',
-                'if (_obj.hasOwnProperty("arguments")) { extend(_obj, _obj.arguments === true ? obj : _obj.arguments); delete _obj.arguments; }',
-                'return ' + element.value + '.call(this, _obj, _Vdt, '
-            ].join('\n'),
-            blocks = [];
-
+    _visitJSXBlocks: function(element, isRoot) {
+        const blocks = [];
+        const children = [];
         Utils.each(element.children, function(child) {
             if (child.type === Type.JSXBlock) {
                 blocks.push(this._visitJSXBlock(child, false));
+            } else {
+                children.push(child);
             }
         }, this);
 
-        ret += (blocks.length ? blocks.join(' && ') + ' && __blocks)' : '__blocks)') + ('}).call(this, ') + (isRoot ? 'blocks)' : '{})');
+        const _blocks = {
+            type: Type.JS,
+            value: blocks.length ? [
+                'function(blocks) {',
+                '    var _blocks = {}, __blocks = extend({}, blocks);',
+                `    return (${blocks.join(' && ')}, __blocks);`,
+                `}.call(this, ${isRoot ? 'blocks' : '{}'})`
+            ].join('\n') : isRoot ? 'blocks' : 'null'
+        };
+    
+        return {blocks: _blocks, children: children.length ? children : null, hasBlock: blocks.length};
+    },
+
+    _visitJSXVdt: function(element, isRoot) {
+        const {blocks, children} = this._visitJSXBlocks(element, isRoot);
+        element.attributes.push({name: 'children', value: children});
+        const ret = [
+            '(function() {',
+            '    var _obj = ' + this._visitJSXAttribute(element, false, false).props + ';',
+            '    if (_obj.hasOwnProperty("arguments")) {',
+            '        extend(_obj, _obj.arguments === true ? obj : _obj.arguments);',
+            '        delete _obj.arguments;',
+            '    }',
+            '    return ' + element.value + '.call(this, _obj, _Vdt, ' + this._visitJS(blocks) + ', ' + element.value + ')',
+            '}).call(this)'
+        ].join('\n');
 
         return this._visitJSXDirective(element, ret);
     },

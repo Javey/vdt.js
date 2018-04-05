@@ -7,7 +7,8 @@
 import * as Utils from './utils';
 
 const {Type, TypeName} = Utils;
-const elementNameRegexp = /^<\w+:?\s*[\w\/>]/;
+const elementNameRegexp = /^<\w+:?\s*[\{\w\/>]/;
+// const importRegexp = /^\s*\bimport\b/;
 
 function isJSXIdentifierPart(ch) {
     return (ch === 58) || (ch === 95) || (ch === 45) || ch === 36 || ch === 46 ||  // : _ (underscore) - $ .
@@ -34,38 +35,44 @@ Parser.prototype = {
 
         this.options = Utils.extend({}, Utils.configure(), options);
 
-        return this._parseTemplate();
+        return this._parseTemplate(true);
     },
 
-    _parseTemplate: function() {
+    _parseTemplate: function(isRoot) {
         var elements = [],
             braces = {count: 0};
         while (this.index < this.length && braces.count >= 0) {
-            elements.push(this._advance(braces));
+            elements.push(this._advance(braces, isRoot));
         }
 
         return elements;
     },
 
-    _advance: function(braces) {
+    _advance: function(braces, isRoot) {
         var ch = this._char();
-        if (ch !== '<') {
-            return this._scanJS(braces);
+        if (isRoot && this._isJSImport()) {
+            return this._scanJSImport();
+        } else if (ch !== '<') {
+            return this._scanJS(braces, isRoot);
         } else {
             return this._scanJSX();
         }
     },
 
-    _scanJS: function(braces) {
+    _scanJS: function(braces, isRoot) {
         var start = this.index,
+            tmp,
             Delimiters = this.options.delimiters;
 
         while (this.index < this.length) {
+            this._skipJSComment();
             var ch = this._char();
             if (ch === '\'' || ch === '"' || ch === '`') {
                 // skip element(<div>) in quotes
                 this._scanStringLiteral();
             } else if (this._isElementStart()) {
+                break;
+            } else if (isRoot && this._isJSImport()) {
                 break;
             } else {
                 if (ch === '{') {
@@ -84,6 +91,29 @@ Parser.prototype = {
         }
 
         return this._type(Type.JS, {
+            value: this.source.slice(start, this.index)
+        });
+    },
+
+    _scanJSImport() {
+        var start = this.index;
+        this._updateIndex(7); // 'import '.length
+        while (this.index < this.length) {
+            var ch = this._char();
+            this._updateIndex();
+            if (
+                (ch === '\'' || ch === '"') && 
+                ((ch = this._char()) === ';' || ch === '\n')
+            ) {
+                if (ch === '\n') {
+                    this._updateLine();
+                }
+                this._updateIndex();
+                break;
+            }
+        }
+
+        return this._type(Type.JSImport, {
             value: this.source.slice(start, this.index)
         });
     },
@@ -480,6 +510,34 @@ Parser.prototype = {
         }
     },
 
+    _skipJSComment: function() {
+        if (this._char() === '/') {
+            var ch = this._char(this.index + 1);
+            if (ch === '/') {
+                this._updateIndex(2);
+                while (this.index < this.length) {
+                    if (this._charCode() === 10) {
+                        // is \n
+                        this._updateLine();
+                        break;
+                    }
+                    this._updateIndex();
+                }
+            } else if (ch === '*') {
+                this._updateIndex(2);
+                while (this.index < this.length) {
+                    if (this._isExpect('*/')) {
+                        this._updateIndex(2);
+                        break;
+                    } else if (this._charCode() === 10) {
+                        this._updateLine();
+                    }
+                    this._updateIndex();
+                }
+            }
+        }
+    },
+
     _expect: function(str) {
         if (!this._isExpect(str)) {
             this._error('expect string ' + str);
@@ -497,6 +555,10 @@ Parser.prototype = {
                 this._isExpect('<!--') || 
                 elementNameRegexp.test(this.source.slice(index))
             );
+    },
+
+    _isJSImport: function() {
+        return this._isExpect('import ');
     },
 
     _type: function(type, ret) {

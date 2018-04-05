@@ -13,6 +13,8 @@ export {isNullOrUndefined, isArray, indexOf, SelfClosingTags};
 let i = 0;
 export const Type = { 
     JS: i++,
+    JSImport: i++,
+
     JSXText: i++,
     JSXUnescapeText: i++,
     JSXElement: i++,
@@ -60,10 +62,7 @@ export const Options = {
     // skip all whitespaces in template
     skipWhitespace: true,
     setModel: function(data, key, value) {
-        
-        // return function(e) {
-            data[key] = value; //typeof e === 'boolean' ? e : e.target.value;
-        // };
+        data[key] = value;
     },
     getModel: function(data, key) {
         return data[key]; 
@@ -200,10 +199,12 @@ export function setCheckboxModel(data, key, trueValue, falseValue, e) {
         checked = e.target.checked;
     if (isArray(value)) {
         value = value.slice(0);
+        var index = indexOf(value, trueValue);
         if (checked) {
-            value.push(trueValue);
+            if (!~index) {
+                value.push(trueValue);
+            }
         } else {
-            var index = indexOf(value, trueValue);
             if (~index) {
                 value.splice(index, 1);
             }

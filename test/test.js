@@ -51,7 +51,29 @@ var util = require('util');
 
 var Vdt = require('../dist');
 // var source = '<div><t:a v-if={true} /> <t:b v-else /></div>';
-var source = '<div {...a} b="1"></div>';
-var ast = Vdt.parser.parse(source);
-console.log(util.inspect(ast, {showHidden: true, depth: null}));
-console.log(Vdt.stringifier.stringify(Vdt.parser.parse(source)));
+// var source = '<div {...a} b="1"></div>';
+// var ast = Vdt.parser.parse(source);
+// console.log(util.inspect(ast, {showHidden: true, depth: null}));
+// console.log(Vdt.stringifier.stringify(Vdt.parser.parse(source)));
+
+// var source = '<div><b:test>aa</b:test></div>';
+// console.log(Vdt.stringifier.stringify(Vdt.parser.parse(source)), "\n-------------\n")
+// source = '<Widget><b:test>aa</b:test></Widget>';
+// console.log(Vdt.stringifier.stringify(Vdt.parser.parse(source)), "\n-------------\n")
+// source = '<Widget><b:test1>aa</b:test1><b:test2>bb</b:test2>sdsdf</Widget>';
+// console.log(Vdt.stringifier.stringify(Vdt.parser.parse(source)), "\n-------------\n")
+// source = '<t:layout><b:test>aa</b:test></t:layout>';
+// console.log(Vdt.stringifier.stringify(Vdt.parser.parse(source)), "\n-------------\n")
+// source = '<t:layout></t:layout>';
+// console.log(Vdt.stringifier.stringify(Vdt.parser.parse(source)), "\n-------------\n")
+
+// var source = 'var a = {a: 1}; <a {...a}></a>';
+// console.log(Vdt.stringifier.stringify(Vdt.parser.parse(source)));
+
+// source = "<div>\n    <b:show v-if={show}>show</b:show>\n    <b:hide v-else>hide</b:hide>\n</div>";
+
+// source = "// comment\nvar a = 1; // comment\n/* comment */\n/*\n * comment\n */\n//<div>\n<div className=\"div\">\n    {/* comment in element */}\n    {a}\n</div>";
+source = "import a from './a'\nimport {b} from \"./b\"; import \"c\"\n\n<div>{test}</div>";
+ console.log(Vdt.stringifier.stringify(Vdt.parser.parse(source)), Vdt.stringifier.head);
+//console.log(util.inspect(Vdt.parser.parse(source), {showHidden: true, depth: null}));
+

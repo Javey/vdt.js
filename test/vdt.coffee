@@ -102,6 +102,7 @@ describe 'Vdt', ->
         /*
          * comment
          */
+        // <div>
 
         <div className="div">
             {/* comment in element */}
@@ -162,6 +163,18 @@ describe 'Vdt', ->
         """
         render(source).should.eql "<div><a></a></div>"
 
+    it 'Widget should have _context prop', ->
+        source = """
+        var C = function(props) {
+            self.context = props._context;
+            return <div></div>
+        }
+        <C />
+        """
+        vdt = Vdt(source)
+        vdt.renderString({})
+        vdt.data.context.should.eql(vdt)
+
     it 'Render block', ->
         source = """
         <div>
@@ -175,6 +188,32 @@ describe 'Vdt', ->
             
                 <div>aaa</div>
             
+        </div>
+        """
+
+    it 'Render block with hyphen', ->
+        source = """
+        <div>
+            <b:a-b>aaa</b:a-b>
+        </div>
+        """
+        render(source).should.eql """
+        <div>
+            aaa
+        </div>
+        """
+
+    it 'Render block with v-if', ->
+        source = """
+        <div>
+            <b:show v-if={show}>show</b:show>
+            <b:hide v-else>hide</b:hide>
+        </div>
+        """
+
+        render(source, {show: false}).should.eql """
+        <div>
+            hide
         </div>
         """
 
@@ -208,6 +247,17 @@ describe 'Vdt', ->
                 <div>child body 1</div>
             
         </div>
+        """
+
+    it 'Render children for template inherit', ->
+        parent = """
+        <div>{scope.children}</div>
+        """
+        source = """
+        <t:parent>test</t:parent>
+        """
+        render(source, {parent: Vdt.compile(parent)}).should.eql """
+        <div>test</div>
         """
 
     it 'Render template include', ->
@@ -659,7 +709,7 @@ describe 'Vdt', ->
 
         render(source).should.eql "<div> {a}&lt;span&gt;&lt;/span&gt;</div>"
 
-    it 'Stringify dynamic attributes', ->
+    it 'Stringify attributes of destruction', ->
         source = """
         <div {...a} b="1"></div>
         """
@@ -667,3 +717,24 @@ describe 'Vdt', ->
         Vdt.stringifier.stringify(Vdt.parser.parse(source)).should.eql """
         return h('div', {...function() {try {return [a][0]} catch(e) {_e(e)}}.call(this), 'b': '1'})
         """
+
+        source = """
+        var a = {a: 1}; <a {...a}></a>
+        """
+        Vdt.stringifier.stringify(Vdt.parser.parse(source)).should.eql """
+        var a = {a: 1}; return h('a', {...function() {try {return [a][0]} catch(e) {_e(e)}}.call(this)})
+        """
+
+    it 'Stringify es6 import should be hoisted', ->
+        source = """
+        import a from './a'
+        import {b} from "./b"; import "c"
+
+        <div>{test}</div>
+        """
+
+        Vdt.stringifier.stringify(Vdt.parser.parse(source)).should.eql """
+         
+        return h('div', null, function() {try {return [test][0]} catch(e) {_e(e)}}.call(this))
+        """
+
