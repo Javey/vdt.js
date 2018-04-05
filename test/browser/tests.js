@@ -1,3 +1,17 @@
+function dispatchEvent(target, eventName, options) {
+    var event;
+    if (document.createEvent) {
+        event = document.createEvent('Event');
+        event.initEvent(eventName, true, true);
+    } else if (document.createEventObject) {
+        event = document.createEventObject();
+        return target.fireEvent('on' + eventName, event);
+    } else if (typeof CustomEvent !== 'undefined') {
+        event = new CustomEvent(eventName);
+    }
+    target.dispatchEvent(event);
+}
+
 describe('Template Inherit', function() {
     it('should render parent template correctly', function() {
         var parent = Vdt(document.getElementById('parent').innerHTML),
@@ -105,11 +119,7 @@ describe('Template Inherit', function() {
         $('body').append(dom);
         dom.value.should.eql('');
         dom.value = 'test';
-        var event = new Event('input', {
-            'bubbles': true,
-            'cancelable': true
-        });
-        dom.dispatchEvent(event);
+        dispatchEvent(dom, 'input');
         vdt.data.text.should.eql('test');
 
         $(dom).remove();
@@ -221,11 +231,7 @@ describe('Template Inherit', function() {
         $('body').append(dom);
         // dom.value.should.eql('');
         dom.value = '2';
-        var event = new Event('change', {
-            'bubbles': true,
-            'cancelable': true
-        });
-        dom.dispatchEvent(event);
+        dispatchEvent(dom, 'change');
         vdt.data.test.should.eql(2);
 
         $(dom).remove();
@@ -270,11 +276,7 @@ describe('Template Inherit', function() {
 
         dom.options[1].selected = true;
         dom.options[2].selected = true;
-        var event = new Event('change', {
-            'bubbles': true,
-            'cancelable': true
-        });
-        dom.dispatchEvent(event);
+        dispatchEvent(dom, 'change');
         vdt.data.test.should.eql([2, '3']);
 
         $(dom).remove();
@@ -286,11 +288,7 @@ describe('Template Inherit', function() {
         $('body').append(dom);
         dom.value.should.eql('');
         dom.value = 'test';
-        var event = new Event('input', {
-            'bubbles': true,
-            'cancelable': true
-        });
-        dom.dispatchEvent(event);
+        dispatchEvent(dom, 'input');
         vdt.data.test.should.eql('test');
 
         $(dom).remove();
