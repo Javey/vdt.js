@@ -61,8 +61,9 @@ export const Options = {
     server: false,
     // skip all whitespaces in template
     skipWhitespace: true,
-    setModel: function(data, key, value) {
+    setModel: function(data, key, value, self) {
         data[key] = value;
+        self.update();
     },
     getModel: function(data, key) {
         return data[key]; 
@@ -194,7 +195,7 @@ export function extend(...args) {
     return dest;
 }
 
-export function setCheckboxModel(data, key, trueValue, falseValue, e) {
+export function setCheckboxModel(data, key, trueValue, falseValue, e, self) {
     var value = Options.getModel(data, key),
         checked = e.target.checked;
     if (isArray(value)) {
@@ -212,7 +213,7 @@ export function setCheckboxModel(data, key, trueValue, falseValue, e) {
     } else {
         value = checked ? trueValue : falseValue;
     }
-    Options.setModel(data, key, value);
+    Options.setModel(data, key, value, self);
 }
 
 export function detectCheckboxChecked(data, key, trueValue) {
@@ -224,7 +225,7 @@ export function detectCheckboxChecked(data, key, trueValue) {
     }
 }
 
-export function setSelectModel(data, key, e) {
+export function setSelectModel(data, key, e, self) {
     var target = e.target,
         multiple = target.multiple,
         value, i, opt,
@@ -247,7 +248,7 @@ export function setSelectModel(data, key, e) {
             }
         }
     }
-    Options.setModel(data, key, value);
+    Options.setModel(data, key, value, self);
 }
 
 export const error = (function() {

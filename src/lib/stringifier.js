@@ -346,18 +346,18 @@ Stringifier.prototype = {
                             if (Utils.isNullOrUndefined(inputValue)) {
                                 ret.push(`checked: _getModel(self, ${value}) === ${trueValue}`);
                                 ret.push(`'ev-change': function(__e) {
-                                    _setModel(self, ${value}, __e.target.checked ? ${trueValue} : ${falseValue});
+                                    _setModel(self, ${value}, __e.target.checked ? ${trueValue} : ${falseValue}, $this);
                                 }`);
                             } else {
                                 if (type === "'radio'") {
                                     ret.push(`checked: _getModel(self, ${value}) === ${inputValue}`);
                                     ret.push(`'ev-change': function(__e) { 
-                                        _setModel(self, ${value}, __e.target.checked ? ${inputValue} : ${falseValue});
+                                        _setModel(self, ${value}, __e.target.checked ? ${inputValue} : ${falseValue}, $this);
                                     }`);
                                 } else {
                                     ret.push(`checked: _detectCheckboxChecked(self, ${value}, ${inputValue})`);
                                     ret.push(`'ev-change': function(__e) { 
-                                        _setCheckboxModel(self, ${value}, ${inputValue}, ${falseValue}, __e);
+                                        _setCheckboxModel(self, ${value}, ${inputValue}, ${falseValue}, __e, $this);
                                     }`);
                                 }
                             }
@@ -370,7 +370,7 @@ Stringifier.prototype = {
                 case 'select':
                     ret.push(`value: _getModel(self, ${value})`);
                     ret.push(`'ev-change': function(__e) {
-                        _setSelectModel(self, ${value}, __e);
+                        _setSelectModel(self, ${value}, __e, $this);
                     }`);
                     return;
                 case 'textarea':
@@ -380,10 +380,10 @@ Stringifier.prototype = {
                     break;
             }
             ret.push(`${valueName}: _getModel(self, ${value})`);
-            ret.push(`'ev-${eventName}': function(__e) { _setModel(self, ${value}, __e.target.value) }`);
+            ret.push(`'ev-${eventName}': function(__e) { _setModel(self, ${value}, __e.target.value, $this) }`);
         } else if (element.type === Type.JSXWidget) {
             ret.push(`value: _getModel(self, ${value})`);
-            ret.push(`'ev-$change:value': function(__c, __n) { _setModel(self, ${value}, __n) }`);
+            ret.push(`'ev-$change:value': function(__c, __n) { _setModel(self, ${value}, __n, $this) }`);
         }
     },
 
