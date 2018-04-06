@@ -39,7 +39,7 @@ var layout = require('./layout.vdt');
         <h1>{title}</h1>
     </b:header>
     <b:body>
-        <div ev-click={onClick.bind(this)}>Clicked: {count}</div>
+        <div ev-click={onClick.bind(self)}>Clicked: {count}</div>
         {parent()}
         <ul v-for={items}>
             <li>{key}: {value}</li>
@@ -59,8 +59,8 @@ var dom = vdt.render({
     count: 0,
 
     onClick: function() {
-        this.data.count++;
-        this.update();
+        this.count++;
+        vdt.update();
     }
 });
 
