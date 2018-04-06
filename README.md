@@ -17,35 +17,14 @@ npm install vdt --save
 
 # 例子
 
-```jsx 
-// @file ./layout.vdt
-<div>
-    <header>
-        <b:header />
-    </header>
-    <div>
-        <b:body>
-            <div>parent content</div>
-        </b:body>
-    </div>
-</div>
-```
-
 ```jsx
-var layout = require('./layout.vdt');
-
-<t:layout>
-    <b:header>
-        <h1>{title}</h1>
-    </b:header>
-    <b:body>
-        <div ev-click={onClick.bind(self)}>Clicked: {count}</div>
-        {parent()}
-        <ul v-for={items}>
-            <li>{key}: {value}</li>
-        </ul>
-    </b:body>
-</t:layout>
+<div>
+    <h1>{title}</h1>
+    <div ev-click={onClick.bind(self)}>Clicked: {count}</div>
+    <ul v-for={items}>
+        <li>{key}: {value}</li>
+    </ul>
+</div>
 ```
 
 ```js
