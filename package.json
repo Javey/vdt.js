@@ -12,7 +12,7 @@
   "license": "MIT",
   "scripts": {
     "build": "rollup -c rollup.config.js && uglifyjs dist/vdt.js -o dist/vdt.min.js -m && rollup -c rollup.config.node.js",
-    "test": "mocha --compilers coffee:coffee-script/register test/*.coffee; mocha-headless-chrome -f test/browser/index.html -a no-sandbox -a disable-setuid-sandbox",
+    "test": "mocha --require coffee-script/register test/*.coffee; mocha-headless-chrome -f test/browser/index.html -a no-sandbox -a disable-setuid-sandbox",
     "cover": "istanbul cover _mocha -- --compilers coffee:coffee-script/register test/*.coffee",
     "release": "npm run release-patch",
     "prelease": "npm version prerelease && git push --tags --force && git push && npm publish",
