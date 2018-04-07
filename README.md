@@ -7,20 +7,20 @@
 
 ![Benchmark](/assets/benchmark-update.png 'Benchmark')
 
-# 功能特性
+## 功能特性
 
 * 基于虚拟DOM，更新速度快
 * 支持模板继承，包含，宏定义等功能
 * 文件大小在gzip压缩后大概13KB（包含浏览器实时编译模块）
 * 支持前后端渲染
 
-# 安装
+## 安装
 
 ```shell
 npm install vdt --save
 ```
 
-# 例子
+## 示例
 
 ```jsx
 <div>
@@ -51,17 +51,16 @@ var dom = vdt.render({
 document.body.appendChild(dom);
 ```
 
-# 相关库
+## 相关库
 
 1. [misstime](https://github.com/Javey/misstime) vdt基于的virtual dom库
 2. [Intact](http://javey.github.io/intact/) 基于vdt的mvvm框架
 3. [vdt-loader](https://github.com/Javey/vdt-loader) vdt模板文件的webpack loader
 
-# 基准测试 
+## 基准测试 
 
 See [Benchmark](http://javey.github.io/vdt.html#/benchmark)
 
-
-# 许可
+## 许可
 
 MIT
