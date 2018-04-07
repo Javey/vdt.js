@@ -57,27 +57,9 @@ document.body.appendChild(dom);
 
 # 基准测试 
 
-See [Benchmark](http://javey.github.io/vdt/benchmark/benchmark.html)
+See [Benchmark](http://javey.github.io/vdt.html#/benchmark)
 
-## Render(compile every time)
-
-* Vdt.js#render x 5,454 ops/sec ±2.40% (89 runs sampled)
-* Lodash#render x 2,390 ops/sec ±3.68% (81 runs sampled)
-* Underscore#render x 6,035 ops/sec ±5.86% (81 runs sampled)
-* Handlebars#render x 959 ops/sec ±6.16% (77 runs sampled)
-* Mustache#render x 4,899 ops/sec ±6.09% (84 runs sampled)
-
-__Fastest is Underscore#render__
-
-## Update(cache compiled result)
-
-* Vdt.js#update x 14,724 ops/sec ±3.61% (87 runs sampled)
-* Lodash#update x 7,734 ops/sec ±2.70% (84 runs sampled)
-* Underscore#update x 7,989 ops/sec ±4.52% (89 runs sampled)
-* Handlebars#update x 7,200 ops/sec ±2.63% (86 runs sampled)
-* Mustache#update x 7,747 ops/sec ±2.40% (96 runs sampled)
-
-__Fastest is Vdt.js#update__
+![Benchmark](/assets/benchmark-update.png 'Benchmark')
 
 # 许可
 
