@@ -9,10 +9,6 @@
     "type": "git",
     "url": "git://github.com/Javey/vdt.js.vdt"
   },
-  "files": {
-    "dist",
-    "src"
-  },
   "license": "MIT",
   "scripts": {
     "build": "rollup -c rollup.config.js && uglifyjs dist/vdt.js -o dist/vdt.min.js -m && rollup -c rollup.config.node.js",
