@@ -37,6 +37,10 @@ function isEventProp(propName) {
     return propName.substr(0, 3) === 'ev-';
 }
 
+function isInvalid(o) {
+    return isNullOrUndefined(o) || o === false || o === true;
+}
+
 var indexOf = function () {
     if (Array.prototype.indexOf) {
         return function (arr, value) {
@@ -109,8 +113,14 @@ var skipProps = {
     className: true,
     checked: true,
     multiple: true,
-    defaultValue: true
+    defaultValue: true,
+    'v-model': true
 };
+
+function isSkipProp(prop) {
+    // treat prop which start with '_' as private prop, so skip it
+    return skipProps[prop] || prop[0] === '_';
+}
 
 var booleanProps = {
     muted: true,
@@ -128,16 +138,18 @@ var booleanProps = {
     seamless: true,
     reversed: true,
     allowfullscreen: true,
-    novalidate: true,
+    noValidate: true,
     hidden: true,
-    autoFocus: true,
-    selected: true
+    autofocus: true,
+    selected: true,
+    indeterminate: true
 };
 
 var strictProps = {
     volume: true,
     defaultChecked: true,
-    value: true
+    value: true,
+    htmlFor: true
 };
 
 var selfClosingTags = {
@@ -179,13 +191,21 @@ MountedQueue.prototype.trigger = function () {
 
 var browser = {};
 if (typeof navigator !== 'undefined') {
-    var ua = navigator.userAgent;
-    var index = ua.indexOf('MSIE ');
+    var ua = navigator.userAgent.toLowerCase();
+    var index = ua.indexOf('msie ');
     if (~index) {
         browser.isIE = true;
         var version = parseInt(ua.substring(index + 5, ua.indexOf('.', index)), 10);
         browser.version = version;
         browser.isIE8 = version === 8;
+    } else if (~ua.indexOf('edge')) {
+        browser.isEdge = true;
+    } else if (~ua.indexOf('safari')) {
+        if (~ua.indexOf('chrome')) {
+            browser.isChrome = true;
+        } else {
+            browser.isSafari = true;
+        }
     }
 }
 
@@ -223,6 +243,8 @@ var _typeof$1 = typeof Symbol === "function" && typeof Symbol.iterator === "symb
 var i = 0;
 var Type$1 = {
     JS: i++,
+    JSImport: i++,
+
     JSXText: i++,
     JSXUnescapeText: i++,
     JSXElement: i++,
@@ -269,11 +291,9 @@ var Options = {
     server: false,
     // skip all whitespaces in template
     skipWhitespace: true,
-    setModel: function setModel(data, key, value) {
-
-        // return function(e) {
-        data[key] = value; //typeof e === 'boolean' ? e : e.target.value;
-        // };
+    setModel: function setModel(data, key, value, self) {
+        data[key] = value;
+        self.update();
     },
     getModel: function getModel(data, key) {
         return data[key];
@@ -408,15 +428,17 @@ function extend() {
     return dest;
 }
 
-function setCheckboxModel(data, key, trueValue, falseValue, e) {
+function setCheckboxModel(data, key, trueValue, falseValue, e, self) {
     var value = Options.getModel(data, key),
         checked = e.target.checked;
     if (isArray(value)) {
         value = value.slice(0);
+        var index = indexOf(value, trueValue);
         if (checked) {
-            value.push(trueValue);
+            if (!~index) {
+                value.push(trueValue);
+            }
         } else {
-            var index = indexOf(value, trueValue);
             if (~index) {
                 value.splice(index, 1);
             }
@@ -424,7 +446,7 @@ function setCheckboxModel(data, key, trueValue, falseValue, e) {
     } else {
         value = checked ? trueValue : falseValue;
     }
-    Options.setModel(data, key, value);
+    Options.setModel(data, key, value, self);
 }
 
 function detectCheckboxChecked(data, key, trueValue) {
@@ -436,7 +458,7 @@ function detectCheckboxChecked(data, key, trueValue) {
     }
 }
 
-function setSelectModel(data, key, e) {
+function setSelectModel(data, key, e, self) {
     var target = e.target,
         multiple = target.multiple,
         value,
@@ -461,7 +483,7 @@ function setSelectModel(data, key, e) {
             }
         }
     }
-    Options.setModel(data, key, value);
+    Options.setModel(data, key, value, self);
 }
 
 var error = function () {
@@ -512,7 +534,8 @@ var utils = (Object.freeze || Object)({
 var Type$$1 = Type$1;
 var TypeName$$1 = TypeName$1;
 
-var elementNameRegexp = /^<\w+:?\s*[\w\/>]/;
+var elementNameRegexp = /^<\w+:?\s*[\{\w\/>]/;
+// const importRegexp = /^\s*\bimport\b/;
 
 function isJSXIdentifierPart(ch) {
     return ch === 58 || ch === 95 || ch === 45 || ch === 36 || ch === 46 || // : _ (underscore) - $ .
@@ -539,38 +562,44 @@ Parser.prototype = {
 
         this.options = extend({}, configure(), options);
 
-        return this._parseTemplate();
+        return this._parseTemplate(true);
     },
 
-    _parseTemplate: function _parseTemplate() {
+    _parseTemplate: function _parseTemplate(isRoot) {
         var elements = [],
             braces = { count: 0 };
         while (this.index < this.length && braces.count >= 0) {
-            elements.push(this._advance(braces));
+            elements.push(this._advance(braces, isRoot));
         }
 
         return elements;
     },
 
-    _advance: function _advance(braces) {
+    _advance: function _advance(braces, isRoot) {
         var ch = this._char();
-        if (ch !== '<') {
-            return this._scanJS(braces);
+        if (isRoot && this._isJSImport()) {
+            return this._scanJSImport();
+        } else if (ch !== '<') {
+            return this._scanJS(braces, isRoot);
         } else {
             return this._scanJSX();
         }
     },
 
-    _scanJS: function _scanJS(braces) {
+    _scanJS: function _scanJS(braces, isRoot) {
         var start = this.index,
+            tmp,
             Delimiters = this.options.delimiters;
 
         while (this.index < this.length) {
+            this._skipJSComment();
             var ch = this._char();
             if (ch === '\'' || ch === '"' || ch === '`') {
                 // skip element(<div>) in quotes
                 this._scanStringLiteral();
             } else if (this._isElementStart()) {
+                break;
+            } else if (isRoot && this._isJSImport()) {
                 break;
             } else {
                 if (ch === '{') {
@@ -592,6 +621,27 @@ Parser.prototype = {
             value: this.source.slice(start, this.index)
         });
     },
+
+    _scanJSImport: function _scanJSImport() {
+        var start = this.index;
+        this._updateIndex(7); // 'import '.length
+        while (this.index < this.length) {
+            var ch = this._char();
+            this._updateIndex();
+            if ((ch === '\'' || ch === '"') && ((ch = this._char()) === ';' || ch === '\n')) {
+                if (ch === '\n') {
+                    this._updateLine();
+                }
+                this._updateIndex();
+                break;
+            }
+        }
+
+        return this._type(Type$$1.JSImport, {
+            value: this.source.slice(start, this.index)
+        });
+    },
+
 
     _scanStringLiteral: function _scanStringLiteral() {
         var quote = this._char(),
@@ -980,6 +1030,34 @@ Parser.prototype = {
         }
     },
 
+    _skipJSComment: function _skipJSComment() {
+        if (this._char() === '/') {
+            var ch = this._char(this.index + 1);
+            if (ch === '/') {
+                this._updateIndex(2);
+                while (this.index < this.length) {
+                    if (this._charCode() === 10) {
+                        // is \n
+                        this._updateLine();
+                        break;
+                    }
+                    this._updateIndex();
+                }
+            } else if (ch === '*') {
+                this._updateIndex(2);
+                while (this.index < this.length) {
+                    if (this._isExpect('*/')) {
+                        this._updateIndex(2);
+                        break;
+                    } else if (this._charCode() === 10) {
+                        this._updateLine();
+                    }
+                    this._updateIndex();
+                }
+            }
+        }
+    },
+
     _expect: function _expect(str) {
         if (!this._isExpect(str)) {
             this._error('expect string ' + str);
@@ -997,6 +1075,10 @@ Parser.prototype = {
         var index = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : this.index;
 
         return this._char(index) === '<' && (this._isExpect('<!--') || elementNameRegexp.test(this.source.slice(index)));
+    },
+
+    _isJSImport: function _isJSImport() {
+        return this._isExpect('import ');
     },
 
     _type: function _type(type, ret) {
@@ -1067,6 +1149,7 @@ Stringifier.prototype = {
         }
         this.autoReturn = !!autoReturn;
         this.enterStringExpression = false;
+        this.head = ''; // save import syntax
         return this._visitJSXExpressionContainer(ast, true);
     },
 
@@ -1077,9 +1160,13 @@ Stringifier.prototype = {
         each(ast, function (element, i) {
             // if is root, add `return` keyword
             if (this.autoReturn && isRoot && i === length - 1) {
-                str += 'return ' + this._visit(element, isRoot);
+                str += 'return ';
+            }
+            var tmp = this._visit(element, isRoot);
+            if (isRoot && element.type === Type$2.JSImport) {
+                this.head += tmp;
             } else {
-                str += this._visit(element, isRoot);
+                str += tmp;
             }
         }, this);
 
@@ -1105,7 +1192,8 @@ Stringifier.prototype = {
         element = element || {};
         switch (element.type) {
             case Type$2.JS:
-                return this._visitJS(element, isRoot);
+            case Type$2.JSImport:
+                return this._visitJS(element);
             case Type$2.JSXElement:
                 return this._visitJSXElement(element);
             case Type$2.JSXText:
@@ -1117,7 +1205,7 @@ Stringifier.prototype = {
             case Type$2.JSXWidget:
                 return this._visitJSXWidget(element);
             case Type$2.JSXBlock:
-                return this._visitJSXBlock(element);
+                return this._visitJSXBlock(element, true);
             case Type$2.JSXVdt:
                 return this._visitJSXVdt(element, isRoot);
             case Type$2.JSXComment:
@@ -1218,7 +1306,7 @@ Stringifier.prototype = {
                 if (!/^\s*$/.test(next.value)) break;
                 // is not the last text node, mark as handled
                 else emptyTextNodes.push(next);
-            } else if (next.type === Type$1.JSXElement || next.type === Type$1.JSXWidget || next.type === Type$1.JSXVdt) {
+            } else if (next.type === Type$1.JSXElement || next.type === Type$1.JSXWidget || next.type === Type$1.JSXVdt || next.type === Type$1.JSXBlock) {
                 if (!next.directives || !next.directives.length) break;
                 var isContinue = false;
                 for (var i = 0, l = next.directives.length; i < l; i++) {
@@ -1302,7 +1390,8 @@ Stringifier.prototype = {
                 return;
             } else if (name === 'v-model') {
                 hasModel = value;
-                return;
+                // pass v-model to element, sometimes it is useful
+                // return;
             } else if (name === 'v-model-true') {
                 addition.trueValue = value;
                 return;
@@ -1348,14 +1437,14 @@ Stringifier.prototype = {
                                 inputValue = addition.value;
                             if (isNullOrUndefined(inputValue)) {
                                 ret.push('checked: _getModel(self, ' + value + ') === ' + trueValue);
-                                ret.push('\'ev-change\': function(__e) {\n                                    _setModel(self, ' + value + ', __e.target.checked ? ' + trueValue + ' : ' + falseValue + ');\n                                }');
+                                ret.push('\'ev-change\': function(__e) {\n                                    _setModel(self, ' + value + ', __e.target.checked ? ' + trueValue + ' : ' + falseValue + ', $this);\n                                }');
                             } else {
                                 if (type === "'radio'") {
                                     ret.push('checked: _getModel(self, ' + value + ') === ' + inputValue);
-                                    ret.push('\'ev-change\': function(__e) { \n                                        _setModel(self, ' + value + ', __e.target.checked ? ' + inputValue + ' : ' + falseValue + ');\n                                    }');
+                                    ret.push('\'ev-change\': function(__e) { \n                                        _setModel(self, ' + value + ', __e.target.checked ? ' + inputValue + ' : ' + falseValue + ', $this);\n                                    }');
                                 } else {
                                     ret.push('checked: _detectCheckboxChecked(self, ' + value + ', ' + inputValue + ')');
-                                    ret.push('\'ev-change\': function(__e) { \n                                        _setCheckboxModel(self, ' + value + ', ' + inputValue + ', ' + falseValue + ', __e);\n                                    }');
+                                    ret.push('\'ev-change\': function(__e) { \n                                        _setCheckboxModel(self, ' + value + ', ' + inputValue + ', ' + falseValue + ', __e, $this);\n                                    }');
                                 }
                             }
                             return;
@@ -1366,7 +1455,7 @@ Stringifier.prototype = {
                     break;
                 case 'select':
                     ret.push('value: _getModel(self, ' + value + ')');
-                    ret.push('\'ev-change\': function(__e) {\n                        _setSelectModel(self, ' + value + ', __e);\n                    }');
+                    ret.push('\'ev-change\': function(__e) {\n                        _setSelectModel(self, ' + value + ', __e, $this);\n                    }');
                     return;
                 case 'textarea':
                     eventName = 'input';
@@ -1375,10 +1464,10 @@ Stringifier.prototype = {
                     break;
             }
             ret.push(valueName + ': _getModel(self, ' + value + ')');
-            ret.push('\'ev-' + eventName + '\': function(__e) { _setModel(self, ' + value + ', __e.target.value) }');
+            ret.push('\'ev-' + eventName + '\': function(__e) { _setModel(self, ' + value + ', __e.target.value, $this) }');
         } else if (element.type === Type$2.JSXWidget) {
             ret.push('value: _getModel(self, ' + value + ')');
-            ret.push('\'ev-$change:value\': function(__c, __n) { _setModel(self, ' + value + ', __n) }');
+            ret.push('\'ev-$change:value\': function(__c, __n) { _setModel(self, ' + value + ', __n, $this) }');
         }
     },
 
@@ -1399,30 +1488,54 @@ Stringifier.prototype = {
     },
 
     _visitJSXWidget: function _visitJSXWidget(element) {
-        if (element.children.length) {
-            element.attributes.push({ name: 'children', value: element.children });
+        var _visitJSXBlocks = this._visitJSXBlocks(element, false),
+            blocks = _visitJSXBlocks.blocks,
+            children = _visitJSXBlocks.children,
+            hasBlock = _visitJSXBlocks.hasBlock;
+
+        element.attributes.push({ name: 'children', value: children });
+        element.attributes.push({ name: '_context', value: {
+                type: Type$2.JS,
+                value: '$this'
+            } });
+        if (hasBlock) {
+            element.attributes.push({ name: '_blocks', value: blocks });
         }
+
         var attributes = this._visitJSXAttribute(element, false, false);
         return this._visitJSXDirective(element, 'h(' + normalizeArgs([element.value, attributes.props, 'null', 'null', attributes.key, attributes.ref]) + ')');
     },
 
     _visitJSXBlock: function _visitJSXBlock(element, isAncestor) {
-        arguments.length === 1 && (isAncestor = true);
-
-        return '(_blocks.' + element.value + ' = function(parent) {return ' + this._visitJSXChildren(element.children) + ';}) && (__blocks.' + element.value + ' = function(parent) {\n' + 'var self = this;\n' + 'return blocks.' + element.value + ' ? blocks.' + element.value + '.call(this, function() {\n' + 'return _blocks.' + element.value + '.call(self, parent);\n' + '}) : _blocks.' + element.value + '.call(this, parent);\n' + '})' + (isAncestor ? ' && __blocks.' + element.value + '.call(this)' : '');
+        return this._visitJSXDirective(element, '(_blocks["' + element.value + '"] = function(parent) {return ' + this._visitJSXChildren(element.children) + ';}) && (__blocks["' + element.value + '"] = function(parent) {\n' + 'var self = this;\n' + 'return blocks["' + element.value + '"] ? blocks["' + element.value + '"].call(this, function() {\n' + 'return _blocks["' + element.value + '"].call(self, parent);\n' + '}) : _blocks["' + element.value + '"].call(this, parent);\n' + '})' + (isAncestor ? ' && __blocks["' + element.value + '"].call(this)' : ''));
     },
 
-    _visitJSXVdt: function _visitJSXVdt(element, isRoot) {
-        var ret = ['(function(blocks) {', 'var _blocks = {}, __blocks = extend({}, blocks), _obj = ' + this._visitJSXAttribute(element, false, false).props + ' || {};', 'if (_obj.hasOwnProperty("arguments")) { extend(_obj, _obj.arguments === true ? obj : _obj.arguments); delete _obj.arguments; }', 'return ' + element.value + '.call(this, _obj, _Vdt, '].join('\n'),
-            blocks = [];
-
+    _visitJSXBlocks: function _visitJSXBlocks(element, isRoot) {
+        var blocks = [];
+        var children = [];
         each(element.children, function (child) {
             if (child.type === Type$2.JSXBlock) {
                 blocks.push(this._visitJSXBlock(child, false));
+            } else {
+                children.push(child);
             }
         }, this);
 
-        ret += (blocks.length ? blocks.join(' && ') + ' && __blocks)' : '__blocks)') + '}).call(this, ' + (isRoot ? 'blocks)' : '{})');
+        var _blocks = {
+            type: Type$2.JS,
+            value: blocks.length ? ['function(blocks) {', '    var _blocks = {}, __blocks = extend({}, blocks);', '    return (' + blocks.join(' && ') + ', __blocks);', '}.call(this, ' + (isRoot ? 'blocks' : '{}') + ')'].join('\n') : isRoot ? 'blocks' : 'null'
+        };
+
+        return { blocks: _blocks, children: children.length ? children : null, hasBlock: blocks.length };
+    },
+
+    _visitJSXVdt: function _visitJSXVdt(element, isRoot) {
+        var _visitJSXBlocks2 = this._visitJSXBlocks(element, isRoot),
+            blocks = _visitJSXBlocks2.blocks,
+            children = _visitJSXBlocks2.children;
+
+        element.attributes.push({ name: 'children', value: children });
+        var ret = ['(function() {', '    var _obj = ' + this._visitJSXAttribute(element, false, false).props + ';', '    if (_obj.hasOwnProperty("arguments")) {', '        extend(_obj, _obj.arguments === true ? obj : _obj.arguments);', '        delete _obj.arguments;', '    }', '    return ' + element.value + '.call(this, _obj, _Vdt, ' + this._visitJS(blocks) + ', ' + element.value + ')', '}).call(this)'].join('\n');
 
         return this._visitJSXDirective(element, ret);
     },
@@ -1492,8 +1605,8 @@ function createVNode(tag, props, children, className, key, ref) {
             if (tag.prototype.init) {
                 type = Types.ComponentClass;
             } else {
-                return tag(props);
-                // type = Types.ComponentFunction;
+                // return tag(props);
+                type = Types.ComponentFunction;
             }
             break;
         case 'object':
@@ -1504,15 +1617,24 @@ function createVNode(tag, props, children, className, key, ref) {
             throw new Error('unknown vNode type: ' + tag);
     }
 
-    if (type & Types.ComponentClass) {
+    if (type & (Types.ComponentClass | Types.ComponentFunction)) {
         if (!isNullOrUndefined(children)) {
             if (props === EMPTY_OBJ) props = {};
-            props.children = normalizeChildren(children);
+            props.children = normalizeChildren(children, false);
+            // props.children = children;
         } else if (!isNullOrUndefined(props.children)) {
-            props.children = normalizeChildren(props.children);
+            props.children = normalizeChildren(props.children, false);
         }
-    } else {
-        children = normalizeChildren(children);
+        if (type & Types.ComponentFunction) {
+            if (key || ref) {
+                if (props === EMPTY_OBJ) props = {};
+                if (key) props.key = key;
+                if (ref) props.ref = ref;
+            }
+            return tag(props);
+        }
+    } else if (!isNullOrUndefined(children)) {
+        children = normalizeChildren(children, true);
     }
 
     return new VNode(type, tag, props, children, className || props.className, key || props.key, ref || props.ref);
@@ -1537,24 +1659,29 @@ function createComponentInstanceVNode(instance) {
     return new VNode(Types.ComponentInstance, instance.constructor, props, instance, null, props.key, props.ref);
 }
 
-function normalizeChildren(vNodes) {
+function normalizeChildren(vNodes, isAddKey) {
     if (isArray(vNodes)) {
-        var childNodes = addChild(vNodes, { index: 0 });
+        var childNodes = addChild(vNodes, { index: 0 }, isAddKey);
         return childNodes.length ? childNodes : null;
     } else if (isComponentInstance(vNodes)) {
         return createComponentInstanceVNode(vNodes);
+    } else if (vNodes.type && !isNullOrUndefined(vNodes.dom)) {
+        return directClone(vNodes);
     }
     return vNodes;
 }
 
-function applyKey(vNode, reference) {
-    if (isNullOrUndefined(vNode.key)) {
+function applyKey(vNode, reference, isAddKey) {
+    if (!isAddKey) return vNode;
+    // start with '.' means the vNode has been set key by index
+    // we will reset the key when it comes back again
+    if (isNullOrUndefined(vNode.key) || vNode.key[0] === '.') {
         vNode.key = '.$' + reference.index++;
     }
     return vNode;
 }
 
-function addChild(vNodes, reference) {
+function addChild(vNodes, reference, isAddKey) {
     var newVNodes = void 0;
     for (var i = 0; i < vNodes.length; i++) {
         var n = vNodes[i];
@@ -1566,25 +1693,93 @@ function addChild(vNodes, reference) {
             if (!newVNodes) {
                 newVNodes = vNodes.slice(0, i);
             }
-            newVNodes = newVNodes.concat(addChild(n, reference));
+            newVNodes = newVNodes.concat(addChild(n, reference, isAddKey));
         } else if (isStringOrNumber(n)) {
             if (!newVNodes) {
                 newVNodes = vNodes.slice(0, i);
             }
-            newVNodes.push(applyKey(createTextVNode(n), reference));
+            newVNodes.push(applyKey(createTextVNode(n), reference, isAddKey));
         } else if (isComponentInstance(n)) {
             if (!newVNodes) {
                 newVNodes = vNodes.slice(0, i);
             }
-            newVNodes.push(applyKey(createComponentInstanceVNode(n), reference));
+            newVNodes.push(applyKey(createComponentInstanceVNode(n), reference, isAddKey));
         } else if (n.type) {
             if (!newVNodes) {
                 newVNodes = vNodes.slice(0, i);
             }
-            newVNodes.push(applyKey(n, reference));
+            if (n.dom || n.key && n.key[0] === '.') {
+                newVNodes.push(applyKey(directClone(n), reference, isAddKey));
+            } else {
+                newVNodes.push(applyKey(n, reference, isAddKey));
+            }
         }
     }
     return newVNodes || vNodes;
+}
+
+function directClone(vNode) {
+    var newVNode = void 0;
+    var type = vNode.type;
+
+    if (type & Types.ComponentClassOrInstance) {
+        var props = void 0;
+        var propsToClone = vNode.props;
+
+        if (propsToClone === EMPTY_OBJ || isNullOrUndefined(propsToClone)) {
+            props = EMPTY_OBJ;
+        } else {
+            props = {};
+            for (var key in propsToClone) {
+                props[key] = propsToClone[key];
+            }
+        }
+
+        newVNode = new VNode(type, vNode.tag, props, vNode.children, null, vNode.key, vNode.ref);
+
+        var newProps = newVNode.props;
+        var newChildren = newProps.children;
+
+        if (newChildren) {
+            if (isArray(newChildren)) {
+                var len = newChildren.length;
+                if (len > 0) {
+                    var tmpArray = [];
+
+                    for (var i = 0; i < len; i++) {
+                        var child = newChildren[i];
+                        if (isStringOrNumber(child)) {
+                            tmpArray.push(child);
+                        } else if (!isInvalid(child) && child.type) {
+                            tmpArray.push(directClone(child));
+                        }
+                    }
+                    newProps.children = tmpArray;
+                }
+            } else if (newChildren.type) {
+                newProps.children = directClone(newChildren);
+            }
+        }
+    } else if (type & Types.Element) {
+        var children = vNode.children;
+        var _props = void 0;
+        var _propsToClone = vNode.props;
+
+        if (_propsToClone === EMPTY_OBJ || isNullOrUndefined(_propsToClone)) {
+            _props = EMPTY_OBJ;
+        } else {
+            _props = {};
+            for (var _key in _propsToClone) {
+                _props[_key] = _propsToClone[_key];
+            }
+        }
+
+        newVNode = new VNode(type, vNode.tag, vNode.props, children, vNode.className, vNode.key, vNode.ref);
+    } else if (type & Types.TextElement) {
+        newVNode = createTextVNode(vNode.children);
+    }
+
+    return newVNode;
 }
 
 var ALL_PROPS = ["altKey", "bubbles", "cancelable", "ctrlKey", "eventPhase", "metaKey", "relatedTarget", "shiftKey", "target", "timeStamp", "type", "view", "which"];
@@ -1678,7 +1873,8 @@ var delegatedEvents = {};
 var unDelegatesEvents = {
     'mouseenter': true,
     'mouseleave': true,
-    'propertychange': true
+    'propertychange': true,
+    'scroll': true
 };
 
 // change event can not be deletegated in IE8 
@@ -1990,11 +2186,13 @@ function createComponentClassOrInstance(vNode, parentDom, mountedQueue, lastVNod
     instance.isRender = isRender;
     instance.parentVNode = parentVNode;
     instance.isSVG = isSVG;
+    instance.vNode = vNode;
     var dom = instance.init(lastVNode, vNode);
     var ref = vNode.ref;
 
     vNode.dom = dom;
     vNode.children = instance;
+    vNode.parentVNode = parentVNode;
 
     if (parentDom) {
         appendChild(parentDom, dom);
@@ -2295,6 +2493,7 @@ function patchComponentClass(lastVNode, nextVNode, parentDom, mountedQueue, pare
         instance.mountedQueue = mountedQueue;
         instance.isRender = false;
         instance.parentVNode = parentVNode;
+        instance.vNode = nextVNode;
         instance.isSVG = isSVG;
         newDom = instance.update(lastVNode, nextVNode);
         nextVNode.dom = newDom;
@@ -2670,7 +2869,7 @@ function patchProps(lastVNode, nextVNode, isSVG) {
     }
     if (lastProps !== EMPTY_OBJ) {
         for (prop in lastProps) {
-            if (!skipProps[prop] && isNullOrUndefined(nextProps[prop]) && !isNullOrUndefined(lastProps[prop])) {
+            if (!isSkipProp(prop) && isNullOrUndefined(nextProps[prop]) && !isNullOrUndefined(lastProps[prop])) {
                 removeProp(prop, lastProps[prop], dom);
             }
         }
@@ -2679,7 +2878,7 @@ function patchProps(lastVNode, nextVNode, isSVG) {
 
 function patchProp(prop, lastValue, nextValue, dom, isFormElement, isSVG) {
     if (lastValue !== nextValue) {
-        if (skipProps[prop] || isFormElement && prop === 'value') {
+        if (isSkipProp(prop) || isFormElement && prop === 'value') {
             return;
         } else if (booleanProps[prop]) {
             dom[prop] = !!nextValue;
@@ -2729,6 +2928,9 @@ function removeProp(prop, lastValue, dom) {
             case 'dataset':
                 removeDataset(lastValue, dom);
                 return;
+            case 'innerHTML':
+                dom.innerHTML = '';
+                return;
             default:
                 break;
         }
@@ -2753,7 +2955,7 @@ function removeProp(prop, lastValue, dom) {
     }
 }
 
-var removeDataset = browser.isIE ? function (lastValue, dom) {
+var removeDataset = browser.isIE || browser.isSafari ? function (lastValue, dom) {
     for (var key in lastValue) {
         dom.removeAttribute('data-' + kebabCase(key));
     }
@@ -2912,8 +3114,8 @@ function toString$1(vNode, parent, disableSplitText, firstChild) {
                 } else if (prop === 'children' || prop === 'className' || prop === 'key' || prop === 'ref') {
                     // ignore
                 } else if (prop === 'defaultValue') {
-                    if (isNullOrUndefined(props.value)) {
-                        html += ' value="' + escapeText(value) + '"';
+                    if (isNullOrUndefined(props.value) && !isNullOrUndefined(value)) {
+                        html += ' value="' + (isString(value) ? escapeText(value) : value) + '"';
                     }
                 } else if (prop === 'defaultChecked') {
                     if (isNullOrUndefined(props.checked) && value === true) {
@@ -2963,7 +3165,7 @@ function toString$1(vNode, parent, disableSplitText, firstChild) {
                         }
                     }
                 } else {
-                    html += toString$1(children, vNode, true);
+                    html += toString$1(children, vNode, disableSplitText, true);
                 }
             }
 
@@ -3091,6 +3293,9 @@ var _typeof$4 = typeof Symbol === "function" && typeof Symbol.iterator === "symb
 function hydrateRoot(vNode, parentDom, mountedQueue) {
     if (!isNullOrUndefined(parentDom)) {
         var dom = parentDom.firstChild;
+        if (isNullOrUndefined(dom)) {
+            return render(vNode, parentDom, mountedQueue, null, false);
+        }
         var newDom = hydrate(vNode, dom, mountedQueue, parentDom, null, false);
         dom = dom.nextSibling;
         // should only one entry
@@ -3142,10 +3347,12 @@ function hydrateComponentClassOrInstance(vNode, dom, mountedQueue, parentDom, pa
     instance.isRender = true;
     instance.parentVNode = parentVNode;
     instance.isSVG = isSVG;
+    instance.vNode = vNode;
     var newDom = instance.hydrate(vNode, dom);
 
     vNode.dom = newDom;
     vNode.children = instance;
+    vNode.parentVNode = parentVNode;
 
     if (typeof instance.mount === 'function') {
         mountedQueue.push(function () {
@@ -3282,17 +3489,18 @@ function hydrateChildren(children, parentDom, mountedQueue, parentVNode, isSVG) 
     } else {
         if (dom !== null) {
             hydrateElement(children, dom, mountedQueue, parentDom, parentVNode, isSVG);
+            dom = dom.nextSibling;
         } else {
             createElement(children, parentDom, mountedQueue, true, parentVNode, isSVG);
         }
     }
 
     // clear any other DOM nodes, there should be on a single entry for the root
-    // while (dom) {
-    // const nextSibling = dom.nextSibling;
-    // parentDom.removeChild(dom);
-    // dom = nextSibling;
-    // }
+    while (dom) {
+        var _nextSibling = dom.nextSibling;
+        parentDom.removeChild(dom);
+        dom = _nextSibling;
+    }
 }
 
 function normalizeChildren$1(parentDom) {
@@ -3325,7 +3533,8 @@ var miss = (Object.freeze || Object)({
 	MountedQueue: MountedQueue,
 	renderString: toString$1,
 	hydrateRoot: hydrateRoot,
-	hydrate: hydrate
+	hydrate: hydrate,
+	Types: Types
 });
 
 var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
@@ -3341,38 +3550,42 @@ function Vdt$1(source, options) {
     this.vNode = null;
     this.node = null;
     this.widgets = {};
+    this.blocks = {};
 }
 Vdt$1.prototype = {
     constructor: Vdt$1,
 
-    render: function render$$1(data, parentDom, queue, parentVNode, isSVG) {
-        this.renderVNode(data);
+    render: function render$$1(data, parentDom, queue, parentVNode, isSVG, blocks) {
+        this.renderVNode(data, blocks);
         this.node = render(this.vNode, parentDom, queue, parentVNode, isSVG);
 
         return this.node;
     },
-    renderVNode: function renderVNode(data) {
+    renderVNode: function renderVNode(data, blocks) {
         if (data !== undefined) {
             this.data = data;
         }
-        this.vNode = this.template(this.data, Vdt$1);
+        // if (blocks !== undefined) {
+        this.blocks = blocks;
+        // }
+        this.vNode = this.template(this.data, Vdt$1, this.blocks, this.template) || createCommentVNode('empty');
 
         return this.vNode;
     },
-    renderString: function renderString$$1(data) {
-        this.renderVNode(data);
+    renderString: function renderString$$1(data, blocks) {
+        this.renderVNode(data, blocks);
 
         return toString$1(this.vNode, null, Vdt$1.configure().disableSplitText);
     },
-    update: function update(data, parentDom, queue, parentVNode, isSVG) {
+    update: function update(data, parentDom, queue, parentVNode, isSVG, blocks) {
         var oldVNode = this.vNode;
-        this.renderVNode(data);
+        this.renderVNode(data, blocks);
         this.node = patch(oldVNode, this.vNode, parentDom, queue, parentVNode, isSVG);
 
         return this.node;
     },
-    hydrate: function hydrate$$1(data, dom, queue, parentDom, parentVNode, isSVG) {
-        this.renderVNode(data);
+    hydrate: function hydrate$$1(data, dom, queue, parentDom, parentVNode, isSVG, blocks) {
+        this.renderVNode(data, blocks);
         hydrate(this.vNode, dom, queue, parentDom, parentVNode, isSVG);
         this.node = this.vNode.dom;
 
@@ -3398,9 +3611,10 @@ function compile(source, options) {
             var ast = parser.parse(source, options),
                 hscript = stringifier.stringify(ast, options.autoReturn);
 
-            hscript = ['_Vdt || (_Vdt = Vdt);', 'obj || (obj = {});', 'blocks || (blocks = {});', 'var h = _Vdt.miss.h, hc = _Vdt.miss.hc, hu = _Vdt.miss.hu, widgets = this && this.widgets || {}, _blocks = {}, __blocks = {},', '__u = _Vdt.utils, extend = __u.extend, _e = __u.error, _className = __u.className,', '__o = __u.Options, _getModel = __o.getModel, _setModel = __o.setModel,', '_setCheckboxModel = __u.setCheckboxModel, _detectCheckboxChecked = __u.detectCheckboxChecked,', '_setSelectModel = __u.setSelectModel,', (options.server ? 'require = function(file) { return _Vdt.require(file, "' + options.filename.replace(/\\/g, '\\\\') + '") }, ' : '') + 'self = this.data, scope = obj, Animate = self && self.Animate, parent = this._super', options.noWith ? hscript : ['with (obj) {', hscript, '}'].join('\n')].join('\n');
-            templateFn = options.onlySource ? function () {} : new Function('obj', '_Vdt', 'blocks', hscript);
-            templateFn.source = 'function(obj, _Vdt, blocks) {\n' + hscript + '\n}';
+            hscript = ['_Vdt || (_Vdt = Vdt);', 'obj || (obj = {});', 'blocks || (blocks = {});', 'var h = _Vdt.miss.h, hc = _Vdt.miss.hc, hu = _Vdt.miss.hu, widgets = this && this.widgets || {}, _blocks = {}, __blocks = {},', '__u = _Vdt.utils, extend = __u.extend, _e = __u.error, _className = __u.className,', '__o = __u.Options, _getModel = __o.getModel, _setModel = __o.setModel,', '_setCheckboxModel = __u.setCheckboxModel, _detectCheckboxChecked = __u.detectCheckboxChecked,', '_setSelectModel = __u.setSelectModel,', (options.server ? 'require = function(file) { return _Vdt.require(file, "' + options.filename.replace(/\\/g, '\\\\') + '") }, ' : '') + 'self = this.data, $this = this, scope = obj, Animate = self && self.Animate, parent = ($callee || {})._super', options.noWith ? hscript : ['with (obj) {', hscript, '}'].join('\n')].join('\n');
+            templateFn = options.onlySource ? function () {} : new Function('obj', '_Vdt', 'blocks', '$callee', hscript);
+            templateFn.source = 'function(obj, _Vdt, blocks, $callee) {\n' + hscript + '\n}';
+            templateFn.head = stringifier.head;
             break;
         case 'function':
             templateFn = source;
