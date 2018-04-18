@@ -1906,7 +1906,7 @@ function handleEvent(name, lastEvent, nextEvent, dom) {
             if (items.delete(dom)) {
                 if (items.size === 0) {
                     removeEventListener(doc, name, delegatedRoots.docEvent);
-                    delete delegatedRoots[name];
+                    delete delegatedEvents[name];
                 }
             }
         }
@@ -2279,7 +2279,7 @@ function removeHtmlElement(vNode, parentDom) {
     for (var name in props) {
         var prop = props[name];
         if (!isNullOrUndefined(prop) && isEventProp(name)) {
-            handleEvent(name.substr(0, 3), prop, null, dom);
+            handleEvent(name.substr(3), prop, null, dom);
         }
     }
 
