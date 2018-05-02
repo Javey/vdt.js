@@ -3585,6 +3585,7 @@ Vdt$1.prototype = {
         return this.vNode;
     },
     renderString: function renderString$$1(data, blocks) {
+        this.data = data;
         var vNode = this.template(data, Vdt$1, blocks, this.template) || createCommentVNode('empty');
 
         return toString$1(vNode, null, Vdt$1.configure().disableSplitText);

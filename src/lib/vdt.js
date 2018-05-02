@@ -39,6 +39,7 @@ Vdt.prototype = {
     },
 
     renderString(data, blocks) {
+        this.data = data;
         const vNode = this.template(data, Vdt, blocks, this.template) || miss.hc('empty');
 
         return miss.renderString(vNode, null, Vdt.configure().disableSplitText);
