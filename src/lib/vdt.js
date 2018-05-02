@@ -39,9 +39,9 @@ Vdt.prototype = {
     },
 
     renderString(data, blocks) {
-        this.renderVNode(data, blocks);
+        const vNode = this.template(data, Vdt, blocks, this.template) || miss.hc('empty');
 
-        return miss.renderString(this.vNode, null, Vdt.configure().disableSplitText);
+        return miss.renderString(vNode, null, Vdt.configure().disableSplitText);
     },
 
     update(data, parentDom, queue, parentVNode, isSVG, blocks) {

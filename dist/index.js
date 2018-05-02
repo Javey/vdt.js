@@ -2468,9 +2468,15 @@ function patchElement(lastVNode, nextVNode, parentDom, mountedQueue, parentVNode
             }
         }
 
+        var lastRef = lastVNode.ref;
         var nextRef = nextVNode.ref;
-        if (!isNullOrUndefined(nextRef) && lastVNode.ref !== nextRef) {
-            createRef(dom, nextRef, mountedQueue);
+        if (lastRef !== nextRef) {
+            if (!isNullOrUndefined(lastRef)) {
+                lastRef(null);
+            }
+            if (!isNullOrUndefined(nextRef)) {
+                createRef(dom, nextRef, mountedQueue);
+            }
         }
     }
 }
@@ -2503,9 +2509,15 @@ function patchComponentClass(lastVNode, nextVNode, parentDom, mountedQueue, pare
         // for intact.js, the dom will not be removed and
         // the component will not be destoryed, so the ref
         // function need be called in update method.
-        var ref = nextVNode.ref;
-        if (typeof ref === 'function') {
-            ref(instance);
+        var lastRef = lastVNode.ref;
+        var nextRef = nextVNode.ref;
+        if (lastRef !== nextRef) {
+            if (!isNullOrUndefined(lastRef)) {
+                lastRef(null);
+            }
+            if (!isNullOrUndefined(nextRef)) {
+                nextRef(instance);
+            }
         }
     }
 
@@ -3573,9 +3585,9 @@ Vdt$1.prototype = {
         return this.vNode;
     },
     renderString: function renderString$$1(data, blocks) {
-        this.renderVNode(data, blocks);
+        var vNode = this.template(data, Vdt$1, blocks, this.template) || createCommentVNode('empty');
 
-        return toString$1(this.vNode, null, Vdt$1.configure().disableSplitText);
+        return toString$1(vNode, null, Vdt$1.configure().disableSplitText);
     },
     update: function update(data, parentDom, queue, parentVNode, isSVG, blocks) {
         var oldVNode = this.vNode;
