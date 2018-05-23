@@ -1678,6 +1678,9 @@ function applyKey(vNode, reference, isAddKey) {
     if (isNullOrUndefined(vNode.key) || vNode.key[0] === '.') {
         vNode.key = '.$' + reference.index++;
     }
+    // add a flag to indicate that we have handle the vNode
+    // when it came back we should clone it
+    vNode.$ = true;
     return vNode;
 }
 
@@ -1708,7 +1711,7 @@ function addChild(vNodes, reference, isAddKey) {
             if (!newVNodes) {
                 newVNodes = vNodes.slice(0, i);
             }
-            if (n.dom || n.key && n.key[0] === '.') {
+            if (n.dom || n.$) {
                 newVNodes.push(applyKey(directClone(n), reference, isAddKey));
             } else {
                 newVNodes.push(applyKey(n, reference, isAddKey));
@@ -1775,8 +1778,10 @@ function directClone(vNode) {
         }
 
         newVNode = new VNode(type, vNode.tag, vNode.props, children, vNode.className, vNode.key, vNode.ref);
-    } else if (type & Types.TextElement) {
+    } else if (type & Types.Text) {
         newVNode = createTextVNode(vNode.children);
+    } else if (type & Types.HtmlComment) {
+        newVNode = createCommentVNode(vNode.children);
     }
 
     return newVNode;
@@ -2360,9 +2365,9 @@ function appendChild(parentDom, dom) {
 
 function createRef(dom, ref, mountedQueue) {
     if (typeof ref === 'function') {
-        mountedQueue.push(function () {
-            return ref(dom);
-        });
+        // mountedQueue.push(() => ref(dom));
+        // set ref immediately, because we have unset it before
+        ref(dom);
     } else {
         throw new Error('ref must be a function, but got "' + JSON.stringify(ref) + '"');
     }
@@ -2402,7 +2407,7 @@ function patchVNode(lastVNode, nextVNode, parentDom, mountedQueue, parentVNode, 
                 replaceElement(lastVNode, nextVNode, parentDom, mountedQueue, parentVNode, isSVG);
             }
         } else if (nextType & Types.TextElement) {
-            if (lastType & Types.TextElement) {
+            if (lastType === nextType) {
                 patchText(lastVNode, nextVNode);
             } else {
                 replaceElement(lastVNode, nextVNode, parentDom, mountedQueue, isSVG);
