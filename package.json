@@ -1,6 +1,6 @@
 {
   "name": "vdt",
-  "version": "1.2.4",
+  "version": "1.2.5",
   "description": "A template engine based on virtual-dom",
   "main": "dist/index",
   "module": "src/client",
