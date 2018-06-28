@@ -68,8 +68,8 @@ Stringifier.prototype = {
                 str = str.substr(3); 
             }
             // add [][0] for return /* comment */
-            str = 'function() {try {return [' + str + '][0]} catch(e) {_e(e)}}.call(this)';
-            // str = 'function() {try {return (' + str + ')} catch(e) {_e(e)}}.call(this)';
+            str = 'function() {try {return [' + str + '][0]} catch(e) {_e(e)}}.call($this)';
+            // str = 'function() {try {return (' + str + ')} catch(e) {_e(e)}}.call($this)';
             if (hasDestructuring) {
                 str = '...' + str;
             }
@@ -432,11 +432,10 @@ Stringifier.prototype = {
         return this._visitJSXDirective(
             element,
            '(_blocks["' + element.value + '"] = function(parent) {return ' + this._visitJSXChildren(element.children) + ';}) && (__blocks["' + element.value + '"] = function(parent) {\n' +
-                'var self = this;\n' +
-                'return blocks["' + element.value + '"] ? blocks["' + element.value + '"].call(this, function() {\n' +
-                    'return _blocks["' + element.value + '"].call(self, parent);\n' +
-                '}) : _blocks["' + element.value + '"].call(this, parent);\n' +
-            '})' + (isAncestor ? ' && __blocks["' + element.value + '"].call(this)' : '')
+                'return blocks["' + element.value + '"] ? blocks["' + element.value + '"].call($this, function() {\n' +
+                    'return _blocks["' + element.value + '"].call($this, parent);\n' +
+                '}) : _blocks["' + element.value + '"].call($this, parent);\n' +
+            '})' + (isAncestor ? ' && __blocks["' + element.value + '"].call($this)' : '')
         );
     },
 
@@ -457,7 +456,7 @@ Stringifier.prototype = {
                 'function(blocks) {',
                 '    var _blocks = {}, __blocks = extend({}, blocks);',
                 `    return (${blocks.join(' && ')}, __blocks);`,
-                `}.call(this, ${isRoot ? 'blocks' : '{}'})`
+                `}.call($this, ${isRoot ? 'blocks' : '{}'})`
             ].join('\n') : isRoot ? 'blocks' : 'null'
         };
     
@@ -474,8 +473,8 @@ Stringifier.prototype = {
             '        extend(_obj, _obj.arguments === true ? obj : _obj.arguments);',
             '        delete _obj.arguments;',
             '    }',
-            '    return ' + element.value + '.call(this, _obj, _Vdt, ' + this._visitJS(blocks) + ', ' + element.value + ')',
-            '}).call(this)'
+            '    return ' + element.value + '.call($this, _obj, _Vdt, ' + this._visitJS(blocks) + ', ' + element.value + ')',
+            '}).call($this)'
         ].join('\n');
 
         return this._visitJSXDirective(element, ret);

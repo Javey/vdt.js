@@ -1178,8 +1178,8 @@ Stringifier.prototype = {
                 str = str.substr(3);
             }
             // add [][0] for return /* comment */
-            str = 'function() {try {return [' + str + '][0]} catch(e) {_e(e)}}.call(this)';
-            // str = 'function() {try {return (' + str + ')} catch(e) {_e(e)}}.call(this)';
+            str = 'function() {try {return [' + str + '][0]} catch(e) {_e(e)}}.call($this)';
+            // str = 'function() {try {return (' + str + ')} catch(e) {_e(e)}}.call($this)';
             if (hasDestructuring) {
                 str = '...' + str;
             }
@@ -1507,7 +1507,7 @@ Stringifier.prototype = {
     },
 
     _visitJSXBlock: function _visitJSXBlock(element, isAncestor) {
-        return this._visitJSXDirective(element, '(_blocks["' + element.value + '"] = function(parent) {return ' + this._visitJSXChildren(element.children) + ';}) && (__blocks["' + element.value + '"] = function(parent) {\n' + 'var self = this;\n' + 'return blocks["' + element.value + '"] ? blocks["' + element.value + '"].call(this, function() {\n' + 'return _blocks["' + element.value + '"].call(self, parent);\n' + '}) : _blocks["' + element.value + '"].call(this, parent);\n' + '})' + (isAncestor ? ' && __blocks["' + element.value + '"].call(this)' : ''));
+        return this._visitJSXDirective(element, '(_blocks["' + element.value + '"] = function(parent) {return ' + this._visitJSXChildren(element.children) + ';}) && (__blocks["' + element.value + '"] = function(parent) {\n' + 'return blocks["' + element.value + '"] ? blocks["' + element.value + '"].call($this, function() {\n' + 'return _blocks["' + element.value + '"].call($this, parent);\n' + '}) : _blocks["' + element.value + '"].call($this, parent);\n' + '})' + (isAncestor ? ' && __blocks["' + element.value + '"].call($this)' : ''));
     },
 
     _visitJSXBlocks: function _visitJSXBlocks(element, isRoot) {
@@ -1523,7 +1523,7 @@ Stringifier.prototype = {
 
         var _blocks = {
             type: Type$2.JS,
-            value: blocks.length ? ['function(blocks) {', '    var _blocks = {}, __blocks = extend({}, blocks);', '    return (' + blocks.join(' && ') + ', __blocks);', '}.call(this, ' + (isRoot ? 'blocks' : '{}') + ')'].join('\n') : isRoot ? 'blocks' : 'null'
+            value: blocks.length ? ['function(blocks) {', '    var _blocks = {}, __blocks = extend({}, blocks);', '    return (' + blocks.join(' && ') + ', __blocks);', '}.call($this, ' + (isRoot ? 'blocks' : '{}') + ')'].join('\n') : isRoot ? 'blocks' : 'null'
         };
 
         return { blocks: _blocks, children: children.length ? children : null, hasBlock: blocks.length };
@@ -1535,7 +1535,7 @@ Stringifier.prototype = {
             children = _visitJSXBlocks2.children;
 
         element.attributes.push({ name: 'children', value: children });
-        var ret = ['(function() {', '    var _obj = ' + this._visitJSXAttribute(element, false, false).props + ';', '    if (_obj.hasOwnProperty("arguments")) {', '        extend(_obj, _obj.arguments === true ? obj : _obj.arguments);', '        delete _obj.arguments;', '    }', '    return ' + element.value + '.call(this, _obj, _Vdt, ' + this._visitJS(blocks) + ', ' + element.value + ')', '}).call(this)'].join('\n');
+        var ret = ['(function() {', '    var _obj = ' + this._visitJSXAttribute(element, false, false).props + ';', '    if (_obj.hasOwnProperty("arguments")) {', '        extend(_obj, _obj.arguments === true ? obj : _obj.arguments);', '        delete _obj.arguments;', '    }', '    return ' + element.value + '.call($this, _obj, _Vdt, ' + this._visitJS(blocks) + ', ' + element.value + ')', '}).call($this)'].join('\n');
 
         return this._visitJSXDirective(element, ret);
     },

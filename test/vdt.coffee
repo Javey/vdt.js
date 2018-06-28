@@ -715,14 +715,14 @@ describe 'Vdt', ->
         """
         
         Vdt.stringifier.stringify(Vdt.parser.parse(source)).should.eql """
-        return h('div', {...function() {try {return [a][0]} catch(e) {_e(e)}}.call(this), 'b': '1'})
+        return h('div', {...function() {try {return [a][0]} catch(e) {_e(e)}}.call($this), 'b': '1'})
         """
 
         source = """
         var a = {a: 1}; <a {...a}></a>
         """
         Vdt.stringifier.stringify(Vdt.parser.parse(source)).should.eql """
-        var a = {a: 1}; return h('a', {...function() {try {return [a][0]} catch(e) {_e(e)}}.call(this)})
+        var a = {a: 1}; return h('a', {...function() {try {return [a][0]} catch(e) {_e(e)}}.call($this)})
         """
 
     it 'Stringify es6 import should be hoisted', ->
@@ -735,6 +735,6 @@ describe 'Vdt', ->
 
         Vdt.stringifier.stringify(Vdt.parser.parse(source)).should.eql """
          
-        return h('div', null, function() {try {return [test][0]} catch(e) {_e(e)}}.call(this))
+        return h('div', null, function() {try {return [test][0]} catch(e) {_e(e)}}.call($this))
         """
 
