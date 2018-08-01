@@ -177,6 +177,10 @@ export function isDirective(name) {
     return hasOwn.call(Directives, name);
 }
 
+export function isVModel(name) {
+    return name === 'v-model' || name.substr(0, 8) === 'v-model:';
+}
+
 export function extend(...args) {
     var dest = args[0];
     var length = args.length;

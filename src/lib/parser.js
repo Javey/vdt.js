@@ -267,6 +267,7 @@ Parser.prototype = {
         var ret = {
             attributes: [],
             directives: [],
+            models: [],
             hasVRaw: false
         };
         while (this.index < this.length) {

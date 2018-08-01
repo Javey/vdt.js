@@ -266,7 +266,7 @@ Stringifier.prototype = {
             key,
             ref,
             type = 'text',
-            hasModel = false,
+            models = [],
             addition = {trueValue: true, falseValue: false};
         Utils.each(attributes, function(attr) {
             if (attr.type === Type.JSXExpressionContainer) {
@@ -296,10 +296,11 @@ Stringifier.prototype = {
             } else if (name === 'ref' && individualKeyAndRef) {
                 ref = value;
                 return;
-            } else if (name === 'v-model') {
-                hasModel = value;
-                // pass v-model to element, sometimes it is useful
-                // return;
+            } else if (Utils.isVModel(name)) {
+                let [, model] = name.split(':');
+                if (model === 'value') name = 'v-model';
+                if (!model) model = 'value';
+                models.push({name: model, value: value});
             } else if (name === 'v-model-true') {
                 addition.trueValue = value;
                 return;
@@ -315,8 +316,8 @@ Stringifier.prototype = {
             ret.push("'" + name + "': " + value);
         }, this);
 
-        if (hasModel) {
-            this._visitJSXAttributeModel(element, hasModel, ret, type, addition);
+        for (let i = 0; i < models.length; i++) {
+            this._visitJSXAttributeModel(element, models[i], ret, type, addition);
         }
 
         return {
@@ -327,13 +328,14 @@ Stringifier.prototype = {
         };
     },
 
-    _visitJSXAttributeModel: function(element, value, ret, type, addition) {
-        var valueName = 'value',
+    _visitJSXAttributeModel: function(element, model, ret, type, addition) {
+        var valueName = model.name,
+            value = model.value,
             eventName = 'change'; 
+
         if (element.type === Type.JSXElement) {
             switch (element.value) {
                 case 'input':
-                    valueName = 'value';
                     switch (type) {
                         case "'file'":
                             eventName = 'change';
@@ -379,12 +381,11 @@ Stringifier.prototype = {
                 default:
                     break;
             }
-            ret.push(`${valueName}: _getModel(self, ${value})`);
             ret.push(`'ev-${eventName}': function(__e) { _setModel(self, ${value}, __e.target.value, $this) }`);
         } else if (element.type === Type.JSXWidget) {
-            ret.push(`value: _getModel(self, ${value})`);
-            ret.push(`'ev-$change:value': function(__c, __n) { _setModel(self, ${value}, __n, $this) }`);
+            ret.push(`'ev-$change:${valueName}': function(__c, __n) { _setModel(self, ${value}, __n, $this) }`);
         }
+        ret.push(`${valueName}: _getModel(self, ${value})`);
     },
 
     _visitJSXAttributeValue: function(value) {

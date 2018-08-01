@@ -406,6 +406,10 @@ function isDirective(name) {
     return hasOwn.call(Directives, name);
 }
 
+function isVModel(name) {
+    return name === 'v-model' || name.substr(0, 8) === 'v-model:';
+}
+
 function extend() {
     for (var _len = arguments.length, args = Array(_len), _key = 0; _key < _len; _key++) {
         args[_key] = arguments[_key];
@@ -518,6 +522,7 @@ var utils = (Object.freeze || Object)({
 	isSelfClosingTag: isSelfClosingTag,
 	isTextTag: isTextTag,
 	isDirective: isDirective,
+	isVModel: isVModel,
 	extend: extend,
 	setCheckboxModel: setCheckboxModel,
 	detectCheckboxChecked: detectCheckboxChecked,
@@ -791,6 +796,7 @@ Parser.prototype = {
         var ret = {
             attributes: [],
             directives: [],
+            models: [],
             hasVRaw: false
         };
         while (this.index < this.length) {
@@ -1108,6 +1114,8 @@ Parser.prototype = {
     }
 };
 
+var _slicedToArray = function () { function sliceIterator(arr, i) { var _arr = []; var _n = true; var _d = false; var _e = undefined; try { for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) { _arr.push(_s.value); if (i && _arr.length === i) break; } } catch (err) { _d = true; _e = err; } finally { try { if (!_n && _i["return"]) _i["return"](); } finally { if (_d) throw _e; } } return _arr; } return function (arr, i) { if (Array.isArray(arr)) { return arr; } else if (Symbol.iterator in Object(arr)) { return sliceIterator(arr, i); } else { throw new TypeError("Invalid attempt to destructure non-iterable instance"); } }; }();
+
 /**
  * @fileoverview stringify ast of jsx to js
  * @author javey
@@ -1358,7 +1366,7 @@ Stringifier.prototype = {
             key,
             ref,
             type = 'text',
-            hasModel = false,
+            models = [],
             addition = { trueValue: true, falseValue: false };
         each(attributes, function (attr) {
             if (attr.type === Type$2.JSXExpressionContainer) {
@@ -1388,10 +1396,14 @@ Stringifier.prototype = {
             } else if (name === 'ref' && individualKeyAndRef) {
                 ref = value;
                 return;
-            } else if (name === 'v-model') {
-                hasModel = value;
-                // pass v-model to element, sometimes it is useful
-                // return;
+            } else if (isVModel(name)) {
+                var _name$split = name.split(':'),
+                    _name$split2 = _slicedToArray(_name$split, 2),
+                    model = _name$split2[1];
+
+                if (model === 'value') name = 'v-model';
+                if (!model) model = 'value';
+                models.push({ name: model, value: value });
             } else if (name === 'v-model-true') {
                 addition.trueValue = value;
                 return;
@@ -1407,8 +1419,8 @@ Stringifier.prototype = {
             ret.push("'" + name + "': " + value);
         }, this);
 
-        if (hasModel) {
-            this._visitJSXAttributeModel(element, hasModel, ret, type, addition);
+        for (var i = 0; i < models.length; i++) {
+            this._visitJSXAttributeModel(element, models[i], ret, type, addition);
         }
 
         return {
@@ -1419,13 +1431,14 @@ Stringifier.prototype = {
         };
     },
 
-    _visitJSXAttributeModel: function _visitJSXAttributeModel(element, value, ret, type, addition) {
-        var valueName = 'value',
+    _visitJSXAttributeModel: function _visitJSXAttributeModel(element, model, ret, type, addition) {
+        var valueName = model.name,
+            value = model.value,
             eventName = 'change';
+
         if (element.type === Type$2.JSXElement) {
             switch (element.value) {
                 case 'input':
-                    valueName = 'value';
                     switch (type) {
                         case "'file'":
                             eventName = 'change';
@@ -1463,12 +1476,11 @@ Stringifier.prototype = {
                 default:
                     break;
             }
-            ret.push(valueName + ': _getModel(self, ' + value + ')');
             ret.push('\'ev-' + eventName + '\': function(__e) { _setModel(self, ' + value + ', __e.target.value, $this) }');
         } else if (element.type === Type$2.JSXWidget) {
-            ret.push('value: _getModel(self, ' + value + ')');
-            ret.push('\'ev-$change:value\': function(__c, __n) { _setModel(self, ' + value + ', __n, $this) }');
+            ret.push('\'ev-$change:' + valueName + '\': function(__c, __n) { _setModel(self, ' + value + ', __n, $this) }');
         }
+        ret.push(valueName + ': _getModel(self, ' + value + ')');
     },
 
     _visitJSXAttributeValue: function _visitJSXAttributeValue(value) {
