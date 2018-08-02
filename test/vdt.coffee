@@ -762,3 +762,29 @@ describe 'Vdt', ->
         return h('div', null, function() {try {return [test][0]} catch(e) {_e(e)}}.call($this))
         """
 
+    it 'Stringify multiple events', ->
+        source = """
+        <div ev-click={a} ev-click={b} ev-dbclick={c}></div>
+        """
+
+        Vdt.stringifier.stringify(Vdt.parser.parse(source)).should.eql """
+        return h('div', {'ev-click': [function() {try {return [a][0]} catch(e) {_e(e)}}.call($this),function() {try {return [b][0]} catch(e) {_e(e)}}.call($this)], 'ev-dbclick': function() {try {return [c][0]} catch(e) {_e(e)}}.call($this)})
+        """
+
+    it 'Stringify event with model', ->
+        source = """
+        <input v-model="a" ev-input={b} />
+        """
+
+        Vdt.stringifier.stringify(Vdt.parser.parse(source)).should.eql """
+        return h('input', {'v-model': 'a', value: _getModel(self, 'a'), 'ev-input': [function() {try {return [b][0]} catch(e) {_e(e)}}.call($this),function(__e) { _setModel(self, 'a', __e.target.value, $this) }]})
+        """
+
+    it 'Strigify event with model in Component', ->
+        source = """
+        <Input v-model="a" ev-$change:value={b} />
+        """
+
+        Vdt.stringifier.stringify(Vdt.parser.parse(source)).should.eql """
+        return h(Input, {'v-model': 'a', 'children': null, '_context': $this, value: _getModel(self, 'a'), 'ev-$change:value': [function() {try {return [b][0]} catch(e) {_e(e)}}.call($this),function(__c, __n) { _setModel(self, 'a', __n, $this) }]})
+        """

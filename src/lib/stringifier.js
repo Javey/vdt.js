@@ -225,6 +225,19 @@ Stringifier.prototype = {
 
     _visitJSXAttribute: function(element, individualClassName, individualKeyAndRef) {
         var ret = [],
+            events = {},
+            // support bind multiple callbacks for the same event
+            addEvent = (name, value) => {
+                const v = events[name];
+                if (v) {
+                    if (!Utils.isArray(v)) {
+                        events[name] = [v];
+                    }
+                    events[name].push(value);
+                } else {
+                    events[name] = value;
+                }
+            },
             attributes = element.attributes,
             className,
             key,
@@ -276,13 +289,20 @@ Stringifier.prototype = {
                 type = value;
             } else if (name === 'value') {
                 addition.value = value;
+            } else if (Utils.isEventProp(name)) {
+                addEvent(name, value);
+                return;
             }
             ret.push("'" + name + "': " + value);
         }, this);
 
         for (let i = 0; i < models.length; i++) {
-            this._visitJSXAttributeModel(element, models[i], ret, type, addition);
+            this._visitJSXAttributeModel(element, models[i], ret, type, addition, addEvent);
         }
+
+        Utils.each(events, (value, name) => {
+            ret.push(`'${name}': ${Utils.isArray(value) ? '[' + value.join(',') + ']' : value}`);
+        });
 
         return {
             props: ret.length ? '{' + ret.join(', ') + '}' : 'null',
@@ -292,7 +312,7 @@ Stringifier.prototype = {
         };
     },
 
-    _visitJSXAttributeModel: function(element, model, ret, type, addition) {
+    _visitJSXAttributeModel: function(element, model, ret, type, addition, addEvent) {
         var valueName = model.name,
             value = model.value,
             eventName = 'change'; 
@@ -311,18 +331,18 @@ Stringifier.prototype = {
                                 inputValue = addition.value;
                             if (Utils.isNullOrUndefined(inputValue)) {
                                 ret.push(`checked: _getModel(self, ${value}) === ${trueValue}`);
-                                ret.push(`'ev-change': function(__e) {
+                                addEvent('ev-change', `function(__e) {
                                     _setModel(self, ${value}, __e.target.checked ? ${trueValue} : ${falseValue}, $this);
                                 }`);
                             } else {
                                 if (type === "'radio'") {
                                     ret.push(`checked: _getModel(self, ${value}) === ${inputValue}`);
-                                    ret.push(`'ev-change': function(__e) { 
+                                    addEvent('ev-change', `function(__e) { 
                                         _setModel(self, ${value}, __e.target.checked ? ${inputValue} : ${falseValue}, $this);
                                     }`);
                                 } else {
                                     ret.push(`checked: _detectCheckboxChecked(self, ${value}, ${inputValue})`);
-                                    ret.push(`'ev-change': function(__e) { 
+                                    addEvent('ev-change', `function(__e) { 
                                         _setCheckboxModel(self, ${value}, ${inputValue}, ${falseValue}, __e, $this);
                                     }`);
                                 }
@@ -335,7 +355,7 @@ Stringifier.prototype = {
                     break;
                 case 'select':
                     ret.push(`value: _getModel(self, ${value})`);
-                    ret.push(`'ev-change': function(__e) {
+                    addEvent('ev-change', `function(__e) {
                         _setSelectModel(self, ${value}, __e, $this);
                     }`);
                     return;
@@ -345,9 +365,9 @@ Stringifier.prototype = {
                 default:
                     break;
             }
-            ret.push(`'ev-${eventName}': function(__e) { _setModel(self, ${value}, __e.target.value, $this) }`);
+            addEvent(`ev-${eventName}`, `function(__e) { _setModel(self, ${value}, __e.target.value, $this) }`);
         } else if (element.type === Type.JSXWidget) {
-            ret.push(`'ev-$change:${valueName}': function(__c, __n) { _setModel(self, ${value}, __n, $this) }`);
+            addEvent(`ev-$change:${valueName}`, `function(__c, __n) { _setModel(self, ${value}, __n, $this) }`);
         }
         ret.push(`${valueName}: _getModel(self, ${value})`);
     },

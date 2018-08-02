@@ -4,11 +4,13 @@
  * @date 15-4-22
  */
 
-import {isNullOrUndefined, isArray, indexOf, 
-    selfClosingTags as SelfClosingTags
+import {
+    isNullOrUndefined, isArray, indexOf, 
+    selfClosingTags as SelfClosingTags,
+    isEventProp,
 } from 'misstime/src/utils';
 
-export {isNullOrUndefined, isArray, indexOf, SelfClosingTags};
+export {isNullOrUndefined, isArray, indexOf, SelfClosingTags, isEventProp};
 
 let i = 0;
 export const Type = { 
