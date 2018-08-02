@@ -61,9 +61,9 @@ describe 'Vdt', ->
         </ul>
         """
         Vdt.bind(Vdt, source).should.throw("""
-            Unclosed tag: </li> At: {line: 2, column: 24}
+            Unclosed tag: </li> At: {line: 2, column: 21}
             > 2 |     <li class="aa"><li>
-                |                        ^
+                |                     ^
         """)
 
     it 'Redundant } in JSXElement should be parsed correctly', ->

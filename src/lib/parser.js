@@ -198,7 +198,10 @@ Parser.prototype = {
         this._expect('<');
         var start = this.index,
             ret = {},
-            flag = this._charCode();
+            flag = this._charCode(),
+            // save the position to show error if unclosed tag
+            position = {line: this.line, column: this.column};
+
         if (flag >= 65 && flag <= 90/* upper case */) {
             // is a widget
             this._type(Type.JSXWidget, ret);
@@ -233,10 +236,10 @@ Parser.prototype = {
 
         ret.value = this.source.slice(start, this.index);
 
-        return this._parseAttributeAndChildren(ret, prev);
+        return this._parseAttributeAndChildren(ret, prev, position);
     },
 
-    _parseAttributeAndChildren: function(ret, prev) {
+    _parseAttributeAndChildren: function(ret, prev, position) {
         ret.children = [];
         this._parseJSXAttribute(ret, prev);
 
@@ -252,7 +255,7 @@ Parser.prototype = {
             this._expect('>');
         } else {
             this._expect('>');
-            ret.children = this._parseJSXChildren(ret, ret.hasVRaw);
+            ret.children = this._parseJSXChildren(ret, ret.hasVRaw, position);
         }
 
         return ret;
@@ -417,12 +420,10 @@ Parser.prototype = {
         });
     },
 
-    _parseJSXChildren: function(element, hasVRaw) {
+    _parseJSXChildren: function(element, hasVRaw, position) {
         var children = [],
             endTag = element.value + '>',
-            current = null,
-            // save the position to show error if unclosed tag
-            position = {line: this.line, column: this.column};
+            current = null;
 
         switch (element.type) {
             case Type.JSXBlock:
