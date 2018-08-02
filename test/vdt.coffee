@@ -57,12 +57,13 @@ describe 'Vdt', ->
     it 'Unclosed tag should throw a error', ->
         source = """
         <ul class="todo-list">
-            {<li class="aa"><li>}
+            <li class="aa"><li>
         </ul>
         """
         Vdt.bind(Vdt, source).should.throw("""
-            expect string </ At: {line: 3, column: 6} Near: "li>}
-            </ul>"
+            Unclosed tag: </li> At: {line: 2, column: 24}
+            > 2 |     <li class="aa"><li>
+                |                        ^
         """)
 
     it 'Redundant } in JSXElement should be parsed correctly', ->
@@ -78,14 +79,19 @@ describe 'Vdt', ->
         </ul>
         """
         Vdt.bind(Vdt, source).should.throw("""
-            Unexpected identifier } At: {line: 3, column: 29} Near: " id={item}}>{item}</li>
-                })"
+            Unexpected identifier } At: {line: 3, column: 29}
+            > 3 |         return <li id={item}}>{item}</li>
+                |                             ^
         """)
 
     it 'Redundant { in should throw a error', ->
         source = "<div>{{a}</div>"
 
-        Vdt.bind(Vdt, source).should.throw('expect string } At: {line: 1, column: 16} Near: "{{a}</div>"')
+        Vdt.bind(Vdt, source).should.throw("""
+            Expect string } At: {line: 1, column: 16}
+            > 1 | <div>{{a}</div>
+                |                ^
+        """)
 
     it 'Escaped quote in string', ->
         source = """
@@ -590,7 +596,11 @@ describe 'Vdt', ->
                 sdfsdjf
                 <div v-else-if={test === 2}>2</div>
             </div>
-        """).should.throw('v-else-if must be led with v-if. At: {line: 4, column: 6}')
+        """).should.throw """
+            v-else-if must be led with v-if or v-else-if At: {line: 4, column: 19}
+            > 4 |     <div v-else-if={test === 2}>2</div>
+                |                   ^
+        """
 
     it 'Render v-if v-else with comment', ->
         vdt = Vdt("""
@@ -604,6 +614,20 @@ describe 'Vdt', ->
             <div>
                 <div>2</div>
                 <!--<div v-else>default</div>-->
+            </div>
+        """
+
+    it 'Render comment between v-if and v-else', ->
+        vdt = Vdt("""
+            <div>
+                <div v-if={test === 1}>1</div>
+                <!--<div v-else>default</div>-->
+                <div v-else-if={test === 2}>2</div>
+            </div>
+        """)
+        vdt.renderString({test: 2}).should.eql """
+            <div>
+                <div>2</div><!--<div v-else>default</div>-->
             </div>
         """
 

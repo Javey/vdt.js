@@ -194,7 +194,7 @@ Parser.prototype = {
         return token;
     },
 
-    _parseJSXElement: function() {
+    _parseJSXElement: function(prev) {
         this._expect('<');
         var start = this.index,
             ret = {},
@@ -233,17 +233,12 @@ Parser.prototype = {
 
         ret.value = this.source.slice(start, this.index);
 
-        return this._parseAttributeAndChildren(ret);
+        return this._parseAttributeAndChildren(ret, prev);
     },
 
-    _parseAttributeAndChildren: function(ret) {
-        var attrs = this._parseJSXAttribute();
-        Utils.extend(ret, {
-            attributes: attrs.attributes,
-            directives: attrs.directives,
-            children: []
-        });
-        if (!ret.directives.length) delete ret.directives;
+    _parseAttributeAndChildren: function(ret, prev) {
+        ret.children = [];
+        this._parseJSXAttribute(ret, prev);
 
         if (ret.type === Type.JSXElement && Utils.isSelfClosingTag(ret.value)) {
             // self closing tag
@@ -257,18 +252,18 @@ Parser.prototype = {
             this._expect('>');
         } else {
             this._expect('>');
-            ret.children = this._parseJSXChildren(ret, attrs.hasVRaw);
+            ret.children = this._parseJSXChildren(ret, ret.hasVRaw);
         }
 
         return ret;
     },
 
-    _parseJSXAttribute: function() {
-        var ret = {
+    _parseJSXAttribute: function(ret, prev) {
+        ret = Utils.extend(ret, {
             attributes: [],
-            directives: [],
-            hasVRaw: false
-        };
+            directives: {},
+            hasVRaw: false,
+        });
         while (this.index < this.length) {
             this._skipWhitespace();
             if (this._char() === '/' || this._char() === '>') {
@@ -280,7 +275,9 @@ Parser.prototype = {
                     ret.attributes.push(this._parseJSXExpressionContainer());
                     continue;
                 }
-                var attr = this._parseJSXAttributeName();
+
+                var attr = this._parseJSXAttributeName(ret, prev);
+
                 if (attr.name === 'v-raw') {
                     ret.hasVRaw = true;
                     continue;
@@ -298,16 +295,19 @@ Parser.prototype = {
                         )]}
                     );
                 }
-                ret[attr.type === Type.JSXAttribute ? 
-                    'attributes' : 'directives'
-                ].push(attr);
+
+                if (attr.type === Type.JSXAttribute) {
+                    ret.attributes.push(attr);
+                } else {
+                    ret.directives[attr.name] = attr;
+                }
             }
         }
 
         return ret;
     },
 
-    _parseJSXAttributeName: function() {
+    _parseJSXAttributeName: function(ret, prev) {
         var start = this.index;
         if (!isJSXIdentifierPart(this._charCode())) {
             this._error('Unexpected identifier ' + this._char());
@@ -322,10 +322,54 @@ Parser.prototype = {
         
         var name = this.source.slice(start, this.index);
         if (Utils.isDirective(name)) {
-            return this._type(Type.JSXDirective, {name: name});
+            const attr = this._type(Type.JSXDirective, {name: name});
+            this._parseJSXAttributeVIf(ret, attr, prev);
+
+            return attr;
         }
 
         return this._type(Type.JSXAttribute, {name: name});
+    },
+
+    _parseJSXAttributeVIf: function(ret, attr, prev) {
+        const name = attr.name;
+        if (name === 'v-else-if' || name === 'v-else') {
+            let emptyTextNodes = []; // persist empty text node, skip them if find v-else-if or v-else
+            let skipNodes = function() {
+                Utils.each(emptyTextNodes, function(item) {
+                    item.skip = true;
+                });
+                emptyTextNodes = [];
+            };
+
+            prev = {prev};
+            while (prev = prev.prev) {
+                if (prev.type === Type.JSXText && /^\s*$/.test(prev.value)) {
+                    emptyTextNodes.push(prev);
+                    continue;
+                }
+                const type = prev.type;
+                if (type === Type.JSXComment) continue; 
+                if (
+                    type === Type.JSXElement ||
+                    type === Type.JSXWidget ||
+                    type === Type.JSXVdt ||
+                    type === Type.JSXBlock
+                ) {
+                    const prevDirectives = prev.directives;
+                    if (prevDirectives['v-if'] || prevDirectives['v-else-if']) {
+                        prev.next = ret;
+                        ret.skip = true;
+                        skipNodes();
+                    }
+                }
+                break;
+            }
+
+            if (!ret.skip) {
+                this._error(`${name} must be led with v-if or v-else-if`);
+            }
+        }
     },
 
     _parseJSXAttributeValue: function() {
@@ -376,7 +420,9 @@ Parser.prototype = {
     _parseJSXChildren: function(element, hasVRaw) {
         var children = [],
             endTag = element.value + '>',
-            current = null;
+            current = null,
+            // save the position to show error if unclosed tag
+            position = {line: this.line, column: this.column};
 
         switch (element.type) {
             case Type.JSXBlock:
@@ -408,7 +454,7 @@ Parser.prototype = {
                 children.push(current);
             }
         }
-        this._parseJSXClosingElement();
+        this._parseJSXClosingElement(endTag, position);
         return children;
     },
 
@@ -421,7 +467,7 @@ Parser.prototype = {
         } else if (Utils.isTextTag(element.value)) {
             ret = this._scanJSXText([endTag, Delimiters[0]]);
         } else if (this._isElementStart()) {
-            ret = this._parseJSXElement();
+            ret = this._parseJSXElement(prev);
             this._skipWhitespaceBetweenElements(endTag);
         } else {
             ret = this._scanJSXText([function() {
@@ -439,8 +485,8 @@ Parser.prototype = {
         return ret;
     },
 
-    _parseJSXClosingElement: function() {
-        this._expect('</');
+    _parseJSXClosingElement: function(endTag, position) {
+        this._expect('</', `Unclosed tag: ${endTag}`, position);
 
         while (this.index < this.length) {
             if (!isJSXIdentifierPart(this._charCode())) {
@@ -538,9 +584,9 @@ Parser.prototype = {
         }
     },
 
-    _expect: function(str) {
+    _expect: function(str, msg, position) {
         if (!this._isExpect(str)) {
-            this._error('expect string ' + str);
+            this._error(msg || 'Expect string ' + str, position);
         }
         this._updateIndex(str.length);
     },
@@ -583,10 +629,18 @@ Parser.prototype = {
         return index;
     },
 
-    _error: function(msg) {
-        throw new Error(
-            msg + ' At: {line: ' + this.line + ', column: ' + this.column +
-            '} Near: "' + this.source.slice(this.index - 10, this.index + 20) + '"'
+    _error: function(msg, position) {
+        const lines = this.source.split('\n');
+        const {line, column} = position || this;
+        const error = new Error(
+            `${msg} At: {line: ${line}, column: ${column}}\n` +
+            `> ${line} | ${lines[line - 1]}\n` +
+            `  ${new Array(String(line).length + 1).join(' ')} | ${new Array(column).join(' ')}^`
         );
+        error.line = line;
+        error.column = column;
+        error.source = this.source;
+
+        throw error;
     }
 };

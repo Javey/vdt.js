@@ -144,8 +144,8 @@ Stringifier.prototype = {
     _visitJSXChildren: function(children) {
         var ret = [];
         Utils.each(children, function(child) {
-            // if this.element has be handled return directly
-            if (child._skip) return;
+            // ignore element which handled by directive
+            if (child.skip) return;
             ret.push(this._visit(child));
         }, this);
 
@@ -163,13 +163,6 @@ Stringifier.prototype = {
                 case 'v-if':
                     ret = this._visitJSXDirectiveIf(directive, ret, element);
                     break;
-                case 'v-else-if':
-                case 'v-else':
-                    if (element._skip) break;
-                    throw new Error(directive.name + ' must be led with v-if. At: {line: ' +
-                        element.line + ', column: ' + 
-                        element.column + '}'
-                    );
                 case 'v-for':
                     directiveFor.data = this._visitJSXAttributeValue(directive.value);
                     break;
@@ -194,52 +187,23 @@ Stringifier.prototype = {
     _visitJSXDirectiveIf: function(directive, ret, element) {
         var result = this._visitJSXAttributeValue(directive.value) + ' ? ' + ret + ' : ',
             hasElse = false,
-            next = element,
-            emptyTextNodes = [], // persist empty text node, skip them if find v-else-if or v-else
-            skipNodes = function() {
-                Utils.each(emptyTextNodes, function(item) {
-                    item._skip = true;
-                });
-                emptyTextNodes = [];
-            };
+            next = element;
+
         while (next = next.next) {
-            if (next.type === Utils.Type.JSXText) {
-                if (!/^\s*$/.test(next.value)) break;
-                // is not the last text node, mark as handled
-                else emptyTextNodes.push(next);
-            } else if (
-                next.type === Utils.Type.JSXElement ||
-                next.type === Utils.Type.JSXWidget ||
-                next.type === Utils.Type.JSXVdt ||
-                next.type === Utils.Type.JSXBlock
-            ) {
-                if (!next.directives || !next.directives.length) break;
-                var isContinue = false;
-                for (var i = 0, l = next.directives.length; i < l; i++) {
-                    var dire = next.directives[i],
-                        name = dire.name;
-                    if (name === 'v-else-if') {
-                        // mark this element as handled
-                        next._skip = true;
-                        result += this._visitJSXAttributeValue(dire.value) + ' ? ' + this._visit(next) + ' : ';
-                        isContinue = true;
-                        // mark text node before as handled
-                        skipNodes();
-                        break;
-                    } else if (name === 'v-else') {
-                        // mark this element as handled
-                        next._skip = true;
-                        result += this._visit(next);
-                        hasElse = true;
-                        // mark text node before as handled
-                        skipNodes();
-                        break;
-                    }
-                }
-                if (!isContinue) break;
+            const nextDirectives = next.directives;
+
+            if (!nextDirectives) break;
+
+            if (nextDirectives['v-else-if']) {
+                result += this._visitJSXAttributeValue(nextDirectives['v-else-if'].value) + ' ? ' + this._visit(next) + ' : ';
+            } else if (nextDirectives['v-else']) {
+                result += this._visit(next);
+                hasElse = true;
+                break;
             }
         }
         if (!hasElse) result += 'undefined';
+
         return result;
     },
 
