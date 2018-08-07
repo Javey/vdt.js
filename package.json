@@ -3,8 +3,6 @@
   "version": "1.2.6",
   "description": "A template engine based on virtual-dom",
   "main": "dist/index",
-  "module": "src/client",
-  "browser": "dist/vdt",
   "repository": {
     "type": "git",
     "url": "git://github.com/Javey/vdt.js.vdt"
@@ -31,7 +29,7 @@
     "gulp-babel": "^6.1.2",
     "istanbul": "^0.4.5",
     "jquery": "^3.3.1",
-    "misstime": "^0.3.0",
+    "misstime": "git+https://github.com/Javey/misstime.git",
     "mocha": "^5.0.5",
     "mocha-headless-chrome": "^1.8.2",
     "rollup": "^0.41.6",
