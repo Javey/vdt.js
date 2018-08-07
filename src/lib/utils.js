@@ -257,7 +257,6 @@ export function setSelectModel(data, key, e, self) {
     Options.setModel(data, key, value, self);
 }
 
-export const error = (function() {
-    var hasConsole = typeof console !== 'undefined';
-    return hasConsole ? function(e) {console.error(e.stack);} : noop;
-})();
+// in ie8 console.log is an object
+export const hasConsole = typeof console !== 'undefined' && typeof console.log === 'function';
+export const error = hasConsole ? function(e) {console.error(e.stack);} : noop;

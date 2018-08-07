@@ -490,12 +490,11 @@ function setSelectModel(data, key, e, self) {
     Options.setModel(data, key, value, self);
 }
 
-var error$1 = function () {
-    var hasConsole = typeof console !== 'undefined';
-    return hasConsole ? function (e) {
-        console.error(e.stack);
-    } : noop;
-}();
+// in ie8 console.log is an object
+var hasConsole = typeof console !== 'undefined' && typeof console.log === 'function';
+var error$1 = hasConsole ? function (e) {
+    console.error(e.stack);
+} : noop;
 
 
 
@@ -530,6 +529,7 @@ var utils = (Object.freeze || Object)({
 	setCheckboxModel: setCheckboxModel,
 	detectCheckboxChecked: detectCheckboxChecked,
 	setSelectModel: setSelectModel,
+	hasConsole: hasConsole,
 	error: error$1
 });
 
