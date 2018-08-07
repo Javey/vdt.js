@@ -30,6 +30,7 @@ export const Type = {
     JSXComment: i++,
 
     JSXDirective: i++,
+    JSXTemplate: i++,
 };
 export const TypeName = [];
 for (let type in Type) {

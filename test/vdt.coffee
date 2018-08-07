@@ -788,3 +788,26 @@ describe 'Vdt', ->
         Vdt.stringifier.stringify(Vdt.parser.parse(source)).should.eql """
         return h(Input, {'v-model': 'a', 'children': null, '_context': $this, value: _getModel(self, 'a'), 'ev-$change:value': [function() {try {return [b][0]} catch(e) {_e(e)}}.call($this),function(__c, __n) { _setModel(self, 'a', __n, $this) }]})
         """
+
+    it 'render template', ->
+        source = """
+        <div>
+            <template v-if={a}>
+                <div>1</div>
+                <div>2</div>
+            </template>
+            <template v-else>
+                <div>3</div>
+                <div>4</div>
+            </template>
+        </div>
+        """
+
+        render(source, {a: 1}).should.eql """
+        <div>
+    
+                <div>1</div>
+                <div>2</div>
+            
+        </div>
+        """

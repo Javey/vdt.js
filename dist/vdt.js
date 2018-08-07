@@ -257,7 +257,8 @@ var Type$1 = {
     JSXBlock: i++,
     JSXComment: i++,
 
-    JSXDirective: i++
+    JSXDirective: i++,
+    JSXTemplate: i++
 };
 var TypeName$1 = [];
 for (var type in Type$1) {
@@ -769,6 +770,11 @@ Parser.prototype = {
 
         ret.value = this.source.slice(start, this.index);
 
+        // if (ret.value === 'template') {
+        // ret.type = Type.JSXTemplate;
+        // ret.typeName = TypeName[ret.type];
+        // }
+
         return this._parseAttributeAndChildren(ret, prev, position);
     },
 
@@ -1274,6 +1280,8 @@ Stringifier.prototype = {
                 return this._visitJSXVdt(element, isRoot);
             case Type$2.JSXComment:
                 return this._visitJSXComment(element);
+            case Type$2.JSXTemplate:
+                return this._visitJSXTemplate(element);
             default:
                 return 'null';
         }
@@ -1298,6 +1306,9 @@ Stringifier.prototype = {
                 });
                 element.children = [];
             }
+        } else if (element.value === 'template') {
+            var ret = this._visitJSXChildren(element.children);
+            return this._visitJSXDirective(element, ret);
         }
 
         var attributes = this._visitJSXAttribute(element, true, true);
