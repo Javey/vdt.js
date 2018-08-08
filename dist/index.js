@@ -768,11 +768,6 @@ Parser.prototype = {
 
         ret.value = this.source.slice(start, this.index);
 
-        // if (ret.value === 'template') {
-        // ret.type = Type.JSXTemplate;
-        // ret.typeName = TypeName[ret.type];
-        // }
-
         return this._parseAttributeAndChildren(ret, prev, position);
     },
 
@@ -1307,8 +1302,8 @@ Stringifier.prototype = {
                 element.children = [];
             }
         } else if (element.value === 'template') {
-            var ret = this._visitJSXChildren(element.children);
-            return this._visitJSXDirective(element, ret);
+            // <template> is a fake tag, we only need handle its children and itself directives
+            return this._visitJSXDirective(element, this._visitJSXChildren(element.children));
         }
 
         var attributes = this._visitJSXAttribute(element, true, true);
