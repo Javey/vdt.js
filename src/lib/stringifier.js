@@ -201,11 +201,14 @@ Stringifier.prototype = {
 
             if (nextDirectives['v-else-if']) {
                 result += this._visitJSXAttributeValue(nextDirectives['v-else-if'].value) + ' ? ' + this._visit(next) + ' : ';
-            } else if (nextDirectives['v-else']) {
+                continue;
+            }
+            if (nextDirectives['v-else']) {
                 result += this._visit(next);
                 hasElse = true;
-                break;
             }
+
+            break;
         }
         if (!hasElse) result += 'undefined';
 

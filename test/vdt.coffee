@@ -540,6 +540,24 @@ describe 'Vdt', ->
             </div>
         """)
 
+    it 'Render v-if which has v-if before it and skipWhitespace', ->
+        # Vdt.configure({skipWhitespace: false, disableSplitText: true})
+        vdt = Vdt("""
+            <div>
+                <div v-if={a}>1</div>
+                <div v-if={b === 1}>2</div>
+                <div v-else-if={b === 2}>3</div>
+                <div v-else>4</div>
+            </div>
+        """, {skipWhitespace: true})
+
+        vdt.renderString({a: 0, b: 2}).should.eql """
+            <div><div>3</div></div>
+        """
+        vdt.renderString({a: 1, b: 2}).should.eql """
+            <div><div>1</div><div>3</div></div>
+        """
+
     it 'Render v-if v-else-if v-else for <t:template>', ->
         vdt = Vdt("""
             var a = function() { return <div>a</div> }
