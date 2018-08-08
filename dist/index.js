@@ -491,6 +491,8 @@ function setSelectModel(data, key, e, self) {
     Options.setModel(data, key, value, self);
 }
 
+var slice = Array.prototype.slice;
+
 // in ie8 console.log is an object
 var hasConsole = typeof console !== 'undefined' && typeof console.log === 'function';
 var error = hasConsole ? function (e) {
@@ -528,6 +530,7 @@ var utils = (Object.freeze || Object)({
 	setCheckboxModel: setCheckboxModel,
 	detectCheckboxChecked: detectCheckboxChecked,
 	setSelectModel: setSelectModel,
+	slice: slice,
 	hasConsole: hasConsole,
 	error: error
 });
@@ -1389,7 +1392,7 @@ Stringifier.prototype = {
     },
 
     _visitJSXDirectiveFor: function _visitJSXDirectiveFor(directive, ret) {
-        return '_Vdt.utils.map(' + directive.data + ', function(' + directive.value + ', ' + directive.key + ') {\n' + 'return ' + ret + ';\n' + '}, this)';
+        return '__m(' + directive.data + ', function(' + directive.value + ', ' + directive.key + ') {\n' + 'return ' + ret + ';\n' + '}, $this)';
     },
 
     _visitJSXChildrenAsString: function _visitJSXChildrenAsString(children) {
@@ -1404,6 +1407,7 @@ Stringifier.prototype = {
 
     _visitJSXAttribute: function _visitJSXAttribute(element, individualClassName, individualKeyAndRef) {
         var ret = [],
+            set = {},
             events = {},
 
         // support bind multiple callbacks for the same event
@@ -1477,6 +1481,8 @@ Stringifier.prototype = {
                 return;
             }
             ret.push("'" + name + "': " + value);
+            // for get property directly 
+            set[name] = value;
         }, this);
 
         for (var i = 0; i < models.length; i++) {
@@ -1491,7 +1497,8 @@ Stringifier.prototype = {
             props: ret.length ? '{' + ret.join(', ') + '}' : 'null',
             className: className$$1 || 'null',
             ref: ref || 'null',
-            key: key || 'null'
+            key: key || 'null',
+            set: set
         };
     },
 
@@ -1583,12 +1590,39 @@ Stringifier.prototype = {
     },
 
     _visitJSXBlock: function _visitJSXBlock(element, isAncestor) {
-        return this._visitJSXDirective(element, '(_blocks["' + element.value + '"] = function(parent) {return ' + this._visitJSXChildren(element.children) + ';}) && (__blocks["' + element.value + '"] = function(parent) {\n' + 'return blocks["' + element.value + '"] ? blocks["' + element.value + '"].call($this, function() {\n' + 'return _blocks["' + element.value + '"].call($this, parent);\n' + '}) : _blocks["' + element.value + '"].call($this, parent);\n' + '})' + (isAncestor ? ' && __blocks["' + element.value + '"].call($this)' : ''));
+        var _visitJSXBlockAttribu = this._visitJSXBlockAttribute(element),
+            params = _visitJSXBlockAttribu.params,
+            args = _visitJSXBlockAttribu.args;
+
+        return this._visitJSXDirective(element, '(_blocks["' + element.value + '"] = function(parent' + (params ? ', ' + params : '') + ') {\n' + '    return ' + this._visitJSXChildren(element.children) + ';\n' + '}) && (__blocks["' + element.value + '"] = function(parent) {\n' + '    var args = arguments;\n' + '    return blocks["' + element.value + '"] ? blocks["' + element.value + '"].apply($this, [function() {\n' + '        return _blocks["' + element.value + '"].apply($this, args);\n' + '    }].concat(__slice.call(args, 1))) : _blocks["' + element.value + '"].apply($this, args);\n' + '})' + (isAncestor ? ' && __blocks["' + element.value + '"].apply($this, ' + (args ? '[__noop].concat(' + args + ')' : '[__noop]') + ')' : ''));
+    },
+
+    _visitJSXBlockAttribute: function _visitJSXBlockAttribute(element) {
+        var ret = {};
+
+        each(element.attributes, function (attr) {
+            var name = attr.name;
+            var value = void 0;
+            switch (name) {
+                case 'args':
+                    value = this._visitJSXAttributeValue(attr.value);
+                    break;
+                case 'params':
+                    value = this._visitJSXText(attr.value, true);
+                    break;
+                default:
+                    return;
+            }
+            ret[name] = value;
+        }, this);
+
+        return ret;
     },
 
     _visitJSXBlocks: function _visitJSXBlocks(element, isRoot) {
         var blocks = [];
         var children = [];
+
         each(element.children, function (child) {
             if (child.type === Type$2.JSXBlock) {
                 blocks.push(this._visitJSXBlock(child, false));
@@ -1611,7 +1645,12 @@ Stringifier.prototype = {
             children = _visitJSXBlocks2.children;
 
         element.attributes.push({ name: 'children', value: children });
-        var ret = ['(function() {', '    var _obj = ' + this._visitJSXAttribute(element, false, false).props + ';', '    if (_obj.hasOwnProperty("arguments")) {', '        extend(_obj, _obj.arguments === true ? obj : _obj.arguments);', '        delete _obj.arguments;', '    }', '    return ' + element.value + '.call($this, _obj, _Vdt, ' + this._visitJS(blocks) + ', ' + element.value + ')', '}).call($this)'].join('\n');
+
+        var _visitJSXAttribute2 = this._visitJSXAttribute(element, false, false),
+            props = _visitJSXAttribute2.props,
+            set = _visitJSXAttribute2.set;
+
+        var ret = ['(function() {', '    var _obj = ' + props + ';', set.hasOwnProperty('arguments') ? '    extend(_obj, _obj.arguments === true ? obj : _obj.arguments);\n' + '    delete _obj.arguments;' : '', '    return ' + element.value + '.call($this, _obj, _Vdt, ' + this._visitJS(blocks) + ', ' + element.value + ')', '}).call($this)'].join('\n');
 
         return this._visitJSXDirective(element, ret);
     },
@@ -3735,7 +3774,7 @@ function compile(source, options) {
             var ast = parser.parse(source, options),
                 hscript = stringifier.stringify(ast, options.autoReturn);
 
-            hscript = ['_Vdt || (_Vdt = Vdt);', 'obj || (obj = {});', 'blocks || (blocks = {});', 'var h = _Vdt.miss.h, hc = _Vdt.miss.hc, hu = _Vdt.miss.hu, widgets = this && this.widgets || {}, _blocks = {}, __blocks = {},', '__u = _Vdt.utils, extend = __u.extend, _e = __u.error, _className = __u.className,', '__o = __u.Options, _getModel = __o.getModel, _setModel = __o.setModel,', '_setCheckboxModel = __u.setCheckboxModel, _detectCheckboxChecked = __u.detectCheckboxChecked,', '_setSelectModel = __u.setSelectModel,', (options.server ? 'require = function(file) { return _Vdt.require(file, "' + options.filename.replace(/\\/g, '\\\\') + '") }, ' : '') + 'self = this.data, $this = this, scope = obj, Animate = self && self.Animate, parent = ($callee || {})._super', options.noWith ? hscript : ['with (obj) {', hscript, '}'].join('\n')].join('\n');
+            hscript = ['_Vdt || (_Vdt = Vdt);', 'obj || (obj = {});', 'blocks || (blocks = {});', 'var h = _Vdt.miss.h, hc = _Vdt.miss.hc, hu = _Vdt.miss.hu, widgets = this && this.widgets || {}, _blocks = {}, __blocks = {},', '__u = _Vdt.utils, extend = __u.extend, _e = __u.error, _className = __u.className, __slice = __u.slice, __noop = __u.noop,', '__m = __u.map, __o = __u.Options, _getModel = __o.getModel, _setModel = __o.setModel,', '_setCheckboxModel = __u.setCheckboxModel, _detectCheckboxChecked = __u.detectCheckboxChecked,', '_setSelectModel = __u.setSelectModel,', (options.server ? 'require = function(file) { return _Vdt.require(file, "' + options.filename.replace(/\\/g, '\\\\') + '") }, ' : '') + 'self = this.data, $this = this, scope = obj, Animate = self && self.Animate, parent = ($callee || {})._super', options.noWith ? hscript : ['with (obj) {', hscript, '}'].join('\n')].join('\n');
             templateFn = options.onlySource ? function () {} : new Function('obj', '_Vdt', 'blocks', '$callee', hscript);
             templateFn.source = 'function(obj, _Vdt, blocks, $callee) {\n' + hscript + '\n}';
             templateFn.head = stringifier.head;

@@ -223,6 +223,76 @@ describe 'Vdt', ->
         </div>
         """
 
+    it 'Render scope block', ->
+        source = """
+        <div>
+            <div v-for={users}>
+                <b:name args={[value]}>{value.name}</b:name>
+            </div>
+        </div>
+        """
+
+        child = """
+        <t:parent arguments>
+            <b:name params="user">username: {user.name}</b:name>
+        </t:parent>
+        """
+
+        grandson = """
+        <t:child arguments>
+            <b:name params="data">{parent()}, hello {data.name}</b:name>
+        </t:child>
+        """
+
+        users = [{name: 1}, {name: 2}]
+
+        render(source, {users: users}).should.eql """
+        <div>
+            <div>
+                1
+            </div><div>
+                2
+            </div>
+        </div>
+        """
+
+        render(child, {
+            users: users,
+            parent: Vdt.compile(source)
+        }).should.eql """
+        <div>
+            <div>
+                username: 1
+            </div><div>
+                username: 2
+            </div>
+        </div>
+        """
+
+        render(grandson, {
+            users: users,
+            parent: Vdt.compile(source),
+            child: Vdt.compile(child)
+        }).should.eql """
+        <div>
+            <div>
+                username: 1, hello 1
+            </div><div>
+                username: 2, hello 2
+            </div>
+        </div>
+        """
+
+    it 'Render template inherit scope block', ->
+        parent = """
+        <div>
+            <div v-for={users}>
+                <b:head args={[name]}>{name}</b:head>
+                <b:body>body</b:body>
+            </div>
+        </div>
+        """
+
     it 'Render template inherit', ->
         parent = """
         <div>

@@ -79,6 +79,8 @@ var Vdt = require('../dist');
  
 // console.log(Vdt.stringifier.stringify(Vdt.parser.parse(source)));
 
-source = "<div>\n    <div v-if={a}>1</div>\n    <div v-if={b === 1}>2</div>\n    <div v-else-if={b === 2}>3</div>\n    <div v-else>4</div>\n</div>";
-console.log(util.inspect(Vdt.parser.parse(source, {skipWhitespace: true}), {showHidden: true, depth: null}));
+// source = "<div>\n    <div v-if={a}>1</div>\n    <div v-if={b === 1}>2</div>\n    <div v-else-if={b === 2}>3</div>\n    <div v-else>4</div>\n</div>";
+source = "<div><b:name args={[value]}>{value.name}</b:name></div>";
+var ast = Vdt.parser.parse(source, {skipWhitespace: true});
+console.log(util.inspect(ast, {showHidden: true, depth: null}));
 

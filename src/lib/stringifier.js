@@ -216,9 +216,9 @@ Stringifier.prototype = {
     },
 
     _visitJSXDirectiveFor: function(directive, ret) {
-        return '_Vdt.utils.map(' + directive.data + ', function(' + directive.value + ', ' + directive.key + ') {\n' +
+        return '__m(' + directive.data + ', function(' + directive.value + ', ' + directive.key + ') {\n' +
             'return ' + ret + ';\n' +
-        '}, this)';
+        '}, $this)';
     },
 
     _visitJSXChildrenAsString: function(children) {
@@ -233,6 +233,7 @@ Stringifier.prototype = {
 
     _visitJSXAttribute: function(element, individualClassName, individualKeyAndRef) {
         var ret = [],
+            set = {},
             events = {},
             // support bind multiple callbacks for the same event
             addEvent = (name, value) => {
@@ -302,6 +303,8 @@ Stringifier.prototype = {
                 return;
             }
             ret.push("'" + name + "': " + value);
+            // for get property directly 
+            set[name] = value;
         }, this);
 
         for (let i = 0; i < models.length; i++) {
@@ -316,7 +319,8 @@ Stringifier.prototype = {
             props: ret.length ? '{' + ret.join(', ') + '}' : 'null',
             className: className || 'null',
             ref: ref || 'null',
-            key: key || 'null'
+            key: key || 'null',
+            set: set
         };
     },
 
@@ -422,19 +426,47 @@ Stringifier.prototype = {
     },
 
     _visitJSXBlock: function(element, isAncestor) {
+        const {params, args} = this._visitJSXBlockAttribute(element);
         return this._visitJSXDirective(
             element,
-           '(_blocks["' + element.value + '"] = function(parent) {return ' + this._visitJSXChildren(element.children) + ';}) && (__blocks["' + element.value + '"] = function(parent) {\n' +
-                'return blocks["' + element.value + '"] ? blocks["' + element.value + '"].call($this, function() {\n' +
-                    'return _blocks["' + element.value + '"].call($this, parent);\n' +
-                '}) : _blocks["' + element.value + '"].call($this, parent);\n' +
-            '})' + (isAncestor ? ' && __blocks["' + element.value + '"].call($this)' : '')
+            '(_blocks["' + element.value + '"] = function(parent' + (params ? ', ' + params : '') + ') {\n' +
+            '    return ' + this._visitJSXChildren(element.children) + ';\n' + 
+            '}) && (__blocks["' + element.value + '"] = function(parent) {\n' +
+            '    var args = arguments;\n' +
+            '    return blocks["' + element.value + '"] ? blocks["' + element.value + '"].apply($this, [function() {\n' +
+            '        return _blocks["' + element.value + '"].apply($this, args);\n' +
+            '    }].concat(__slice.call(args, 1))) : _blocks["' + element.value + '"].apply($this, args);\n' +
+            '})' + (isAncestor ? ' && __blocks["' + element.value + '"].apply($this, ' + 
+                (args ? '[__noop].concat(' + args + ')' : '[__noop]') + ')' : '')
         );
+    },
+
+    _visitJSXBlockAttribute: function(element) {
+        const ret = {};
+
+        Utils.each(element.attributes, function(attr) {
+            const name = attr.name;
+            let value;
+            switch (name) {
+                case 'args':
+                    value = this._visitJSXAttributeValue(attr.value);
+                    break;
+                case 'params':
+                    value = this._visitJSXText(attr.value, true);
+                    break;
+                default:
+                    return;
+            }
+            ret[name] = value;
+        }, this);
+          
+        return ret;
     },
 
     _visitJSXBlocks: function(element, isRoot) {
         const blocks = [];
         const children = [];
+
         Utils.each(element.children, function(child) {
             if (child.type === Type.JSXBlock) {
                 blocks.push(this._visitJSXBlock(child, false));
@@ -459,13 +491,13 @@ Stringifier.prototype = {
     _visitJSXVdt: function(element, isRoot) {
         const {blocks, children} = this._visitJSXBlocks(element, isRoot);
         element.attributes.push({name: 'children', value: children});
+        const {props, set} = this._visitJSXAttribute(element, false, false);
         const ret = [
             '(function() {',
-            '    var _obj = ' + this._visitJSXAttribute(element, false, false).props + ';',
-            '    if (_obj.hasOwnProperty("arguments")) {',
-            '        extend(_obj, _obj.arguments === true ? obj : _obj.arguments);',
-            '        delete _obj.arguments;',
-            '    }',
+            '    var _obj = ' + props + ';',
+            set.hasOwnProperty('arguments') ? 
+            '    extend(_obj, _obj.arguments === true ? obj : _obj.arguments);\n' +
+            '    delete _obj.arguments;' : '',
             '    return ' + element.value + '.call($this, _obj, _Vdt, ' + this._visitJS(blocks) + ', ' + element.value + ')',
             '}).call($this)'
         ].join('\n');

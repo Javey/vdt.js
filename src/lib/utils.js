@@ -258,6 +258,8 @@ export function setSelectModel(data, key, e, self) {
     Options.setModel(data, key, value, self);
 }
 
+export const slice = Array.prototype.slice;
+
 // in ie8 console.log is an object
 export const hasConsole = typeof console !== 'undefined' && typeof console.log === 'function';
 export const error = hasConsole ? function(e) {console.error(e.stack);} : noop;
