@@ -465,6 +465,7 @@ Parser.prototype = {
 
         if (this._isExpect(Delimiters[0])) {
             ret = this._parseJSXExpressionContainer();
+            this._skipWhitespaceBetweenElements(endTag, false);
         } else if (Utils.isTextTag(element.value)) {
             ret = this._scanJSXText([endTag, Delimiters[0]]);
         } else if (this._isElementStart()) {
@@ -527,15 +528,22 @@ Parser.prototype = {
          return this.source.charCodeAt(index);
     },
 
-    _skipWhitespaceBetweenElements: function(endTag) {
+    _skipWhitespaceBetweenElements: function(endTag, skipBeforeDelimiter = true) {
         if (!this.options.skipWhitespace) return;
 
+        const Delimiters = this.options.delimiters;
         let start = this.index;
         while (start < this.length) {
             const code = this._charCode(start);
             if (Utils.isWhiteSpace(code)) {
                 start++;
-            } else if (this._isExpect(endTag, start) || this._isElementStart(start)) {
+            } else if (
+                this._isExpect(endTag, start) || 
+                this._isElementStart(start) ||
+                // skip whitespaces between after element starting and expression
+                // but not skip before element ending 
+                (skipBeforeDelimiter && this._isExpect(Delimiters[0], start))
+            ) {
                 this._skipWhitespace();
                 break;
             } else {

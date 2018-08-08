@@ -988,6 +988,7 @@ Parser.prototype = {
 
         if (this._isExpect(Delimiters[0])) {
             ret = this._parseJSXExpressionContainer();
+            this._skipWhitespaceBetweenElements(endTag, false);
         } else if (isTextTag(element.value)) {
             ret = this._scanJSXText([endTag, Delimiters[0]]);
         } else if (this._isElementStart()) {
@@ -1055,14 +1056,20 @@ Parser.prototype = {
     },
 
     _skipWhitespaceBetweenElements: function _skipWhitespaceBetweenElements(endTag) {
+        var skipBeforeDelimiter = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : true;
+
         if (!this.options.skipWhitespace) return;
 
+        var Delimiters = this.options.delimiters;
         var start = this.index;
         while (start < this.length) {
             var code = this._charCode(start);
             if (isWhiteSpace(code)) {
                 start++;
-            } else if (this._isExpect(endTag, start) || this._isElementStart(start)) {
+            } else if (this._isExpect(endTag, start) || this._isElementStart(start) ||
+            // skip whitespaces between after element starting and expression
+            // but not skip before element ending 
+            skipBeforeDelimiter && this._isExpect(Delimiters[0], start)) {
                 this._skipWhitespace();
                 break;
             } else {
