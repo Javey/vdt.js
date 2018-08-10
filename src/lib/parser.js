@@ -8,6 +8,7 @@ import * as Utils from './utils';
 
 const {Type, TypeName} = Utils;
 const elementNameRegexp = /^<\w+:?\s*[\{\w\/>]/;
+const emptyRegexp = /^\s*$/;
 // const importRegexp = /^\s*\bimport\b/;
 
 function isJSXIdentifierPart(ch) {
@@ -62,7 +63,8 @@ Parser.prototype = {
     _scanJS: function(braces, isRoot) {
         var start = this.index,
             tmp,
-            Delimiters = this.options.delimiters;
+            Delimiters = this.options.delimiters,
+            element = this._type(Type.JS);
 
         while (this.index < this.length) {
             this._skipJSComment();
@@ -90,13 +92,15 @@ Parser.prototype = {
             }
         }
 
-        return this._type(Type.JS, {
-            value: this.source.slice(start, this.index)
-        });
+        element.value = this.source.slice(start, this.index);
+
+        return element;
     },
 
     _scanJSImport() {
-        var start = this.index;
+        var start = this.index,
+            element = this._type(Type.JSImport);
+
         this._updateIndex(7); // 'import '.length
         while (this.index < this.length) {
             var ch = this._char();
@@ -113,17 +117,18 @@ Parser.prototype = {
             }
         }
 
-        return this._type(Type.JSImport, {
-            value: this.source.slice(start, this.index)
-        });
+        element.value = this.source.slice(start, this.index);
+
+        return element;
     },
 
     _scanStringLiteral: function() {
         var quote = this._char(),
             start = this.index,
-            str = '';
-        this._updateIndex();
+            str = '',
+            element = this._type(Type.StringLiteral);
 
+        this._updateIndex();
         while (this.index < this.length) {
             var ch = this._char();
             if (ch.charCodeAt(0) === 10) {
@@ -144,9 +149,9 @@ Parser.prototype = {
             this._error('Unclosed quote');
         }
 
-        return this._type(Type.StringLiteral, {
-            value: this.source.slice(start, this.index)
-        });
+        element.value = this.source.slice(start, this.index);
+
+        return element;
     },
 
     _scanJSX: function() {
@@ -157,7 +162,8 @@ Parser.prototype = {
         var start = this.index,
             l = stopChars.length,
             i,
-            charCode;
+            charCode,
+            element = this._type(Type.JSXText);
 
         loop:
         while (this.index < this.length) {
@@ -178,9 +184,9 @@ Parser.prototype = {
             this._updateIndex();
         }
 
-        return this._type(Type.JSXText, {
-            value: this.source.slice(start, this.index)
-        });
+        element.value = this.source.slice(start, this.index);
+
+        return element;
     },
 
     _scanJSXStringLiteral: function() {
@@ -194,11 +200,12 @@ Parser.prototype = {
         return token;
     },
 
-    _parseJSXElement: function() {
+    _parseJSXElement: function(prev) {
         this._expect('<');
         var start = this.index,
             ret = {},
             flag = this._charCode();
+
         if (flag >= 65 && flag <= 90/* upper case */) {
             // is a widget
             this._type(Type.JSXWidget, ret);
@@ -233,17 +240,12 @@ Parser.prototype = {
 
         ret.value = this.source.slice(start, this.index);
 
-        return this._parseAttributeAndChildren(ret);
+        return this._parseAttributeAndChildren(ret, prev);
     },
 
-    _parseAttributeAndChildren: function(ret) {
-        var attrs = this._parseJSXAttribute();
-        Utils.extend(ret, {
-            attributes: attrs.attributes,
-            directives: attrs.directives,
-            children: []
-        });
-        if (!ret.directives.length) delete ret.directives;
+    _parseAttributeAndChildren: function(ret, prev) {
+        ret.children = [];
+        this._parseJSXAttribute(ret, prev);
 
         if (ret.type === Type.JSXElement && Utils.isSelfClosingTag(ret.value)) {
             // self closing tag
@@ -257,18 +259,31 @@ Parser.prototype = {
             this._expect('>');
         } else {
             this._expect('>');
-            ret.children = this._parseJSXChildren(ret, attrs.hasVRaw);
+            if (Utils.isTextTag(ret.value)) {
+                // if it is a text element, treat children as innerHTML attribute
+                const attr = this._type(Type.JSXAttribute, {
+                    name: 'innerHTML',
+                    value: this._type(Type.JSXString)
+                });
+                const children = this._parseJSXChildren(ret, ret.hasVRaw);
+                if (children.length) {
+                    attr.value.value = children;
+                    ret.attributes.push(attr);
+                }
+            } else {
+                ret.children = this._parseJSXChildren(ret, ret.hasVRaw); 
+            }
         }
 
         return ret;
     },
 
-    _parseJSXAttribute: function() {
-        var ret = {
+    _parseJSXAttribute: function(ret, prev) {
+        ret = Utils.extend(ret, {
             attributes: [],
-            directives: [],
-            hasVRaw: false
-        };
+            directives: {},
+            hasVRaw: false,
+        });
         while (this.index < this.length) {
             this._skipWhitespace();
             if (this._char() === '/' || this._char() === '>') {
@@ -280,7 +295,9 @@ Parser.prototype = {
                     ret.attributes.push(this._parseJSXExpressionContainer());
                     continue;
                 }
-                var attr = this._parseJSXAttributeName();
+
+                var attr = this._parseJSXAttributeName(ret, prev);
+
                 if (attr.name === 'v-raw') {
                     ret.hasVRaw = true;
                     continue;
@@ -298,20 +315,28 @@ Parser.prototype = {
                         )]}
                     );
                 }
-                ret[attr.type === Type.JSXAttribute ? 
-                    'attributes' : 'directives'
-                ].push(attr);
+
+                if (attr.type === Type.JSXAttribute) {
+                    ret.attributes.push(attr);
+                } else {
+                    ret.directives[attr.name] = attr;
+                }
             }
         }
 
         return ret;
     },
 
-    _parseJSXAttributeName: function() {
-        var start = this.index;
+    _parseJSXAttributeName: function(ret, prev) {
+        let start = this.index;
+        let line = this.line;
+        let column = this.column;
+        let element;
+
         if (!isJSXIdentifierPart(this._charCode())) {
             this._error('Unexpected identifier ' + this._char());
         }
+
         while (this.index < this.length) {
             var ch = this._charCode();
             if (!isJSXIdentifierPart(ch)) {
@@ -322,10 +347,56 @@ Parser.prototype = {
         
         var name = this.source.slice(start, this.index);
         if (Utils.isDirective(name)) {
-            return this._type(Type.JSXDirective, {name: name});
+            element = this._type(Type.JSXDirective, {name: name});
+            this._parseJSXAttributeVIf(ret, element, prev);
+        } else {
+            element = this._type(Type.JSXAttribute, {name: name});
         }
+        element.line = line;
+        element.column = column;
 
-        return this._type(Type.JSXAttribute, {name: name});
+        return element;
+    },
+
+    _parseJSXAttributeVIf: function(ret, attr, prev) {
+        const name = attr.name;
+        if (name === 'v-else-if' || name === 'v-else') {
+            let emptyTextNodes = []; // persist empty text node, skip them if find v-else-if or v-else
+            let skipNodes = function() {
+                Utils.each(emptyTextNodes, function(item) {
+                    item.skip = true;
+                });
+                emptyTextNodes = [];
+            };
+
+            prev = {prev};
+            while (prev = prev.prev) {
+                if (prev.type === Type.JSXText && /^\s*$/.test(prev.value)) {
+                    emptyTextNodes.push(prev);
+                    continue;
+                }
+                const type = prev.type;
+                if (type === Type.JSXComment) continue; 
+                if (
+                    type === Type.JSXElement ||
+                    type === Type.JSXWidget ||
+                    type === Type.JSXVdt ||
+                    type === Type.JSXBlock
+                ) {
+                    const prevDirectives = prev.directives;
+                    if (prevDirectives['v-if'] || prevDirectives['v-else-if']) {
+                        prev.next = ret;
+                        ret.skip = true;
+                        skipNodes();
+                    }
+                }
+                break;
+            }
+
+            if (!ret.skip) {
+                this._error(`${name} must be led with v-if or v-else-if`);
+            }
+        }
     },
 
     _parseJSXAttributeValue: function() {
@@ -341,21 +412,27 @@ Parser.prototype = {
 
     _parseJSXExpressionContainer: function() {
         var expression,
-            Delimiters = this.options.delimiters;
+            Delimiters = this.options.delimiters,
+            element = this._type(Type.JSXExpressionContainer);
+
         this._expect(Delimiters[0]);
+        this._skipWhitespaceAndJSComment();
         if (this._isExpect(Delimiters[1])) {
-            expression = this._parseJSXEmptyExpression();
+            expression = [this._parseJSXEmptyExpression()];
         } else if (this._isExpect('=')) {
             // if the lead char is '=', then treat it as unescape string
+            this._skipWhitespace();
             expression = this._parseJSXUnescapeText();
-            this._expect(Delimiters[1]);
+            this._expect(Delimiters[1], `Unclosed delimiter`, expression);
             return expression;
         } else {
             expression = this._parseExpression();
         }
-        this._expect(Delimiters[1]);
+        this._expect(Delimiters[1], `Unclosed delimiter`, element);
 
-        return this._type(Type.JSXExpressionContainer, {value: expression});
+        element.value = expression;
+
+        return element;
     },
 
     _parseJSXEmptyExpression: function() {
@@ -408,7 +485,7 @@ Parser.prototype = {
                 children.push(current);
             }
         }
-        this._parseJSXClosingElement();
+        this._parseJSXClosingElement(endTag, element);
         return children;
     },
 
@@ -418,10 +495,11 @@ Parser.prototype = {
 
         if (this._isExpect(Delimiters[0])) {
             ret = this._parseJSXExpressionContainer();
+            this._skipWhitespaceBetweenElements(endTag, false);
         } else if (Utils.isTextTag(element.value)) {
             ret = this._scanJSXText([endTag, Delimiters[0]]);
         } else if (this._isElementStart()) {
-            ret = this._parseJSXElement();
+            ret = this._parseJSXElement(prev);
             this._skipWhitespaceBetweenElements(endTag);
         } else {
             ret = this._scanJSXText([function() {
@@ -439,8 +517,8 @@ Parser.prototype = {
         return ret;
     },
 
-    _parseJSXClosingElement: function() {
-        this._expect('</');
+    _parseJSXClosingElement: function(endTag, element) {
+        this._expect('</', `Unclosed tag: ${endTag}`, element);
 
         while (this.index < this.length) {
             if (!isJSXIdentifierPart(this._charCode())) {
@@ -455,7 +533,9 @@ Parser.prototype = {
 
     _parseJSXComment: function() {
         this._expect('!--');
-        var start = this.index;
+        var start = this.index,
+            element = this._type(Type.JSXComment);
+
         while (this.index < this.length) {
             if (this._isExpect('-->')) {
                 break;
@@ -464,12 +544,10 @@ Parser.prototype = {
             }
             this._updateIndex();
         }
-        var ret = this._type(Type.JSXComment, {
-            value: this.source.slice(start, this.index)
-        });
+        element.value = this.source.slice(start, this.index);
         this._expect('-->');
 
-        return ret;
+        return element;
     },
 
     _char: function(index = this.index) {
@@ -480,15 +558,22 @@ Parser.prototype = {
          return this.source.charCodeAt(index);
     },
 
-    _skipWhitespaceBetweenElements: function(endTag) {
+    _skipWhitespaceBetweenElements: function(endTag, skipBeforeDelimiter = true) {
         if (!this.options.skipWhitespace) return;
 
+        const Delimiters = this.options.delimiters;
         let start = this.index;
         while (start < this.length) {
             const code = this._charCode(start);
             if (Utils.isWhiteSpace(code)) {
                 start++;
-            } else if (this._isExpect(endTag, start) || this._isElementStart(start)) {
+            } else if (
+                this._isExpect(endTag, start) || 
+                this._isElementStart(start) ||
+                // skip whitespaces between after element starting and expression
+                // but not skip before element ending 
+                (skipBeforeDelimiter && this._isExpect(Delimiters[0], start))
+            ) {
                 this._skipWhitespace();
                 break;
             } else {
@@ -511,36 +596,50 @@ Parser.prototype = {
     },
 
     _skipJSComment: function() {
-        if (this._char() === '/') {
-            var ch = this._char(this.index + 1);
-            if (ch === '/') {
-                this._updateIndex(2);
-                while (this.index < this.length) {
-                    if (this._charCode() === 10) {
-                        // is \n
-                        this._updateLine();
-                        break;
+        let start;
+        do {
+            start = this.index;
+            if (this._char() === '/') {
+                var ch = this._char(this.index + 1);
+                if (ch === '/') {
+                    this._updateIndex(2);
+                    while (this.index < this.length) {
+                        let code = this._charCode();
+                        this._updateIndex();
+                        if (code === 10) {
+                            // is \n
+                            this._updateLine();
+                            break;
+                        }
                     }
-                    this._updateIndex();
-                }
-            } else if (ch === '*') {
-                this._updateIndex(2);
-                while (this.index < this.length) {
-                    if (this._isExpect('*/')) {
-                        this._updateIndex(2);
-                        break;
-                    } else if (this._charCode() === 10) {
-                        this._updateLine();
+                } else if (ch === '*') {
+                    this._updateIndex(2);
+                    while (this.index < this.length) {
+                        if (this._isExpect('*/')) {
+                            this._updateIndex(2);
+                            break;
+                        } else if (this._charCode() === 10) {
+                            this._updateLine();
+                        }
+                        this._updateIndex();
                     }
-                    this._updateIndex();
                 }
             }
-        }
+        } while (start !== this.index);
     },
 
-    _expect: function(str) {
+    _skipWhitespaceAndJSComment: function() {
+        let start;
+        do {
+            start = this.index;
+            this._skipWhitespace();
+            this._skipJSComment();
+        } while (start !== this.index);
+    },
+
+    _expect: function(str, msg, element) {
         if (!this._isExpect(str)) {
-            this._error('expect string ' + str);
+            this._error(msg || 'Expect string ' + str, element);
         }
         this._updateIndex(str.length);
     },
@@ -583,10 +682,18 @@ Parser.prototype = {
         return index;
     },
 
-    _error: function(msg) {
-        throw new Error(
-            msg + ' At: {line: ' + this.line + ', column: ' + this.column +
-            '} Near: "' + this.source.slice(this.index - 10, this.index + 20) + '"'
+    _error: function(msg, element) {
+        const lines = this.source.split('\n');
+        const {line, column} = element || this;
+        const error = new Error(
+            `${msg} (${line}:${column})\n` +
+            `> ${line} | ${lines[line - 1]}\n` +
+            `  ${new Array(String(line).length + 1).join(' ')} | ${new Array(column).join(' ')}^`
         );
+        error.line = line;
+        error.column = column;
+        error.source = this.source;
+
+        throw error;
     }
 };

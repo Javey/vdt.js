@@ -1,7 +1,7 @@
 import Parser from './parser';
 import Stringifier from './stringifier';
 import * as utils from './utils';
-import * as miss from 'misstime';
+import * as miss from 'misstime/src';
 
 const parser = new Parser();
 const stringifier = new Stringifier();
@@ -39,9 +39,10 @@ Vdt.prototype = {
     },
 
     renderString(data, blocks) {
-        this.renderVNode(data, blocks);
+        this.data = data;
+        const vNode = this.template(data, Vdt, blocks, this.template) || miss.hc('empty');
 
-        return miss.renderString(this.vNode, null, Vdt.configure().disableSplitText);
+        return miss.renderString(vNode, null, Vdt.configure().disableSplitText);
     },
 
     update(data, parentDom, queue, parentVNode, isSVG, blocks) {
@@ -85,21 +86,20 @@ function compile(source, options) {
                 'obj || (obj = {});',
                 'blocks || (blocks = {});',
                 'var h = _Vdt.miss.h, hc = _Vdt.miss.hc, hu = _Vdt.miss.hu, widgets = this && this.widgets || {}, _blocks = {}, __blocks = {},',
-                    '__u = _Vdt.utils, extend = __u.extend, _e = __u.error, _className = __u.className,',
-                    '__o = __u.Options, _getModel = __o.getModel, _setModel = __o.setModel,',
-                    '_setCheckboxModel = __u.setCheckboxModel, _detectCheckboxChecked = __u.detectCheckboxChecked,',
-                    '_setSelectModel = __u.setSelectModel,',
-                    (options.server ? 
-                        'require = function(file) { return _Vdt.require(file, "' + 
-                            options.filename.replace(/\\/g, '\\\\') + 
-                        '") }, ' : 
-                        ''
-                    ) +
-                    'self = this.data, $this = this, scope = obj, Animate = self && self.Animate, parent = ($callee || {})._super',
+                '    __u = _Vdt.utils, extend = __u.extend, _e = __u.error, _className = __u.className, __slice = __u.slice, __noop = __u.noop,',
+                '    __m = __u.map, __o = __u.Options, _getModel = __o.getModel, _setModel = __o.setModel,',
+                '    _setCheckboxModel = __u.setCheckboxModel, _detectCheckboxChecked = __u.detectCheckboxChecked,',
+                '    _setSelectModel = __u.setSelectModel,',
+                (options.server ? 
+                '    require = function(file) { return _Vdt.require(file, "' + 
+                        options.filename.replace(/\\/g, '\\\\') + 
+                '    ") }, ' : 
+                ''),
+                '    self = this.data, $this = this, scope = obj, Animate = self && self.Animate, parent = ($callee || {})._super',
                 options.noWith ? hscript : [
-                    'with (obj) {',
-                        hscript,
-                    '}'
+                '    with (obj) {',
+                '        ' + hscript,
+                '    }',
                 ].join('\n')
             ].join('\n');
             templateFn = options.onlySource ? function() {} : new Function('obj', '_Vdt', 'blocks', '$callee', hscript);

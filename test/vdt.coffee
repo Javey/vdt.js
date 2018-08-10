@@ -57,12 +57,13 @@ describe 'Vdt', ->
     it 'Unclosed tag should throw a error', ->
         source = """
         <ul class="todo-list">
-            {<li class="aa"><li>}
+            <li class="aa"><li>
         </ul>
         """
         Vdt.bind(Vdt, source).should.throw("""
-            expect string </ At: {line: 3, column: 6} Near: "li>}
-            </ul>"
+            Unclosed tag: </li> (2:21)
+            > 2 |     <li class="aa"><li>
+                |                     ^
         """)
 
     it 'Redundant } in JSXElement should be parsed correctly', ->
@@ -78,14 +79,19 @@ describe 'Vdt', ->
         </ul>
         """
         Vdt.bind(Vdt, source).should.throw("""
-            Unexpected identifier } At: {line: 3, column: 29} Near: " id={item}}>{item}</li>
-                })"
+            Unexpected identifier } (3:29)
+            > 3 |         return <li id={item}}>{item}</li>
+                |                             ^
         """)
 
     it 'Redundant { in should throw a error', ->
         source = "<div>{{a}</div>"
 
-        Vdt.bind(Vdt, source).should.throw('expect string } At: {line: 1, column: 16} Near: "{{a}</div>"')
+        Vdt.bind(Vdt, source).should.throw("""
+            Unclosed delimiter (1:6)
+            > 1 | <div>{{a}</div>
+                |      ^
+        """)
 
     it 'Escaped quote in string', ->
         source = """
@@ -214,6 +220,76 @@ describe 'Vdt', ->
         render(source, {show: false}).should.eql """
         <div>
             hide
+        </div>
+        """
+
+    it 'Render scope block', ->
+        source = """
+        <div>
+            <div v-for={users}>
+                <b:name args={[value]}>{value.name}</b:name>
+            </div>
+        </div>
+        """
+
+        child = """
+        <t:parent arguments>
+            <b:name params="user">username: {user.name}</b:name>
+        </t:parent>
+        """
+
+        grandson = """
+        <t:child arguments>
+            <b:name params="data">{parent()}, hello {data.name}</b:name>
+        </t:child>
+        """
+
+        users = [{name: 1}, {name: 2}]
+
+        render(source, {users: users}).should.eql """
+        <div>
+            <div>
+                1
+            </div><div>
+                2
+            </div>
+        </div>
+        """
+
+        render(child, {
+            users: users,
+            parent: Vdt.compile(source)
+        }).should.eql """
+        <div>
+            <div>
+                username: 1
+            </div><div>
+                username: 2
+            </div>
+        </div>
+        """
+
+        render(grandson, {
+            users: users,
+            parent: Vdt.compile(source),
+            child: Vdt.compile(child)
+        }).should.eql """
+        <div>
+            <div>
+                username: 1, hello 1
+            </div><div>
+                username: 2, hello 2
+            </div>
+        </div>
+        """
+
+    it 'Render template inherit scope block', ->
+        parent = """
+        <div>
+            <div v-for={users}>
+                <b:head args={[name]}>{name}</b:head>
+                <b:body>body</b:body>
+            </div>
         </div>
         """
 
@@ -497,10 +573,17 @@ describe 'Vdt', ->
 
     it 'Whitespace between string and expression should not be skipped', ->
         vdt = Vdt("""
-            <div> aa {value} b <div>{c} </div> </div>
+            <div> aa {value} b <div>{c}</div> </div>
         """, {skipWhitespace: true})
 
-        vdt.renderString({value: 1, c: 'c'}).should.eql('<div> aa 1 b <div>c </div></div>')
+        vdt.renderString({value: 1, c: 'c'}).should.eql('<div> aa 1 b <div>c</div></div>')
+
+    it 'Whitespace between interpolation and element should be skipped', ->
+        vdt = Vdt("""
+            <div> {value} b <div>{value} {value} </div> {value} </div>
+        """, {skipWhitespace: true})
+
+        vdt.renderString({value: 1}).should.eql('<div>1 b <div>1 1</div>1</div>')
 
     it 'Render v-if v-else-if v-else', ->
         vdt = Vdt("""
@@ -526,6 +609,24 @@ describe 'Vdt', ->
                 <div>default</div>
             </div>
         """)
+
+    it 'Render v-if which has v-if before it and skipWhitespace', ->
+        # Vdt.configure({skipWhitespace: false, disableSplitText: true})
+        vdt = Vdt("""
+            <div>
+                <div v-if={a}>1</div>
+                <div v-if={b === 1}>2</div>
+                <div v-else-if={b === 2}>3</div>
+                <div v-else>4</div>
+            </div>
+        """, {skipWhitespace: true})
+
+        vdt.renderString({a: 0, b: 2}).should.eql """
+            <div><div>3</div></div>
+        """
+        vdt.renderString({a: 1, b: 2}).should.eql """
+            <div><div>1</div><div>3</div></div>
+        """
 
     it 'Render v-if v-else-if v-else for <t:template>', ->
         vdt = Vdt("""
@@ -590,7 +691,11 @@ describe 'Vdt', ->
                 sdfsdjf
                 <div v-else-if={test === 2}>2</div>
             </div>
-        """).should.throw('v-else-if must be led with v-if. At: {line: 4, column: 6}')
+        """).should.throw """
+            v-else-if must be led with v-if or v-else-if (4:19)
+            > 4 |     <div v-else-if={test === 2}>2</div>
+                |                   ^
+        """
 
     it 'Render v-if v-else with comment', ->
         vdt = Vdt("""
@@ -604,6 +709,20 @@ describe 'Vdt', ->
             <div>
                 <div>2</div>
                 <!--<div v-else>default</div>-->
+            </div>
+        """
+
+    it 'Render comment between v-if and v-else', ->
+        vdt = Vdt("""
+            <div>
+                <div v-if={test === 1}>1</div>
+                <!--<div v-else>default</div>-->
+                <div v-else-if={test === 2}>2</div>
+            </div>
+        """)
+        vdt.renderString({test: 2}).should.eql """
+            <div>
+                <div>2</div><!--<div v-else>default</div>-->
             </div>
         """
 
@@ -715,14 +834,14 @@ describe 'Vdt', ->
         """
         
         Vdt.stringifier.stringify(Vdt.parser.parse(source)).should.eql """
-        return h('div', {...function() {try {return [a][0]} catch(e) {_e(e)}}.call(this), 'b': '1'})
+        return h('div', {...function() {try {return (a)} catch(e) {_e(e)}}.call($this), 'b': '1'})
         """
 
         source = """
         var a = {a: 1}; <a {...a}></a>
         """
         Vdt.stringifier.stringify(Vdt.parser.parse(source)).should.eql """
-        var a = {a: 1}; return h('a', {...function() {try {return [a][0]} catch(e) {_e(e)}}.call(this)})
+        var a = {a: 1}; return h('a', {...function() {try {return (a)} catch(e) {_e(e)}}.call($this)})
         """
 
     it 'Stringify es6 import should be hoisted', ->
@@ -735,6 +854,55 @@ describe 'Vdt', ->
 
         Vdt.stringifier.stringify(Vdt.parser.parse(source)).should.eql """
          
-        return h('div', null, function() {try {return [test][0]} catch(e) {_e(e)}}.call(this))
+        return h('div', null, function() {try {return (test)} catch(e) {_e(e)}}.call($this))
         """
 
+    it 'Stringify multiple events', ->
+        source = """
+        <div ev-click={a} ev-click={b} ev-dbclick={c}></div>
+        """
+
+        Vdt.stringifier.stringify(Vdt.parser.parse(source)).should.eql """
+        return h('div', {'ev-click': [function() {try {return (a)} catch(e) {_e(e)}}.call($this),function() {try {return (b)} catch(e) {_e(e)}}.call($this)], 'ev-dbclick': function() {try {return (c)} catch(e) {_e(e)}}.call($this)})
+        """
+
+    it 'Stringify event with model', ->
+        source = """
+        <input v-model="a" ev-input={b} />
+        """
+
+        Vdt.stringifier.stringify(Vdt.parser.parse(source)).should.eql """
+        return h('input', {'v-model': 'a', value: _getModel(self, 'a'), 'ev-input': [function() {try {return (b)} catch(e) {_e(e)}}.call($this),function(__e) { _setModel(self, 'a', __e.target.value, $this) }]})
+        """
+
+    it 'Strigify event with model in Component', ->
+        source = """
+        <Input v-model="a" ev-$change:value={b} />
+        """
+
+        Vdt.stringifier.stringify(Vdt.parser.parse(source)).should.eql """
+        return h(Input, {'v-model': 'a', 'children': null, '_context': $this, value: _getModel(self, 'a'), 'ev-$change:value': [function() {try {return (b)} catch(e) {_e(e)}}.call($this),function(__c, __n) { _setModel(self, 'a', __n, $this) }]})
+        """
+
+    it 'render template', ->
+        source = """
+        <div>
+            <template v-if={a}>
+                <div>1</div>
+                <div>2</div>
+            </template>
+            <template v-else>
+                <div>3</div>
+                <div>4</div>
+            </template>
+        </div>
+        """
+
+        render(source, {a: 1}).should.eql """
+        <div>
+    
+                <div>1</div>
+                <div>2</div>
+            
+        </div>
+        """

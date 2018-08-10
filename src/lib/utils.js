@@ -4,11 +4,13 @@
  * @date 15-4-22
  */
 
-import {isNullOrUndefined, isArray, indexOf, 
-    selfClosingTags as SelfClosingTags
+import {
+    isNullOrUndefined, isArray, indexOf, 
+    selfClosingTags as SelfClosingTags,
+    isEventProp,
 } from 'misstime/src/utils';
 
-export {isNullOrUndefined, isArray, indexOf, SelfClosingTags};
+export {isNullOrUndefined, isArray, indexOf, SelfClosingTags, isEventProp};
 
 let i = 0;
 export const Type = { 
@@ -28,6 +30,9 @@ export const Type = {
     JSXComment: i++,
 
     JSXDirective: i++,
+    JSXTemplate: i++,
+
+    JSXString: i++,
 };
 export const TypeName = [];
 for (let type in Type) {
@@ -61,13 +66,15 @@ export const Options = {
     server: false,
     // skip all whitespaces in template
     skipWhitespace: true,
-    setModel: function(data, key, value) {
+    setModel: function(data, key, value, self) {
         data[key] = value;
+        self.update();
     },
     getModel: function(data, key) {
         return data[key]; 
     },
-    disableSplitText: false // split text with <!---->
+    disableSplitText: false, // split text with <!---->
+    sourceMap: true,
 };
 
 export const hasOwn = Object.prototype.hasOwnProperty;
@@ -176,6 +183,10 @@ export function isDirective(name) {
     return hasOwn.call(Directives, name);
 }
 
+export function isVModel(name) {
+    return name === 'v-model' || name.substr(0, 8) === 'v-model:';
+}
+
 export function extend(...args) {
     var dest = args[0];
     var length = args.length;
@@ -194,7 +205,7 @@ export function extend(...args) {
     return dest;
 }
 
-export function setCheckboxModel(data, key, trueValue, falseValue, e) {
+export function setCheckboxModel(data, key, trueValue, falseValue, e, self) {
     var value = Options.getModel(data, key),
         checked = e.target.checked;
     if (isArray(value)) {
@@ -212,7 +223,7 @@ export function setCheckboxModel(data, key, trueValue, falseValue, e) {
     } else {
         value = checked ? trueValue : falseValue;
     }
-    Options.setModel(data, key, value);
+    Options.setModel(data, key, value, self);
 }
 
 export function detectCheckboxChecked(data, key, trueValue) {
@@ -224,7 +235,7 @@ export function detectCheckboxChecked(data, key, trueValue) {
     }
 }
 
-export function setSelectModel(data, key, e) {
+export function setSelectModel(data, key, e, self) {
     var target = e.target,
         multiple = target.multiple,
         value, i, opt,
@@ -247,10 +258,11 @@ export function setSelectModel(data, key, e) {
             }
         }
     }
-    Options.setModel(data, key, value);
+    Options.setModel(data, key, value, self);
 }
 
-export const error = (function() {
-    var hasConsole = typeof console !== 'undefined';
-    return hasConsole ? function(e) {console.error(e.stack);} : noop;
-})();
+export const slice = Array.prototype.slice;
+
+// in ie8 console.log is an object
+export const hasConsole = typeof console !== 'undefined' && typeof console.log === 'function';
+export const error = hasConsole ? function(e) {console.error(e.stack);} : noop;

@@ -35,7 +35,7 @@ var util = require('util');
 //source = "<t:card>\n    <b:body>\n        <div>test</div>\n    </b:body>\n</t:card>";
 //Utils.setDelimiters(['{{', '}}']);
 //source = "<script>\n    var a;\n\n    function aa() {\n        var msg;\n        msg = '<form onsubmit=\"return setPassword();\"';\n        msg += '  style=\"margin-bottom: 0px\">';\n        msg += '<input type=password size=10 id=\"password_input\">';\n        msg += '<\/form>';\n    }\n\n    if (a<1) { console.log(a) }\n\n    var b = \"{{ a }}\";\n</script>";
-//source = "<div>\n    <div v-if={test === 1}>1</div>\n   <div v-else-if={test === 2}>2</div>\n    <!--<div v-else>default</div>-->\n</div>";
+// source = "<div>\n    <div v-if={test === 1}>1</div>\n   <div v-else-if={test === 2}>2</div>\n    <!--<div v-else>default</div>-->\n</div>";
 //source = "<div><div v-if={test === 1}></div> <Div v-else></Div></div>";
 //console.log(util.inspect(parser.parse(source), {showHidden: true, depth: null}))
 //source = "<Page />"
@@ -68,12 +68,25 @@ var Vdt = require('../dist');
 // console.log(Vdt.stringifier.stringify(Vdt.parser.parse(source)), "\n-------------\n")
 
 // var source = 'var a = {a: 1}; <a {...a}></a>';
-// console.log(Vdt.stringifier.stringify(Vdt.parser.parse(source)));
+
 
 // source = "<div>\n    <b:show v-if={show}>show</b:show>\n    <b:hide v-else>hide</b:hide>\n</div>";
 
-// source = "// comment\nvar a = 1; // comment\n/* comment */\n/*\n * comment\n */\n//<div>\n<div className=\"div\">\n    {/* comment in element */}\n    {a}\n</div>";
-source = "import a from './a'\nimport {b} from \"./b\"; import \"c\"\n\n<div>{test}</div>";
- console.log(Vdt.stringifier.stringify(Vdt.parser.parse(source)), Vdt.stringifier.head);
-//console.log(util.inspect(Vdt.parser.parse(source), {showHidden: true, depth: null}));
+source = "// comment\nvar a = 1; // comment\n/* comment */\n/*\n * comment\n */\n//<div>\n\n<div className=\"className\">\n    {/* comment in element */}\n    {a}\n</div>";
+// source = "import a from './a'\nimport {b} from \"./b\"; import \"c\"\n\n<div>{test}</div>";
+// source = '<div v-model="a" v-model:b="test" v-model-true={1} v-model-false="2"></div>';
+// console.log(Vdt.stringifier.stringify(Vdt.parser.parse(source)), Vdt.stringifier.head);
+ 
+// console.log(Vdt.stringifier.stringify(Vdt.parser.parse(source)));
+
+// source = "<div>\n    <div v-if={a}>1</div>\n    <div v-if={b === 1}>2</div>\n    <div v-else-if={b === 2}>3</div>\n    <div v-else>4</div>\n</div>";
+// source = "<div><b:name args={[value]}>{value.name}</b:name></div>";
+// source = "<div>{a}</div>"
+var ast = Vdt.parser.parse(source, {skipWhitespace: true});
+// console.log(util.inspect(ast, {showHidden: true, depth: null}));
+console.log(Vdt.stringifier.stringify(ast))
+
+// const sourceMap = require('source-map');
+
+
 

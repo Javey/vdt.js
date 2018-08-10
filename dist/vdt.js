@@ -257,7 +257,10 @@ var Type$1 = {
     JSXBlock: i++,
     JSXComment: i++,
 
-    JSXDirective: i++
+    JSXDirective: i++,
+    JSXTemplate: i++,
+
+    JSXString: i++
 };
 var TypeName$1 = [];
 for (var type in Type$1) {
@@ -291,13 +294,15 @@ var Options = {
     server: false,
     // skip all whitespaces in template
     skipWhitespace: true,
-    setModel: function setModel(data, key, value) {
+    setModel: function setModel(data, key, value, self) {
         data[key] = value;
+        self.update();
     },
     getModel: function getModel(data, key) {
         return data[key];
     },
-    disableSplitText: false // split text with <!---->
+    disableSplitText: false, // split text with <!---->
+    sourceMap: true
 };
 
 var hasOwn = Object.prototype.hasOwnProperty;
@@ -405,6 +410,10 @@ function isDirective(name) {
     return hasOwn.call(Directives, name);
 }
 
+function isVModel(name) {
+    return name === 'v-model' || name.substr(0, 8) === 'v-model:';
+}
+
 function extend() {
     for (var _len = arguments.length, args = Array(_len), _key = 0; _key < _len; _key++) {
         args[_key] = arguments[_key];
@@ -427,7 +436,7 @@ function extend() {
     return dest;
 }
 
-function setCheckboxModel(data, key, trueValue, falseValue, e) {
+function setCheckboxModel(data, key, trueValue, falseValue, e, self) {
     var value = Options.getModel(data, key),
         checked = e.target.checked;
     if (isArray(value)) {
@@ -445,7 +454,7 @@ function setCheckboxModel(data, key, trueValue, falseValue, e) {
     } else {
         value = checked ? trueValue : falseValue;
     }
-    Options.setModel(data, key, value);
+    Options.setModel(data, key, value, self);
 }
 
 function detectCheckboxChecked(data, key, trueValue) {
@@ -457,7 +466,7 @@ function detectCheckboxChecked(data, key, trueValue) {
     }
 }
 
-function setSelectModel(data, key, e) {
+function setSelectModel(data, key, e, self) {
     var target = e.target,
         multiple = target.multiple,
         value,
@@ -482,15 +491,16 @@ function setSelectModel(data, key, e) {
             }
         }
     }
-    Options.setModel(data, key, value);
+    Options.setModel(data, key, value, self);
 }
 
-var error$1 = function () {
-    var hasConsole = typeof console !== 'undefined';
-    return hasConsole ? function (e) {
-        console.error(e.stack);
-    } : noop;
-}();
+var slice = Array.prototype.slice;
+
+// in ie8 console.log is an object
+var hasConsole = typeof console !== 'undefined' && typeof console.log === 'function';
+var error$1 = hasConsole ? function (e) {
+    console.error(e.stack);
+} : noop;
 
 
 
@@ -499,6 +509,7 @@ var utils = (Object.freeze || Object)({
 	isArray: isArray,
 	indexOf: indexOf,
 	SelfClosingTags: selfClosingTags,
+	isEventProp: isEventProp,
 	Type: Type$1,
 	TypeName: TypeName$1,
 	TextTags: TextTags,
@@ -519,10 +530,13 @@ var utils = (Object.freeze || Object)({
 	isSelfClosingTag: isSelfClosingTag,
 	isTextTag: isTextTag,
 	isDirective: isDirective,
+	isVModel: isVModel,
 	extend: extend,
 	setCheckboxModel: setCheckboxModel,
 	detectCheckboxChecked: detectCheckboxChecked,
 	setSelectModel: setSelectModel,
+	slice: slice,
+	hasConsole: hasConsole,
 	error: error$1
 });
 
@@ -590,7 +604,8 @@ Parser.prototype = {
     _scanJS: function _scanJS(braces, isRoot) {
         var start = this.index,
             tmp,
-            Delimiters = this.options.delimiters;
+            Delimiters = this.options.delimiters,
+            element = this._type(Type$$1.JS);
 
         while (this.index < this.length) {
             this._skipJSComment();
@@ -618,13 +633,15 @@ Parser.prototype = {
             }
         }
 
-        return this._type(Type$$1.JS, {
-            value: this.source.slice(start, this.index)
-        });
+        element.value = this.source.slice(start, this.index);
+
+        return element;
     },
 
     _scanJSImport: function _scanJSImport() {
-        var start = this.index;
+        var start = this.index,
+            element = this._type(Type$$1.JSImport);
+
         this._updateIndex(7); // 'import '.length
         while (this.index < this.length) {
             var ch = this._char();
@@ -638,18 +655,19 @@ Parser.prototype = {
             }
         }
 
-        return this._type(Type$$1.JSImport, {
-            value: this.source.slice(start, this.index)
-        });
+        element.value = this.source.slice(start, this.index);
+
+        return element;
     },
 
 
     _scanStringLiteral: function _scanStringLiteral() {
         var quote = this._char(),
             start = this.index,
-            str = '';
-        this._updateIndex();
+            str = '',
+            element = this._type(Type$$1.StringLiteral);
 
+        this._updateIndex();
         while (this.index < this.length) {
             var ch = this._char();
             if (ch.charCodeAt(0) === 10) {
@@ -670,9 +688,9 @@ Parser.prototype = {
             this._error('Unclosed quote');
         }
 
-        return this._type(Type$$1.StringLiteral, {
-            value: this.source.slice(start, this.index)
-        });
+        element.value = this.source.slice(start, this.index);
+
+        return element;
     },
 
     _scanJSX: function _scanJSX() {
@@ -683,7 +701,8 @@ Parser.prototype = {
         var start = this.index,
             l = stopChars.length,
             i,
-            charCode;
+            charCode,
+            element = this._type(Type$$1.JSXText);
 
         loop: while (this.index < this.length) {
             charCode = this._charCode();
@@ -701,9 +720,9 @@ Parser.prototype = {
             this._updateIndex();
         }
 
-        return this._type(Type$$1.JSXText, {
-            value: this.source.slice(start, this.index)
-        });
+        element.value = this.source.slice(start, this.index);
+
+        return element;
     },
 
     _scanJSXStringLiteral: function _scanJSXStringLiteral() {
@@ -717,11 +736,12 @@ Parser.prototype = {
         return token;
     },
 
-    _parseJSXElement: function _parseJSXElement() {
+    _parseJSXElement: function _parseJSXElement(prev) {
         this._expect('<');
         var start = this.index,
             ret = {},
             flag = this._charCode();
+
         if (flag >= 65 && flag <= 90 /* upper case */) {
                 // is a widget
                 this._type(Type$$1.JSXWidget, ret);
@@ -758,17 +778,12 @@ Parser.prototype = {
 
         ret.value = this.source.slice(start, this.index);
 
-        return this._parseAttributeAndChildren(ret);
+        return this._parseAttributeAndChildren(ret, prev);
     },
 
-    _parseAttributeAndChildren: function _parseAttributeAndChildren(ret) {
-        var attrs = this._parseJSXAttribute();
-        extend(ret, {
-            attributes: attrs.attributes,
-            directives: attrs.directives,
-            children: []
-        });
-        if (!ret.directives.length) delete ret.directives;
+    _parseAttributeAndChildren: function _parseAttributeAndChildren(ret, prev) {
+        ret.children = [];
+        this._parseJSXAttribute(ret, prev);
 
         if (ret.type === Type$$1.JSXElement && isSelfClosingTag(ret.value)) {
             // self closing tag
@@ -782,18 +797,31 @@ Parser.prototype = {
             this._expect('>');
         } else {
             this._expect('>');
-            ret.children = this._parseJSXChildren(ret, attrs.hasVRaw);
+            if (isTextTag(ret.value)) {
+                // if it is a text element, treat children as innerHTML attribute
+                var attr = this._type(Type$$1.JSXAttribute, {
+                    name: 'innerHTML',
+                    value: this._type(Type$$1.JSXString)
+                });
+                var children = this._parseJSXChildren(ret, ret.hasVRaw);
+                if (children.length) {
+                    attr.value.value = children;
+                    ret.attributes.push(attr);
+                }
+            } else {
+                ret.children = this._parseJSXChildren(ret, ret.hasVRaw);
+            }
         }
 
         return ret;
     },
 
-    _parseJSXAttribute: function _parseJSXAttribute() {
-        var ret = {
+    _parseJSXAttribute: function _parseJSXAttribute(ret, prev) {
+        ret = extend(ret, {
             attributes: [],
-            directives: [],
+            directives: {},
             hasVRaw: false
-        };
+        });
         while (this.index < this.length) {
             this._skipWhitespace();
             if (this._char() === '/' || this._char() === '>') {
@@ -805,7 +833,9 @@ Parser.prototype = {
                     ret.attributes.push(this._parseJSXExpressionContainer());
                     continue;
                 }
-                var attr = this._parseJSXAttributeName();
+
+                var attr = this._parseJSXAttributeName(ret, prev);
+
                 if (attr.name === 'v-raw') {
                     ret.hasVRaw = true;
                     continue;
@@ -817,18 +847,28 @@ Parser.prototype = {
                     // treat no-value attribute as true
                     attr.value = this._type(Type$$1.JSXExpressionContainer, { value: [this._type(Type$$1.JS, { value: 'true' })] });
                 }
-                ret[attr.type === Type$$1.JSXAttribute ? 'attributes' : 'directives'].push(attr);
+
+                if (attr.type === Type$$1.JSXAttribute) {
+                    ret.attributes.push(attr);
+                } else {
+                    ret.directives[attr.name] = attr;
+                }
             }
         }
 
         return ret;
     },
 
-    _parseJSXAttributeName: function _parseJSXAttributeName() {
+    _parseJSXAttributeName: function _parseJSXAttributeName(ret, prev) {
         var start = this.index;
+        var line = this.line;
+        var column = this.column;
+        var element = void 0;
+
         if (!isJSXIdentifierPart(this._charCode())) {
             this._error('Unexpected identifier ' + this._char());
         }
+
         while (this.index < this.length) {
             var ch = this._charCode();
             if (!isJSXIdentifierPart(ch)) {
@@ -839,10 +879,51 @@ Parser.prototype = {
 
         var name = this.source.slice(start, this.index);
         if (isDirective(name)) {
-            return this._type(Type$$1.JSXDirective, { name: name });
+            element = this._type(Type$$1.JSXDirective, { name: name });
+            this._parseJSXAttributeVIf(ret, element, prev);
+        } else {
+            element = this._type(Type$$1.JSXAttribute, { name: name });
         }
+        element.line = line;
+        element.column = column;
 
-        return this._type(Type$$1.JSXAttribute, { name: name });
+        return element;
+    },
+
+    _parseJSXAttributeVIf: function _parseJSXAttributeVIf(ret, attr, prev) {
+        var name = attr.name;
+        if (name === 'v-else-if' || name === 'v-else') {
+            var emptyTextNodes = []; // persist empty text node, skip them if find v-else-if or v-else
+            var skipNodes = function skipNodes() {
+                each(emptyTextNodes, function (item) {
+                    item.skip = true;
+                });
+                emptyTextNodes = [];
+            };
+
+            prev = { prev: prev };
+            while (prev = prev.prev) {
+                if (prev.type === Type$$1.JSXText && /^\s*$/.test(prev.value)) {
+                    emptyTextNodes.push(prev);
+                    continue;
+                }
+                var type = prev.type;
+                if (type === Type$$1.JSXComment) continue;
+                if (type === Type$$1.JSXElement || type === Type$$1.JSXWidget || type === Type$$1.JSXVdt || type === Type$$1.JSXBlock) {
+                    var prevDirectives = prev.directives;
+                    if (prevDirectives['v-if'] || prevDirectives['v-else-if']) {
+                        prev.next = ret;
+                        ret.skip = true;
+                        skipNodes();
+                    }
+                }
+                break;
+            }
+
+            if (!ret.skip) {
+                this._error(name + ' must be led with v-if or v-else-if');
+            }
+        }
     },
 
     _parseJSXAttributeValue: function _parseJSXAttributeValue() {
@@ -858,21 +939,27 @@ Parser.prototype = {
 
     _parseJSXExpressionContainer: function _parseJSXExpressionContainer() {
         var expression,
-            Delimiters = this.options.delimiters;
+            Delimiters = this.options.delimiters,
+            element = this._type(Type$$1.JSXExpressionContainer);
+
         this._expect(Delimiters[0]);
+        this._skipWhitespaceAndJSComment();
         if (this._isExpect(Delimiters[1])) {
-            expression = this._parseJSXEmptyExpression();
+            expression = [this._parseJSXEmptyExpression()];
         } else if (this._isExpect('=')) {
             // if the lead char is '=', then treat it as unescape string
+            this._skipWhitespace();
             expression = this._parseJSXUnescapeText();
-            this._expect(Delimiters[1]);
+            this._expect(Delimiters[1], 'Unclosed delimiter', expression);
             return expression;
         } else {
             expression = this._parseExpression();
         }
-        this._expect(Delimiters[1]);
+        this._expect(Delimiters[1], 'Unclosed delimiter', element);
 
-        return this._type(Type$$1.JSXExpressionContainer, { value: expression });
+        element.value = expression;
+
+        return element;
     },
 
     _parseJSXEmptyExpression: function _parseJSXEmptyExpression() {
@@ -925,7 +1012,7 @@ Parser.prototype = {
                 children.push(current);
             }
         }
-        this._parseJSXClosingElement();
+        this._parseJSXClosingElement(endTag, element);
         return children;
     },
 
@@ -935,10 +1022,11 @@ Parser.prototype = {
 
         if (this._isExpect(Delimiters[0])) {
             ret = this._parseJSXExpressionContainer();
+            this._skipWhitespaceBetweenElements(endTag, false);
         } else if (isTextTag(element.value)) {
             ret = this._scanJSXText([endTag, Delimiters[0]]);
         } else if (this._isElementStart()) {
-            ret = this._parseJSXElement();
+            ret = this._parseJSXElement(prev);
             this._skipWhitespaceBetweenElements(endTag);
         } else {
             ret = this._scanJSXText([function () {
@@ -956,8 +1044,8 @@ Parser.prototype = {
         return ret;
     },
 
-    _parseJSXClosingElement: function _parseJSXClosingElement() {
-        this._expect('</');
+    _parseJSXClosingElement: function _parseJSXClosingElement(endTag, element) {
+        this._expect('</', 'Unclosed tag: ' + endTag, element);
 
         while (this.index < this.length) {
             if (!isJSXIdentifierPart(this._charCode())) {
@@ -972,7 +1060,9 @@ Parser.prototype = {
 
     _parseJSXComment: function _parseJSXComment() {
         this._expect('!--');
-        var start = this.index;
+        var start = this.index,
+            element = this._type(Type$$1.JSXComment);
+
         while (this.index < this.length) {
             if (this._isExpect('-->')) {
                 break;
@@ -981,12 +1071,10 @@ Parser.prototype = {
             }
             this._updateIndex();
         }
-        var ret = this._type(Type$$1.JSXComment, {
-            value: this.source.slice(start, this.index)
-        });
+        element.value = this.source.slice(start, this.index);
         this._expect('-->');
 
-        return ret;
+        return element;
     },
 
     _char: function _char() {
@@ -1002,14 +1090,20 @@ Parser.prototype = {
     },
 
     _skipWhitespaceBetweenElements: function _skipWhitespaceBetweenElements(endTag) {
+        var skipBeforeDelimiter = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : true;
+
         if (!this.options.skipWhitespace) return;
 
+        var Delimiters = this.options.delimiters;
         var start = this.index;
         while (start < this.length) {
             var code = this._charCode(start);
             if (isWhiteSpace(code)) {
                 start++;
-            } else if (this._isExpect(endTag, start) || this._isElementStart(start)) {
+            } else if (this._isExpect(endTag, start) || this._isElementStart(start) ||
+            // skip whitespaces between after element starting and expression
+            // but not skip before element ending 
+            skipBeforeDelimiter && this._isExpect(Delimiters[0], start)) {
                 this._skipWhitespace();
                 break;
             } else {
@@ -1032,36 +1126,50 @@ Parser.prototype = {
     },
 
     _skipJSComment: function _skipJSComment() {
-        if (this._char() === '/') {
-            var ch = this._char(this.index + 1);
-            if (ch === '/') {
-                this._updateIndex(2);
-                while (this.index < this.length) {
-                    if (this._charCode() === 10) {
-                        // is \n
-                        this._updateLine();
-                        break;
+        var start = void 0;
+        do {
+            start = this.index;
+            if (this._char() === '/') {
+                var ch = this._char(this.index + 1);
+                if (ch === '/') {
+                    this._updateIndex(2);
+                    while (this.index < this.length) {
+                        var code = this._charCode();
+                        this._updateIndex();
+                        if (code === 10) {
+                            // is \n
+                            this._updateLine();
+                            break;
+                        }
                     }
-                    this._updateIndex();
-                }
-            } else if (ch === '*') {
-                this._updateIndex(2);
-                while (this.index < this.length) {
-                    if (this._isExpect('*/')) {
-                        this._updateIndex(2);
-                        break;
-                    } else if (this._charCode() === 10) {
-                        this._updateLine();
+                } else if (ch === '*') {
+                    this._updateIndex(2);
+                    while (this.index < this.length) {
+                        if (this._isExpect('*/')) {
+                            this._updateIndex(2);
+                            break;
+                        } else if (this._charCode() === 10) {
+                            this._updateLine();
+                        }
+                        this._updateIndex();
                     }
-                    this._updateIndex();
                 }
             }
-        }
+        } while (start !== this.index);
     },
 
-    _expect: function _expect(str) {
+    _skipWhitespaceAndJSComment: function _skipWhitespaceAndJSComment() {
+        var start = void 0;
+        do {
+            start = this.index;
+            this._skipWhitespace();
+            this._skipJSComment();
+        } while (start !== this.index);
+    },
+
+    _expect: function _expect(str, msg, element) {
         if (!this._isExpect(str)) {
-            this._error('expect string ' + str);
+            this._error(msg || 'Expect string ' + str, element);
         }
         this._updateIndex(str.length);
     },
@@ -1104,8 +1212,19 @@ Parser.prototype = {
         return index;
     },
 
-    _error: function _error(msg) {
-        throw new Error(msg + ' At: {line: ' + this.line + ', column: ' + this.column + '} Near: "' + this.source.slice(this.index - 10, this.index + 20) + '"');
+    _error: function _error(msg, element) {
+        var lines = this.source.split('\n');
+
+        var _ref = element || this,
+            line = _ref.line,
+            column = _ref.column;
+
+        var error$$1 = new Error(msg + ' (' + line + ':' + column + ')\n' + ('> ' + line + ' | ' + lines[line - 1] + '\n') + ('  ' + new Array(String(line).length + 1).join(' ') + ' | ' + new Array(column).join(' ') + '^'));
+        error$$1.line = line;
+        error$$1.column = column;
+        error$$1.source = this.source;
+
+        throw error$$1;
     }
 };
 
@@ -1116,7 +1235,6 @@ Parser.prototype = {
  */
 
 var Type$2 = Type$1;
-var TypeName$2 = TypeName$1;
 
 
 var attrMap = function () {
@@ -1139,6 +1257,15 @@ var normalizeArgs = function normalizeArgs(args) {
     return (i === l ? args : args.slice(0, i + 1)).join(', ');
 };
 
+var getLineAndColumn = function getLineAndColumn(code) {
+    var lines = code.split(/\n/);
+
+    return {
+        line: lines.length,
+        column: lines[lines.length - 1].length
+    };
+};
+
 function Stringifier() {}
 
 Stringifier.prototype = {
@@ -1151,10 +1278,33 @@ Stringifier.prototype = {
         this.autoReturn = !!autoReturn;
         this.enterStringExpression = false;
         this.head = ''; // save import syntax
-        return this._visitJSXExpressionContainer(ast, true);
+
+        this.mappings = [];
+        this.lines = [];
+
+        var ret = this._visitJSXExpressionContainer(ast, true, 1, 1);
+        console.log(this.mappings, ret);
+        return ret;
     },
 
-    _visitJSXExpressionContainer: function _visitJSXExpressionContainer(ast, isRoot) {
+    _addMapping: function _addMapping(element, line) {
+        var column = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 1;
+
+        this.mappings.push({
+            generated: {
+                line: line,
+                column: column
+            },
+            original: {
+                line: element.line,
+                column: element.column
+            },
+            element: element
+        });
+    },
+
+
+    _visitJSXExpressionContainer: function _visitJSXExpressionContainer(ast, isRoot, line, column) {
         var str = '',
             length = ast.length,
             hasDestructuring = false;
@@ -1163,9 +1313,14 @@ Stringifier.prototype = {
             if (this.autoReturn && isRoot && i === length - 1) {
                 str += 'return ';
             }
-            var tmp = this._visit(element, isRoot);
+
+            var _getLineAndColumn = getLineAndColumn(str),
+                c = _getLineAndColumn.column,
+                l = _getLineAndColumn.line;
+
+            var tmp = this._visit(element, isRoot, line + l - 1, column + c);
             if (isRoot && element.type === Type$2.JSImport) {
-                this.head += tmp;
+                this.head += tmp + '\n';
             } else {
                 str += tmp;
             }
@@ -1173,14 +1328,11 @@ Stringifier.prototype = {
 
         if (!isRoot && !this.enterStringExpression) {
             // special for ... syntaxt
-            str = trimLeft(str);
             if (str[0] === '.' && str[1] === '.' && str[2] === '.') {
                 hasDestructuring = true;
                 str = str.substr(3);
             }
-            // add [][0] for return /* comment */
-            str = 'function() {try {return [' + str + '][0]} catch(e) {_e(e)}}.call(this)';
-            // str = 'function() {try {return (' + str + ')} catch(e) {_e(e)}}.call(this)';
+            str = 'function() {try {return (' + str + ')} catch(e) {_e(e)}}.call($this)';
             if (hasDestructuring) {
                 str = '...' + str;
             }
@@ -1189,69 +1341,83 @@ Stringifier.prototype = {
         return str;
     },
 
-    _visit: function _visit(element, isRoot) {
+    _visit: function _visit(element, isRoot, line, column) {
         element = element || {};
+        var ret = void 0;
         switch (element.type) {
             case Type$2.JS:
             case Type$2.JSImport:
-                return this._visitJS(element);
+                ret = this._visitJS(element, line, column);
+                break;
             case Type$2.JSXElement:
-                return this._visitJSXElement(element);
+                ret = this._visitJSXElement(element, line, column);
+                break;
             case Type$2.JSXText:
-                return this._visitJSXText(element);
+                ret = this._visitJSXText(element);
+                break;
             case Type$2.JSXUnescapeText:
-                return this._visitJSXUnescapeText(element);
+                ret = this._visitJSXUnescapeText(element);
+                break;
             case Type$2.JSXExpressionContainer:
-                return this._visitJSXExpressionContainer(element.value);
+                ret = this._visitJSXExpressionContainer(element.value);
+                break;
             case Type$2.JSXWidget:
-                return this._visitJSXWidget(element);
+                ret = this._visitJSXWidget(element);
+                break;
             case Type$2.JSXBlock:
-                return this._visitJSXBlock(element, true);
+                ret = this._visitJSXBlock(element, true);
+                break;
             case Type$2.JSXVdt:
-                return this._visitJSXVdt(element, isRoot);
+                ret = this._visitJSXVdt(element, isRoot);
+                break;
             case Type$2.JSXComment:
-                return this._visitJSXComment(element);
+                ret = this._visitJSXComment(element);
+                break;
+            case Type$2.JSXTemplate:
+                ret = this._visitJSXTemplate(element);
+                break;
+            case Type$2.JSXString:
+                ret = this._visitJSXString(element);
+                break;
             default:
-                return 'null';
-        }
-    },
-
-    _visitJS: function _visitJS(element) {
-        return this.enterStringExpression ? '(' + element.value + ')' : element.value;
-    },
-
-    _visitJSXElement: function _visitJSXElement(element) {
-        if (element.value === 'script' || element.value === 'style') {
-            if (element.children.length) {
-                element.attributes.push({
-                    type: Type$2.JSXAttribute,
-                    typeName: TypeName$2[Type$2.JSXAttribute],
-                    name: 'innerHTML',
-                    value: {
-                        type: Type$2.JS,
-                        typeName: TypeName$2[Type$2.JS],
-                        value: this._visitJSXChildrenAsString(element.children)
-                    }
-                });
-                element.children = [];
-            }
+                ret = 'null';
+                break;
         }
 
-        var attributes = this._visitJSXAttribute(element, true, true);
+        return ret;
+    },
+
+    _visitJS: function _visitJS(element, line, column) {
+        var ret = this.enterStringExpression ? '(' + element.value + ')' : element.value;
+
+        this._addMapping(element, line, column);
+
+        return ret;
+    },
+
+    _visitJSXElement: function _visitJSXElement(element, line, column) {
+        if (element.value === 'template') {
+            // <template> is a fake tag, we only need handle its children and itself directives
+            return this._visitJSXDirective(element, this._visitJSXChildren(element.children));
+        }
+
+        var attributes = this._visitJSXAttribute(element, true, true, line);
         var ret = "h(" + normalizeArgs(["'" + element.value + "'", attributes.props, this._visitJSXChildren(element.children), attributes.className, attributes.key, attributes.ref]) + ')';
+
+        this._addMapping(element, line, column);
 
         return this._visitJSXDirective(element, ret);
     },
 
-    _visitJSXChildren: function _visitJSXChildren(children) {
+    _visitJSXChildren: function _visitJSXChildren(children, line) {
         var ret = [];
         each(children, function (child) {
-            // if this.element has be handled return directly
-            if (child._skip) return;
-            ret.push(this._visit(child));
+            // ignore element which handled by directive
+            if (child.skip) return;
+            ret.push(this._visit(child, line + ret.length));
         }, this);
 
-        return ret.length > 1 ? '[' + ret.join(', ') + ']' : ret[0] || 'null';
+        return ret.length > 1 ? '[' + ret.join(',\n') + ']' : ret[0] || 'null';
     },
 
     _visitJSXDirective: function _visitJSXDirective(element, ret) {
@@ -1265,10 +1431,6 @@ Stringifier.prototype = {
                 case 'v-if':
                     ret = this._visitJSXDirectiveIf(directive, ret, element);
                     break;
-                case 'v-else-if':
-                case 'v-else':
-                    if (element._skip) break;
-                    throw new Error(directive.name + ' must be led with v-if. At: {line: ' + element.line + ', column: ' + element.column + '}');
                 case 'v-for':
                     directiveFor.data = this._visitJSXAttributeValue(directive.value);
                     break;
@@ -1293,80 +1455,73 @@ Stringifier.prototype = {
     _visitJSXDirectiveIf: function _visitJSXDirectiveIf(directive, ret, element) {
         var result = this._visitJSXAttributeValue(directive.value) + ' ? ' + ret + ' : ',
             hasElse = false,
-            next = element,
-            emptyTextNodes = [],
-            // persist empty text node, skip them if find v-else-if or v-else
-        skipNodes = function skipNodes() {
-            each(emptyTextNodes, function (item) {
-                item._skip = true;
-            });
-            emptyTextNodes = [];
-        };
+            next = element;
+
         while (next = next.next) {
-            if (next.type === Type$1.JSXText) {
-                if (!/^\s*$/.test(next.value)) break;
-                // is not the last text node, mark as handled
-                else emptyTextNodes.push(next);
-            } else if (next.type === Type$1.JSXElement || next.type === Type$1.JSXWidget || next.type === Type$1.JSXVdt || next.type === Type$1.JSXBlock) {
-                if (!next.directives || !next.directives.length) break;
-                var isContinue = false;
-                for (var i = 0, l = next.directives.length; i < l; i++) {
-                    var dire = next.directives[i],
-                        name = dire.name;
-                    if (name === 'v-else-if') {
-                        // mark this element as handled
-                        next._skip = true;
-                        result += this._visitJSXAttributeValue(dire.value) + ' ? ' + this._visit(next) + ' : ';
-                        isContinue = true;
-                        // mark text node before as handled
-                        skipNodes();
-                        break;
-                    } else if (name === 'v-else') {
-                        // mark this element as handled
-                        next._skip = true;
-                        result += this._visit(next);
-                        hasElse = true;
-                        // mark text node before as handled
-                        skipNodes();
-                        break;
-                    }
-                }
-                if (!isContinue) break;
+            var nextDirectives = next.directives;
+
+            if (!nextDirectives) break;
+
+            if (nextDirectives['v-else-if']) {
+                result += this._visitJSXAttributeValue(nextDirectives['v-else-if'].value) + ' ? ' + this._visit(next) + ' : ';
+                continue;
             }
+            if (nextDirectives['v-else']) {
+                result += this._visit(next);
+                hasElse = true;
+            }
+
+            break;
         }
         if (!hasElse) result += 'undefined';
+
         return result;
     },
 
     _visitJSXDirectiveFor: function _visitJSXDirectiveFor(directive, ret) {
-        return '_Vdt.utils.map(' + directive.data + ', function(' + directive.value + ', ' + directive.key + ') {\n' + 'return ' + ret + ';\n' + '}, this)';
+        return '__m(' + directive.data + ', function(' + directive.value + ', ' + directive.key + ') {\n' + 'return ' + ret + ';\n' + '}, $this)';
     },
 
-    _visitJSXChildrenAsString: function _visitJSXChildrenAsString(children) {
+    _visitJSXString: function _visitJSXString(element) {
         var ret = [];
         this.enterStringExpression = true;
-        each(children, function (child) {
+        each(element.value, function (child) {
             ret.push(this._visit(child));
         }, this);
         this.enterStringExpression = false;
         return ret.join('+');
     },
 
-    _visitJSXAttribute: function _visitJSXAttribute(element, individualClassName, individualKeyAndRef) {
+    _visitJSXAttribute: function _visitJSXAttribute(element, individualClassName, individualKeyAndRef, line) {
         var ret = [],
+            set = {},
+            events = {},
+
+        // support bind multiple callbacks for the same event
+        addEvent = function addEvent(name, value) {
+            var v = events[name];
+            if (v) {
+                if (!isArray(v)) {
+                    events[name] = [v];
+                }
+                events[name].push(value);
+            } else {
+                events[name] = value;
+            }
+        },
             attributes = element.attributes,
             className$$1,
             key,
             ref,
             type = 'text',
-            hasModel = false,
+            models = [],
             addition = { trueValue: true, falseValue: false };
         each(attributes, function (attr) {
             if (attr.type === Type$2.JSXExpressionContainer) {
-                return ret.push(this._visitJSXAttributeValue(attr));
+                return ret.push(this._visitJSXAttributeValue(attr, line));
             }
             var name = attrMap(attr.name),
-                value = this._visitJSXAttributeValue(attr.value);
+                value = this._visitJSXAttributeValue(attr.value, line);
             if ((name === 'widget' || name === 'ref') && attr.value.type === Type$2.JSXText) {
                 // for compatility v1.0
                 // convert widget="a" to ref=(i) => widgets.a = i
@@ -1389,10 +1544,13 @@ Stringifier.prototype = {
             } else if (name === 'ref' && individualKeyAndRef) {
                 ref = value;
                 return;
-            } else if (name === 'v-model') {
-                hasModel = value;
-                // pass v-model to element, sometimes it is useful
-                // return;
+            } else if (isVModel(name)) {
+                var _name$split = name.split(':'),
+                    model = _name$split[1];
+
+                if (model === 'value') name = 'v-model';
+                if (!model) model = 'value';
+                models.push({ name: model, value: value });
             } else if (name === 'v-model-true') {
                 addition.trueValue = value;
                 return;
@@ -1404,29 +1562,40 @@ Stringifier.prototype = {
                 type = value;
             } else if (name === 'value') {
                 addition.value = value;
+            } else if (isEventProp(name)) {
+                addEvent(name, value);
+                return;
             }
             ret.push("'" + name + "': " + value);
+            // for get property directly 
+            set[name] = value;
         }, this);
 
-        if (hasModel) {
-            this._visitJSXAttributeModel(element, hasModel, ret, type, addition);
+        for (var i = 0; i < models.length; i++) {
+            this._visitJSXAttributeModel(element, models[i], ret, type, addition, addEvent);
         }
 
+        each(events, function (value, name) {
+            ret.push('\'' + name + '\': ' + (isArray(value) ? '[' + value.join(',') + ']' : value));
+        });
+
         return {
-            props: ret.length ? '{' + ret.join(', ') + '}' : 'null',
+            props: ret.length ? '{' + ret.join(',\n') + '}' : 'null',
             className: className$$1 || 'null',
             ref: ref || 'null',
-            key: key || 'null'
+            key: key || 'null',
+            set: set
         };
     },
 
-    _visitJSXAttributeModel: function _visitJSXAttributeModel(element, value, ret, type, addition) {
-        var valueName = 'value',
+    _visitJSXAttributeModel: function _visitJSXAttributeModel(element, model, ret, type, addition, addEvent) {
+        var valueName = model.name,
+            value = model.value,
             eventName = 'change';
+
         if (element.type === Type$2.JSXElement) {
             switch (element.value) {
                 case 'input':
-                    valueName = 'value';
                     switch (type) {
                         case "'file'":
                             eventName = 'change';
@@ -1438,14 +1607,14 @@ Stringifier.prototype = {
                                 inputValue = addition.value;
                             if (isNullOrUndefined(inputValue)) {
                                 ret.push('checked: _getModel(self, ' + value + ') === ' + trueValue);
-                                ret.push('\'ev-change\': function(__e) {\n                                    _setModel(self, ' + value + ', __e.target.checked ? ' + trueValue + ' : ' + falseValue + ');\n                                }');
+                                addEvent('ev-change', 'function(__e) {\n                                    _setModel(self, ' + value + ', __e.target.checked ? ' + trueValue + ' : ' + falseValue + ', $this);\n                                }');
                             } else {
                                 if (type === "'radio'") {
                                     ret.push('checked: _getModel(self, ' + value + ') === ' + inputValue);
-                                    ret.push('\'ev-change\': function(__e) { \n                                        _setModel(self, ' + value + ', __e.target.checked ? ' + inputValue + ' : ' + falseValue + ');\n                                    }');
+                                    addEvent('ev-change', 'function(__e) { \n                                        _setModel(self, ' + value + ', __e.target.checked ? ' + inputValue + ' : ' + falseValue + ', $this);\n                                    }');
                                 } else {
                                     ret.push('checked: _detectCheckboxChecked(self, ' + value + ', ' + inputValue + ')');
-                                    ret.push('\'ev-change\': function(__e) { \n                                        _setCheckboxModel(self, ' + value + ', ' + inputValue + ', ' + falseValue + ', __e);\n                                    }');
+                                    addEvent('ev-change', 'function(__e) { \n                                        _setCheckboxModel(self, ' + value + ', ' + inputValue + ', ' + falseValue + ', __e, $this);\n                                    }');
                                 }
                             }
                             return;
@@ -1456,7 +1625,7 @@ Stringifier.prototype = {
                     break;
                 case 'select':
                     ret.push('value: _getModel(self, ' + value + ')');
-                    ret.push('\'ev-change\': function(__e) {\n                        _setSelectModel(self, ' + value + ', __e);\n                    }');
+                    addEvent('ev-change', 'function(__e) {\n                        _setSelectModel(self, ' + value + ', __e, $this);\n                    }');
                     return;
                 case 'textarea':
                     eventName = 'input';
@@ -1464,16 +1633,15 @@ Stringifier.prototype = {
                 default:
                     break;
             }
-            ret.push(valueName + ': _getModel(self, ' + value + ')');
-            ret.push('\'ev-' + eventName + '\': function(__e) { _setModel(self, ' + value + ', __e.target.value) }');
+            addEvent('ev-' + eventName, 'function(__e) { _setModel(self, ' + value + ', __e.target.value, $this) }');
         } else if (element.type === Type$2.JSXWidget) {
-            ret.push('value: _getModel(self, ' + value + ')');
-            ret.push('\'ev-$change:value\': function(__c, __n) { _setModel(self, ' + value + ', __n) }');
+            addEvent('ev-$change:' + valueName, 'function(__c, __n) { _setModel(self, ' + value + ', __n, $this) }');
         }
+        ret.push(valueName + ': _getModel(self, ' + value + ')');
     },
 
-    _visitJSXAttributeValue: function _visitJSXAttributeValue(value) {
-        return isArray(value) ? this._visitJSXChildren(value) : this._visit(value);
+    _visitJSXAttributeValue: function _visitJSXAttributeValue(value, line) {
+        return isArray(value) ? this._visitJSXChildren(value, line) : this._visit(value, false, line);
     },
 
     _visitJSXText: function _visitJSXText(element, noQuotes) {
@@ -1507,13 +1675,40 @@ Stringifier.prototype = {
         return this._visitJSXDirective(element, 'h(' + normalizeArgs([element.value, attributes.props, 'null', 'null', attributes.key, attributes.ref]) + ')');
     },
 
-    _visitJSXBlock: function _visitJSXBlock(element, isAncestor) {
-        return this._visitJSXDirective(element, '(_blocks["' + element.value + '"] = function(parent) {return ' + this._visitJSXChildren(element.children) + ';}) && (__blocks["' + element.value + '"] = function(parent) {\n' + 'var self = this;\n' + 'return blocks["' + element.value + '"] ? blocks["' + element.value + '"].call(this, function() {\n' + 'return _blocks["' + element.value + '"].call(self, parent);\n' + '}) : _blocks["' + element.value + '"].call(this, parent);\n' + '})' + (isAncestor ? ' && __blocks["' + element.value + '"].call(this)' : ''));
+    _visitJSXBlock: function _visitJSXBlock(element, isAncestor, line) {
+        var _visitJSXBlockAttribu = this._visitJSXBlockAttribute(element),
+            params = _visitJSXBlockAttribu.params,
+            args = _visitJSXBlockAttribu.args;
+
+        return this._visitJSXDirective(element, '(_blocks["' + element.value + '"] = function(parent' + (params ? ', ' + params : '') + ') {\n' + '    return ' + this._visitJSXChildren(element.children, line) + ';\n' + '}) && (__blocks["' + element.value + '"] = function(parent) {\n' + '    var args = arguments;\n' + '    return blocks["' + element.value + '"] ? blocks["' + element.value + '"].apply($this, [function() {\n' + '        return _blocks["' + element.value + '"].apply($this, args);\n' + '    }].concat(__slice.call(args, 1))) : _blocks["' + element.value + '"].apply($this, args);\n' + '})' + (isAncestor ? ' && __blocks["' + element.value + '"].apply($this, ' + (args ? '[__noop].concat(' + args + ')' : '[__noop]') + ')' : ''));
+    },
+
+    _visitJSXBlockAttribute: function _visitJSXBlockAttribute(element) {
+        var ret = {};
+
+        each(element.attributes, function (attr) {
+            var name = attr.name;
+            var value = void 0;
+            switch (name) {
+                case 'args':
+                    value = this._visitJSXAttributeValue(attr.value);
+                    break;
+                case 'params':
+                    value = this._visitJSXText(attr.value, true);
+                    break;
+                default:
+                    return;
+            }
+            ret[name] = value;
+        }, this);
+
+        return ret;
     },
 
     _visitJSXBlocks: function _visitJSXBlocks(element, isRoot) {
         var blocks = [];
         var children = [];
+
         each(element.children, function (child) {
             if (child.type === Type$2.JSXBlock) {
                 blocks.push(this._visitJSXBlock(child, false));
@@ -1524,7 +1719,7 @@ Stringifier.prototype = {
 
         var _blocks = {
             type: Type$2.JS,
-            value: blocks.length ? ['function(blocks) {', '    var _blocks = {}, __blocks = extend({}, blocks);', '    return (' + blocks.join(' && ') + ', __blocks);', '}.call(this, ' + (isRoot ? 'blocks' : '{}') + ')'].join('\n') : isRoot ? 'blocks' : 'null'
+            value: blocks.length ? ['function(blocks) {', '    var _blocks = {}, __blocks = extend({}, blocks);', '    return (' + blocks.join(' && ') + ', __blocks);', '}.call($this, ' + (isRoot ? 'blocks' : '{}') + ')'].join('\n') : isRoot ? 'blocks' : 'null'
         };
 
         return { blocks: _blocks, children: children.length ? children : null, hasBlock: blocks.length };
@@ -1536,7 +1731,12 @@ Stringifier.prototype = {
             children = _visitJSXBlocks2.children;
 
         element.attributes.push({ name: 'children', value: children });
-        var ret = ['(function() {', '    var _obj = ' + this._visitJSXAttribute(element, false, false).props + ';', '    if (_obj.hasOwnProperty("arguments")) {', '        extend(_obj, _obj.arguments === true ? obj : _obj.arguments);', '        delete _obj.arguments;', '    }', '    return ' + element.value + '.call(this, _obj, _Vdt, ' + this._visitJS(blocks) + ', ' + element.value + ')', '}).call(this)'].join('\n');
+
+        var _visitJSXAttribute2 = this._visitJSXAttribute(element, false, false),
+            props = _visitJSXAttribute2.props,
+            set = _visitJSXAttribute2.set;
+
+        var ret = ['(function() {', '    var _obj = ' + props + ';', set.hasOwnProperty('arguments') ? '    extend(_obj, _obj.arguments === true ? obj : _obj.arguments);\n' + '    delete _obj.arguments;' : '', '    return ' + element.value + '.call($this, _obj, _Vdt, ' + this._visitJS(blocks) + ', ' + element.value + ')', '}).call($this)'].join('\n');
 
         return this._visitJSXDirective(element, ret);
     },
@@ -1677,6 +1877,9 @@ function applyKey(vNode, reference, isAddKey) {
     if (isNullOrUndefined(vNode.key) || vNode.key[0] === '.') {
         vNode.key = '.$' + reference.index++;
     }
+    // add a flag to indicate that we have handle the vNode
+    // when it came back we should clone it
+    vNode.$ = true;
     return vNode;
 }
 
@@ -1707,7 +1910,11 @@ function addChild(vNodes, reference, isAddKey) {
             if (!newVNodes) {
                 newVNodes = vNodes.slice(0, i);
             }
+<<<<<<< HEAD
             if (n.dom || n.key && n.key[0] === '.') {
+=======
+            if (n.dom || n.$) {
+>>>>>>> master
                 newVNodes.push(applyKey(directClone(n), reference, isAddKey));
             } else {
                 newVNodes.push(applyKey(n, reference, isAddKey));
@@ -1774,8 +1981,15 @@ function directClone(vNode) {
         }
 
         newVNode = new VNode(type, vNode.tag, vNode.props, children, vNode.className, vNode.key, vNode.ref);
+<<<<<<< HEAD
     } else if (type & Types.TextElement) {
         newVNode = createTextVNode(vNode.children);
+=======
+    } else if (type & Types.Text) {
+        newVNode = createTextVNode(vNode.children);
+    } else if (type & Types.HtmlComment) {
+        newVNode = createCommentVNode(vNode.children);
+>>>>>>> master
     }
 
     return newVNode;
@@ -1911,10 +2125,26 @@ function handleEvent(name, lastEvent, nextEvent, dom) {
         }
     } else {
         if (lastEvent) {
-            removeEventListener(dom, name, lastEvent);
+            if (isArray(lastEvent)) {
+                for (var i = 0; i < lastEvent.length; i++) {
+                    if (lastEvent[i]) {
+                        removeEventListener(dom, name, lastEvent[i]);
+                    }
+                }
+            } else {
+                removeEventListener(dom, name, lastEvent);
+            }
         }
         if (nextEvent) {
-            addEventListener(dom, name, nextEvent);
+            if (isArray(nextEvent)) {
+                for (var _i = 0; _i < nextEvent.length; _i++) {
+                    if (nextEvent[_i]) {
+                        addEventListener(dom, name, nextEvent[_i]);
+                    }
+                }
+            } else {
+                addEventListener(dom, name, nextEvent);
+            }
         }
     }
 }
@@ -1924,7 +2154,16 @@ function dispatchEvent(event, target, items, count, isClick) {
     if (eventToTrigger) {
         count--;
         event.currentTarget = target;
-        eventToTrigger(event);
+        if (isArray(eventToTrigger)) {
+            for (var i = 0; i < eventToTrigger.length; i++) {
+                var _eventToTrigger = eventToTrigger[i];
+                if (_eventToTrigger) {
+                    _eventToTrigger(event);
+                }
+            }
+        } else {
+            eventToTrigger(event);
+        }
         if (event._rawEvent.cancelBubble) {
             return;
         }
@@ -2110,7 +2349,7 @@ function createElement(vNode, parentDom, mountedQueue, isRender, parentVNode, is
     } else if (type & Types.HtmlComment) {
         return createCommentElement(vNode, parentDom);
     } else {
-        throw new Error('unknown vnode type ' + type);
+        throw new Error('expect a vNode but got ' + vNode);
     }
 }
 
@@ -2332,7 +2571,11 @@ function replaceChild(parentDom, lastVNode, nextVNode) {
     if (lastDom._unmount) {
         lastDom._unmount(lastVNode, parentDom);
         if (!nextDom.parentNode) {
-            parentDom.appendChild(nextDom);
+            if (parentDom.lastChild === lastDom) {
+                parentDom.appendChild(nextDom);
+            } else {
+                parentDom.insertBefore(nextDom, lastDom.nextSibling);
+            }
         }
     } else {
         parentDom.replaceChild(nextDom, lastDom);
@@ -2359,9 +2602,9 @@ function appendChild(parentDom, dom) {
 
 function createRef(dom, ref, mountedQueue) {
     if (typeof ref === 'function') {
-        mountedQueue.push(function () {
-            return ref(dom);
-        });
+        // mountedQueue.push(() => ref(dom));
+        // set ref immediately, because we have unset it before
+        ref(dom);
     } else {
         throw new Error('ref must be a function, but got "' + JSON.stringify(ref) + '"');
     }
@@ -2401,7 +2644,7 @@ function patchVNode(lastVNode, nextVNode, parentDom, mountedQueue, parentVNode, 
                 replaceElement(lastVNode, nextVNode, parentDom, mountedQueue, parentVNode, isSVG);
             }
         } else if (nextType & Types.TextElement) {
-            if (lastType & Types.TextElement) {
+            if (lastType === nextType) {
                 patchText(lastVNode, nextVNode);
             } else {
                 replaceElement(lastVNode, nextVNode, parentDom, mountedQueue, isSVG);
@@ -2467,9 +2710,15 @@ function patchElement(lastVNode, nextVNode, parentDom, mountedQueue, parentVNode
             }
         }
 
+        var lastRef = lastVNode.ref;
         var nextRef = nextVNode.ref;
-        if (!isNullOrUndefined(nextRef) && lastVNode.ref !== nextRef) {
-            createRef(dom, nextRef, mountedQueue);
+        if (lastRef !== nextRef) {
+            if (!isNullOrUndefined(lastRef)) {
+                lastRef(null);
+            }
+            if (!isNullOrUndefined(nextRef)) {
+                createRef(dom, nextRef, mountedQueue);
+            }
         }
     }
 }
@@ -2502,9 +2751,15 @@ function patchComponentClass(lastVNode, nextVNode, parentDom, mountedQueue, pare
         // for intact.js, the dom will not be removed and
         // the component will not be destoryed, so the ref
         // function need be called in update method.
-        var ref = nextVNode.ref;
-        if (typeof ref === 'function') {
-            ref(instance);
+        var lastRef = lastVNode.ref;
+        var nextRef = nextVNode.ref;
+        if (lastRef !== nextRef) {
+            if (!isNullOrUndefined(lastRef)) {
+                lastRef(null);
+            }
+            if (!isNullOrUndefined(nextRef)) {
+                nextRef(instance);
+            }
         }
     }
 
@@ -3531,7 +3786,8 @@ var miss = (Object.freeze || Object)({
 	renderString: toString$1,
 	hydrateRoot: hydrateRoot,
 	hydrate: hydrate,
-	Types: Types
+	Types: Types,
+	VNode: VNode
 });
 
 var parser = new Parser();
@@ -3568,9 +3824,10 @@ Vdt$1.prototype = {
         return this.vNode;
     },
     renderString: function renderString$$1(data, blocks) {
-        this.renderVNode(data, blocks);
+        this.data = data;
+        var vNode = this.template(data, Vdt$1, blocks, this.template) || createCommentVNode('empty');
 
-        return toString$1(this.vNode, null, Vdt$1.configure().disableSplitText);
+        return toString$1(vNode, null, Vdt$1.configure().disableSplitText);
     },
     update: function update(data, parentDom, queue, parentVNode, isSVG, blocks) {
         var oldVNode = this.vNode;
@@ -3606,7 +3863,7 @@ function compile(source, options) {
             var ast = parser.parse(source, options),
                 hscript = stringifier.stringify(ast, options.autoReturn);
 
-            hscript = ['_Vdt || (_Vdt = Vdt);', 'obj || (obj = {});', 'blocks || (blocks = {});', 'var h = _Vdt.miss.h, hc = _Vdt.miss.hc, hu = _Vdt.miss.hu, widgets = this && this.widgets || {}, _blocks = {}, __blocks = {},', '__u = _Vdt.utils, extend = __u.extend, _e = __u.error, _className = __u.className,', '__o = __u.Options, _getModel = __o.getModel, _setModel = __o.setModel,', '_setCheckboxModel = __u.setCheckboxModel, _detectCheckboxChecked = __u.detectCheckboxChecked,', '_setSelectModel = __u.setSelectModel,', (options.server ? 'require = function(file) { return _Vdt.require(file, "' + options.filename.replace(/\\/g, '\\\\') + '") }, ' : '') + 'self = this.data, $this = this, scope = obj, Animate = self && self.Animate, parent = ($callee || {})._super', options.noWith ? hscript : ['with (obj) {', hscript, '}'].join('\n')].join('\n');
+            hscript = ['_Vdt || (_Vdt = Vdt);', 'obj || (obj = {});', 'blocks || (blocks = {});', 'var h = _Vdt.miss.h, hc = _Vdt.miss.hc, hu = _Vdt.miss.hu, widgets = this && this.widgets || {}, _blocks = {}, __blocks = {},', '    __u = _Vdt.utils, extend = __u.extend, _e = __u.error, _className = __u.className, __slice = __u.slice, __noop = __u.noop,', '    __m = __u.map, __o = __u.Options, _getModel = __o.getModel, _setModel = __o.setModel,', '    _setCheckboxModel = __u.setCheckboxModel, _detectCheckboxChecked = __u.detectCheckboxChecked,', '    _setSelectModel = __u.setSelectModel,', options.server ? '    require = function(file) { return _Vdt.require(file, "' + options.filename.replace(/\\/g, '\\\\') + '    ") }, ' : '', '    self = this.data, $this = this, scope = obj, Animate = self && self.Animate, parent = ($callee || {})._super', options.noWith ? hscript : ['    with (obj) {', '        ' + hscript, '    }'].join('\n')].join('\n');
             templateFn = options.onlySource ? function () {} : new Function('obj', '_Vdt', 'blocks', '$callee', hscript);
             templateFn.source = 'function(obj, _Vdt, blocks, $callee) {\n' + hscript + '\n}';
             templateFn.head = stringifier.head;
