@@ -8,6 +8,7 @@ import * as Utils from './utils';
 
 const {Type, TypeName} = Utils;
 const elementNameRegexp = /^<\w+:?\s*[\{\w\/>]/;
+const emptyRegexp = /^\s*$/;
 // const importRegexp = /^\s*\bimport\b/;
 
 function isJSXIdentifierPart(ch) {
@@ -390,10 +391,12 @@ Parser.prototype = {
         var expression,
             Delimiters = this.options.delimiters;
         this._expect(Delimiters[0]);
+        this._skipWhitespaceAndJSComment();
         if (this._isExpect(Delimiters[1])) {
-            expression = this._parseJSXEmptyExpression();
+            expression = [this._parseJSXEmptyExpression()];
         } else if (this._isExpect('=')) {
             // if the lead char is '=', then treat it as unescape string
+            this._skipWhitespace();
             expression = this._parseJSXUnescapeText();
             this._expect(Delimiters[1]);
             return expression;
@@ -591,6 +594,14 @@ Parser.prototype = {
                 }
             }
         }
+    },
+
+    _skipWhitespaceAndJSComment: function() {
+        do {
+            var start = this.index;
+            this._skipWhitespace();
+            this._skipJSComment();
+        } while (start !== this.index);
     },
 
     _expect: function(str, msg, position) {

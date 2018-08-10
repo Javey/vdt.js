@@ -40,7 +40,24 @@ Stringifier.prototype = {
         this.autoReturn = !!autoReturn;
         this.enterStringExpression = false;
         this.head = ''; // save import syntax
+
+        this.offsetLine = 10;
+        this.mappings = [];
+
         return this._visitJSXExpressionContainer(ast, true);
+    },
+
+    _addMapping(element) {
+        this.mappings.push({
+            generated: {
+                line: element.line + this.offsetLine,
+                column: 1
+            },
+            original: {
+                line: element.line,
+                column: element.column,
+            }
+        });
     },
 
     _visitJSXExpressionContainer: function(ast, isRoot) {
@@ -54,7 +71,7 @@ Stringifier.prototype = {
             }
             var tmp = this._visit(element, isRoot);
             if (isRoot && element.type === Type.JSImport) {
-                this.head += tmp;
+                this.head += `${tmp}\n`;
             } else {
                 str += tmp;
             }
@@ -62,14 +79,14 @@ Stringifier.prototype = {
 
         if (!isRoot && !this.enterStringExpression) {
             // special for ... syntaxt
-            str = Utils.trimLeft(str); 
+            // str = Utils.trimLeft(str); 
             if (str[0] === '.' && str[1] === '.' && str[2] === '.') {
                 hasDestructuring = true;
                 str = str.substr(3); 
             }
             // add [][0] for return /* comment */
-            str = 'function() {try {return [' + str + '][0]} catch(e) {_e(e)}}.call($this)';
-            // str = 'function() {try {return (' + str + ')} catch(e) {_e(e)}}.call($this)';
+            // str = 'function() {try {return [' + str + '][0]} catch(e) {_e(e)}}.call($this)';
+            str = 'function() {try {return (' + str + ')} catch(e) {_e(e)}}.call($this)';
             if (hasDestructuring) {
                 str = '...' + str;
             }
@@ -154,7 +171,7 @@ Stringifier.prototype = {
             ret.push(this._visit(child));
         }, this);
 
-        return ret.length > 1 ? '[' + ret.join(', ') + ']' : (ret[0] || 'null');
+        return ret.length > 1 ? '[' + ret.join(',\n') + ']' : (ret[0] || 'null');
     },
 
     _visitJSXDirective: function(element, ret) {
