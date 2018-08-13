@@ -7,7 +7,7 @@
 import {
     isNullOrUndefined, isArray, indexOf, 
     selfClosingTags as SelfClosingTags,
-    isEventProp,
+    isEventProp
 } from 'misstime/src/utils';
 
 export {isNullOrUndefined, isArray, indexOf, SelfClosingTags, isEventProp};

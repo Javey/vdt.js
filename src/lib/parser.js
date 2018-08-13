@@ -486,7 +486,17 @@ Parser.prototype = {
             }
         }
         this._parseJSXClosingElement(endTag, element);
-        return children;
+
+        // ignore skipped child
+        const ret = [];
+        for (let i = 0; i < children.length; i++) {
+            const child = children[i];
+            if (!child.skip) {
+                ret.push(child);
+            }
+        }
+
+        return ret;
     },
 
     _parseJSXChild: function(element, endTag, prev) {

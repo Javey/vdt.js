@@ -50,13 +50,16 @@ Stringifier.prototype = {
         this.enterStringExpression = false;
         this.head = ''; // save import syntax
 
+        this.indent = 0;
+
+        this.buffer = [];
         this.mappings = [];
 
         this.line = 1;
         this.column = 1;
 
         const ret = this._visitJSXExpressionContainer(ast, true);
-        console.log(this.mappings, ret);
+        console.log(this.buffer.join(''), this.mappings);
         return ret;
     },
 
@@ -75,44 +78,36 @@ Stringifier.prototype = {
     },
 
     _visitJSXExpressionContainer: function(ast, isRoot) {
-        var str = '',
-            length = ast.length,
-            hasDestructuring = false;
-
-        let {line, column} = this;
+        let length = ast.length;
+        let hasDestructuring = false;
 
         Utils.each(ast, function(element, i) {
             // if is root, add `return` keyword
             if (this.autoReturn && isRoot && i === length - 1) {
-                str += 'return ';
-                this.column = getLineAndColumn(str).column;
+                this._append('return ');
             }
-            var tmp = this._visit(element, isRoot);
-            this.line = 
-            if (isRoot && element.type === Type.JSImport) {
-                this.head += `${tmp}\n`;
-            } else {
-                str += tmp;
-                const {line: l, column: c} = getLineAndColumn(str);
-                this.line = line + l - 1;
-                this.column += column + c;
-            }
+
+            let str = this._visit(element, isRoot);
+            // if (isRoot && element.type === Type.JSImport) {
+                // this.head += `${str}\n`;
+            // }
+
+            // if (!isRoot && !this.enterStringExpression) {
+                // // special for ... syntaxt
+                // if (str[0] === '.' && str[1] === '.' && str[2] === '.') {
+                    // hasDestructuring = true;
+                    // str = str.substr(3); 
+                // }
+                // str = 'function() {try {return (' + str + ')} catch(e) {_e(e)}}.call($this)';
+                // if (hasDestructuring) {
+                    // str = '...' + str;
+                // }
+            // }
+
+            // if (isRoot) {
+                // this._append(str, element);
+            // }
         }, this);
-
-        if (!isRoot && !this.enterStringExpression) {
-            // special for ... syntaxt
-            if (str[0] === '.' && str[1] === '.' && str[2] === '.') {
-                hasDestructuring = true;
-                str = str.substr(3); 
-            }
-            str = 'function() {try {return (' + str + ')} catch(e) {_e(e)}}.call($this)';
-            if (hasDestructuring) {
-                str = '...' + str;
-            }
-            this.column += 
-        }
-
-        return str;
     },
 
     _visit: function(element, isRoot) {
@@ -166,9 +161,7 @@ Stringifier.prototype = {
             '(' + element.value + ')' : 
             element.value; 
 
-        this._addMapping(element);
-
-        return ret;
+        this._append(ret, element);
     },
 
     _visitJSXElement: function(element) {
@@ -177,30 +170,62 @@ Stringifier.prototype = {
             return this._visitJSXDirective(element, this._visitJSXChildren(element.children));
         }
 
-        var attributes = this._visitJSXAttribute(element, true, true);
-        var ret = "h(" + normalizeArgs([
-            "'" + element.value + "'", 
-            attributes.props, 
-            this._visitJSXChildren(element.children),
-            attributes.className,
-            attributes.key,
-            attributes.ref
-        ]) + ')';
+        this._append(`h('${element.value}', `, element);
 
-        this._addMapping(element);
+        const attributes = this._visitJSXAttribute(element, true, true);
+        this._append(', ');
 
-        return this._visitJSXDirective(element, ret);
+        this._visitJSXChildren(element.children);
+        this._append(', ');
+        if (attributes.className) {
+            this._visitJSXAttributeClassName(attributes.className);
+        } else {
+            this._append('null');
+        }
+        this._append(', ');
+        if (attributes.key) {
+            this._visitJSXAttributeValue(attributes.key);
+        } else {
+            this._append('null');
+        }
+        this._append(', ');
+        if (attributes.ref) {
+            this._visitJSXAttributeRef(attributes.ref);
+        } else {
+            this._append('null');
+        }
+        this._append(')');
+
+        // return this._visitJSXDirective(element, ret);
+        // var ret = "h(" + normalizeArgs([
+            // "'" + element.value + "'", 
+            // attributes.props, 
+            // this._visitJSXChildren(element.children),
+            // attributes.className,
+            // attributes.key,
+            // attributes.ref
+        // ]) + ')';
+
+        // return this._visitJSXDirective(element, ret);
     },
 
     _visitJSXChildren: function(children) {
-        var ret = [];
-        Utils.each(children, function(child) {
-            // ignore element which handled by directive
-            if (child.skip) return;
-            ret.push(this._visit(child));
+        const length = children.length;
+        if (!length) {
+            this._append('null');
+        }
+        if (length > 1) {
+            this._append('[\n');
+        }
+        Utils.each(children, function(child, index) {
+            this._visit(child);
+            if (index !== length - 1) {
+                this._append(',\n');
+            }
         }, this);
-
-        return ret.length > 1 ? '[\n' + ret.join(',\n') + '\n]' : (ret[0] || 'null');
+        if (length > 1) {
+            this._append('\n]');
+        }
     },
 
     _visitJSXDirective: function(element, ret) {
@@ -232,7 +257,7 @@ Stringifier.prototype = {
             ret = this._visitJSXDirectiveFor(directiveFor, ret);
         }
 
-        return ret;
+        return this._result(ret);
     },
 
     _visitJSXDirectiveIf: function(directive, ret, element) {
@@ -278,134 +303,186 @@ Stringifier.prototype = {
     },
 
     _visitJSXAttribute: function(element, individualClassName, individualKeyAndRef) {
-        var ret = [],
-            set = {},
+        var set = {},
             events = {},
             // support bind multiple callbacks for the same event
-            addEvent = (name, value) => {
+            addEvent = (name, attr) => {
                 const v = events[name];
-                if (v) {
-                    if (!Utils.isArray(v)) {
-                        events[name] = [v];
-                    }
-                    events[name].push(value);
-                } else {
-                    events[name] = value;
+                if (!v) {
+                    events[name] = [];
                 }
+                events[name].push(attr);
             },
             attributes = element.attributes,
-            className,
-            key,
-            ref,
-            type = 'text',
             models = [],
-            addition = {trueValue: true, falseValue: false};
+            addition = {trueValue: true, falseValue: false, type: 'text'},
+            isFirst;
+
+        const addAttribute = (name, attr) => {
+            if (isFirst === undefined) {
+                this._append('{\n');
+                isFirst = true;
+            }
+            if (!isFirst) {
+                this._append(',\n');
+            }
+            this._append(`'${name}': `, attr);
+            isFirst = false;
+        }
+
         Utils.each(attributes, function(attr) {
             if (attr.type === Type.JSXExpressionContainer) {
-                return ret.push(this._visitJSXAttributeValue(attr, line));
+                return this._visitJSXAttributeValue(attr);
             }
-            var name = attrMap(attr.name),
-                value = this._visitJSXAttributeValue(attr.value, line);
-            if ((name === 'widget' || name === 'ref') && attr.value.type === Type.JSXText) {
-                // for compatility v1.0
-                // convert widget="a" to ref=(i) => widgets.a = i
-                // convert ref="a" to ref=(i) => widgets.a = i. For Intact
-                ref = 'function(i) {widgets[' + value + '] = i}';
-                return;
-            } else if (name === 'className') {
-                // process className individually
-                if (attr.value.type === Type.JSXExpressionContainer) {
-                    // for class={ {active: true} }
-                    value = '_className(' + value + ')';
+
+            let name = attrMap(attr.name);
+
+            if (name === 'className') {
+                if (!individualClassName) {
+                    addAttribute(name, attr);
+                    this._visitJSXAttributeClassName(attr.value);
                 }
-                if (individualClassName) {
-                    className = value;
-                    return;
+            } else if (name === 'key') {
+                if (!individualKeyAndRef) {
+                    addAttribute(name, attr);
+                    this._visitJSXAttributeValue(attr.value);
                 }
-            } else if (name === 'key' && individualKeyAndRef) {
-                key = value;
-                return;
-            } else if (name === 'ref' && individualKeyAndRef) {
-                ref = value;
-                return;
+            } else if (name === 'widget' || name === 'ref') {
+                if (!individualClassName) {
+                    addAttribute('ref', attr);
+                    this._visitJSXAttributeRef(attr.value);   
+                }
             } else if (Utils.isVModel(name)) {
                 let [, model] = name.split(':');
+
                 if (model === 'value') name = 'v-model';
                 if (!model) model = 'value';
-                models.push({name: model, value: value});
-            } else if (name === 'v-model-true') {
-                addition.trueValue = value;
-                return;
-            } else if (name === 'v-model-false') {
-                addition.falseValue = value;
-                return;
-            } else if (name === 'type') {
-                // save the type value for v-model of input element
-                type = value;
-            } else if (name === 'value') {
-                addition.value = value;
-            } else if (Utils.isEventProp(name)) {
-                addEvent(name, value);
-                return;
-            }
-            ret.push("'" + name + "': " + value);
-            // for get property directly 
-            set[name] = value;
 
+                models.push({name: model, value: attr.value, attr: attr});
+            } else if (name === 'v-model-true') {
+                addition.trueValue = attr.value;
+            } else if (name === 'v-model-false') {
+                addition.falseValue = attr.value;
+            } else if (name === 'type' || name === 'value') {
+                // save the type value for v-model of input element
+                addAttribute(name, attr);
+                this._visitJSXAttributeValue(attr.value);
+                addition[name] = attr.value;
+            } else if (Utils.isEventProp(name)) {
+                addEvent(name, attr);
+            } else {
+                addAttribute(name, attr);
+                this._visitJSXAttributeValue(attr.value);
+            }
+
+            // for get property directly 
+            set[name] = attr.value;
         }, this);
 
         for (let i = 0; i < models.length; i++) {
-            this._visitJSXAttributeModel(element, models[i], ret, type, addition, addEvent);
+            this._visitJSXAttributeModel(element, models[i], addition, addEvent, addAttribute);
         }
 
-        Utils.each(events, (value, name) => {
-            ret.push(`'${name}': ${Utils.isArray(value) ? '[' + value.join(',') + ']' : value}`);
+        Utils.each(events, (events, name) => {
+            addAttribute(name, events[0]);
+
+            const length = events.length;
+            if (length > 1) {
+                this._append('[\n');
+            }
+            for (let i = 0; i < length; i++) {
+                const event = events[i];
+                if (typeof event === 'function') {
+                    event();
+                } else {
+                    this._visitJSXAttributeValue(event.value);
+                }
+                if (i !== length - 1) {
+                    this._append(',\n');
+                }
+            }
+            if (length > 1) {
+                this._append('\n]');
+            }
         });
 
-        this.line += ret.length + 1;
+        if (isFirst !== undefined) {
+            this._append('\n}');
+        } else {
+            this._append('null');
+        }
 
-        return {
-            props: ret.length ? '{\n' + ret.join(',\n') + '\n}' : 'null',
-            className: className || 'null',
-            ref: ref || 'null',
-            key: key || 'null',
-            set: set
-        };
+        return set; 
     },
 
-    _visitJSXAttributeModel: function(element, model, ret, type, addition, addEvent) {
+    _visitJSXAttributeClassName(value) {
+        if (value.type === Type.JSXExpressionContainer) {
+            // for class={ {active: true} }
+            this._append('_className(');
+            this._visitJSXAttributeValue(value);
+            this._append(')');
+        } else {
+            this._visitJSXAttributeValue(value);
+        }
+    },
+
+    _visitJSXAttributeRef(value) {
+        if (value.type === Type.JSXText) {
+            // for compatility v1.0
+            // convert widget="a" to ref=(i) => widgets.a = i
+            // convert ref="a" to ref=(i) => widgets.a = i. For Intact
+            this._append(`function(i) {widgets[`);
+            this._visitJSXAttributeValue(value);
+            this._append(`] = i}`);
+        } else {
+            this._visitJSXAttributeValue(value);
+        }
+    },
+
+    _visitJSXAttributeModel: function(element, model, addition, addEvent, addAttribute) {
         var valueName = model.name,
             value = model.value,
             eventName = 'change'; 
 
+        const append = (...args) => {
+            for (let i = 0; i < args.length; i++) {
+                if (i % 2) {
+                    this._visitJSXAttributeValue(args[i]);
+                } else {
+                    this._append(args[i]);
+                }
+            }
+        };
+
         if (element.type === Type.JSXElement) {
             switch (element.value) {
                 case 'input':
-                    switch (type) {
+                    switch (addition.type) {
                         case "'file'":
                             eventName = 'change';
                             break;
                         case "'radio'":
                         case "'checkbox'":
+                            addAttribute('checked', model.attr);
                             var trueValue = addition.trueValue,
                                 falseValue = addition.falseValue,
                                 inputValue = addition.value;
                             if (Utils.isNullOrUndefined(inputValue)) {
-                                ret.push(`checked: _getModel(self, ${value}) === ${trueValue}`);
-                                addEvent('ev-change', `function(__e) {
-                                    _setModel(self, ${value}, __e.target.checked ? ${trueValue} : ${falseValue}, $this);
-                                }`);
+                                append('_getModel(self, ', value, ') === ', trueValue);
+                                addEvent('ev-change', () => {
+                                    append('function(__e) {\n__e.target.checked ? ', trueValue, ' : ', falseValue, ', $this);\n}');
+                                });
                             } else {
                                 if (type === "'radio'") {
-                                    ret.push(`checked: _getModel(self, ${value}) === ${inputValue}`);
-                                    addEvent('ev-change', `function(__e) { 
-                                        _setModel(self, ${value}, __e.target.checked ? ${inputValue} : ${falseValue}, $this);
-                                    }`);
+                                    append(`_getModel(self, `, value, ') === ', trueValue);
+                                    addEvent('ev-change', () => {
+                                        append('function(__e) {\n_setModel(self, ', value, ', __e.target.checked ? ', inputValue, ' : ', falseValue, ', $this);\n}');
+                                    });
                                 } else {
-                                    ret.push(`checked: _detectCheckboxChecked(self, ${value}, ${inputValue})`);
-                                    addEvent('ev-change', `function(__e) { 
-                                        _setCheckboxModel(self, ${value}, ${inputValue}, ${falseValue}, __e, $this);
-                                    }`);
+                                    append(`_detectCheckboxChecked(self, `, value, ', ', inputValue, '), \n');
+                                    addEvent('ev-change', () => {
+                                        append('function(__e) {\n_setCheckboxModel(self, ', value, ', ', inputValue, ', ', falseValue, ', __e, $this);\n}');
+                                    });
                                 }
                             }
                             return;
@@ -415,10 +492,11 @@ Stringifier.prototype = {
                     }
                     break;
                 case 'select':
-                    ret.push(`value: _getModel(self, ${value})`);
-                    addEvent('ev-change', `function(__e) {
-                        _setSelectModel(self, ${value}, __e, $this);
-                    }`);
+                    addAttribute('value', model.attr);
+                    append('_getModel(self, ', value, ')');
+                    addEvent('ev-change', () => {
+                        append('function(__e) {\n__setSelectModel(self, ', value, ', _e, $this);\n}');
+                    });
                     return;
                 case 'textarea':
                     eventName = 'input';
@@ -426,15 +504,20 @@ Stringifier.prototype = {
                 default:
                     break;
             }
-            addEvent(`ev-${eventName}`, `function(__e) { _setModel(self, ${value}, __e.target.value, $this) }`);
+            addEvent(`ev-${eventName}`, () => {
+                append('function(__e) { _setModel(self, ', value, ', __e.target.value, $this) }');
+            });
         } else if (element.type === Type.JSXWidget) {
-            addEvent(`ev-$change:${valueName}`, `function(__c, __n) { _setModel(self, ${value}, __n, $this) }`);
+            addEvent(`ev-$change:${valueName}`, () => {
+                append('function(__c, __n) { _setModel(self, ', value, ', __n, $this) }');
+            });
         }
-        ret.push(`${valueName}: _getModel(self, ${value})`);
+        addAttribute(valueName, model.attr);
+        append(`_getModel(self, `, value, ')');
     },
 
-    _visitJSXAttributeValue: function(value, line) {
-        return Utils.isArray(value) ? this._visitJSXChildren(value, line) : this._visit(value, false, line);
+    _visitJSXAttributeValue: function(value) {
+        Utils.isArray(value) ? this._visitJSXChildren(value) : this._visit(value, false);
     },
 
     _visitJSXText: function(element, noQuotes) {
@@ -442,11 +525,14 @@ Stringifier.prototype = {
         if (!noQuotes) {
             ret = "'" + ret + "'";
         }
-        return ret;
+
+        this._append(ret, element);
     },
 
     _visitJSXUnescapeText: function(element) {
-        return 'hu('+ this._visitJSXExpressionContainer(element.value) +')';
+        this._append('hu(');
+        this._visitJSXExpressionContainer(element.value);
+        this._append(')');
     },
 
     _visitJSXWidget: function(element) {
@@ -474,12 +560,12 @@ Stringifier.prototype = {
         );
     },
 
-    _visitJSXBlock: function(element, isAncestor, line) {
+    _visitJSXBlock: function(element, isAncestor) {
         const {params, args} = this._visitJSXBlockAttribute(element);
         return this._visitJSXDirective(
             element,
             '(_blocks["' + element.value + '"] = function(parent' + (params ? ', ' + params : '') + ') {\n' +
-            '    return ' + this._visitJSXChildren(element.children, line) + ';\n' + 
+            '    return ' + this._visitJSXChildren(element.children) + ';\n' + 
             '}) && (__blocks["' + element.value + '"] = function(parent) {\n' +
             '    var args = arguments;\n' +
             '    return blocks["' + element.value + '"] ? blocks["' + element.value + '"].apply($this, [function() {\n' +
@@ -556,5 +642,41 @@ Stringifier.prototype = {
 
     _visitJSXComment: function(element) {
         return 'hc(' + this._visitJSXText(element) + ')';
-    }
+    },
+
+    _result(code) {
+        // const {line, column} = getLineAndColumn(code);
+        // this.line += line - 1;
+        // this.column = line > 1 ? column + 1 : this.column + column + 1; 
+
+        return code;
+    },
+
+    _append(code, element) {
+        if (element) {
+            this._addMapping(element);
+        }
+        this.buffer.push(code);
+
+        for (let i = 0; i < code.length; i++) {
+            if (code[i] === '\n') {
+                this.line++;
+                this.column = 0;
+            } else {
+                this.column++;
+            }
+        }
+    },
+
+    _indent() {
+        this.indent++;
+    },
+
+    _dedent() {
+        this.index--;
+    },
+
+    _getIndent() {
+        new Array(this.indent + 1).join('    ');
+    },
 };
