@@ -84,11 +84,45 @@ var Vdt = require('../dist');
 // source = "<div>{a}</div>"
 source = `const a = 1;
 <div class="a" test={b}>
+    <!--test-->
     <input v-model="value" ev-input={fn} />
-    <span key="a" ref="a"></span>
+    <span key="a" ref="a" {...a}></span>
     <i>{hello} world!</i>
+    <div v-if={a}>ab</div>
+    <div v-if={a}>a</div>
+    <div v-else-if={b}>b</div>
+    <div v-else>c</div>
+    <div v-for={data}>{value}</div>
+    <template v-if={a}>
+        <div>1</div>
+        <div>2</div>
+    </template>
 </div>
 `
+// source = `const a = 1;
+// <div>
+//     <b:name args={a}>
+//         <div>aaa</div>
+//     </b:name>
+// </div>
+// `
+// source = `<t:parent arguments>
+//     <b:name params="data, a">test</b:name>
+// </t:parent>`
+// source =`<Div key="a" ref="b">
+//     <div>test</div>
+//     <b:name>test</b:name>
+// </Div>`
+// source = `import a from 'a';
+// // aaa
+// import b from 'b';
+// <div {...a} a="1"></div>`
+source =`<input />`
+
+// source = "var Page = function(attrs) {\n    return <div title={attrs.title}>\n        {attrs.children}\n    </div>\n}\n<Page title=\"test\">\n    <div>1</div>\n    <div>2</div>\n</Page>";
+// source = "var A = function(attrs) {\n    return <div>{attrs.data}{attrs.value}</div>\n}\n<A data={[<div>1</div>, <div>2</div>]} value={[1, 2]}></A>";
+// source = "<script type=\"text/javascript\">\n    var a = 1;\n    console.log(a);\n    if (a < 2) {\n        console.log('less than {{ a < 2 ? 'a' : 'b' }}');\n    }\n</script>";
+// source = "<ul>\n    <li v-if={index % 2} class=\"test\" v-for={data} v-for-key=\"index\">{value}</li>\n</ul>";
 var ast = Vdt.parser.parse(source, {skipWhitespace: true});
 // console.log(util.inspect(ast, {showHidden: true, depth: null}));
 console.log(Vdt.stringifier.stringify(ast))

@@ -833,15 +833,20 @@ describe 'Vdt', ->
         <div {...a} b="1"></div>
         """
         
-        Vdt.stringifier.stringify(Vdt.parser.parse(source)).should.eql """
-        return h('div', {...function() {try {return (a)} catch(e) {_e(e)}}.call($this), 'b': '1'})
+        Vdt.stringifier.body(Vdt.parser.parse(source)).should.eql """
+        return h('div', {
+            ...function() {try {return (a)} catch(e) {_e(e)}}.call($this),
+            'b': '1'
+        })
         """
 
         source = """
         var a = {a: 1}; <a {...a}></a>
         """
-        Vdt.stringifier.stringify(Vdt.parser.parse(source)).should.eql """
-        var a = {a: 1}; return h('a', {...function() {try {return (a)} catch(e) {_e(e)}}.call($this)})
+        Vdt.stringifier.body(Vdt.parser.parse(source)).should.eql """
+        var a = {a: 1}; return h('a', {
+            ...function() {try {return (a)} catch(e) {_e(e)}}.call($this)
+        })
         """
 
     it 'Stringify es6 import should be hoisted', ->
@@ -852,8 +857,8 @@ describe 'Vdt', ->
         <div>{test}</div>
         """
 
-        Vdt.stringifier.stringify(Vdt.parser.parse(source)).should.eql """
-         
+        Vdt.stringifier.body(Vdt.parser.parse(source)).should.eql """
+        
         return h('div', null, function() {try {return (test)} catch(e) {_e(e)}}.call($this))
         """
 
@@ -862,8 +867,14 @@ describe 'Vdt', ->
         <div ev-click={a} ev-click={b} ev-dbclick={c}></div>
         """
 
-        Vdt.stringifier.stringify(Vdt.parser.parse(source)).should.eql """
-        return h('div', {'ev-click': [function() {try {return (a)} catch(e) {_e(e)}}.call($this),function() {try {return (b)} catch(e) {_e(e)}}.call($this)], 'ev-dbclick': function() {try {return (c)} catch(e) {_e(e)}}.call($this)})
+        Vdt.stringifier.body(Vdt.parser.parse(source)).should.containEql """
+        return h('div', {
+            'ev-click': [
+                function() {try {return (a)} catch(e) {_e(e)}}.call($this),
+                function() {try {return (b)} catch(e) {_e(e)}}.call($this)
+            ],
+            'ev-dbclick': function() {try {return (c)} catch(e) {_e(e)}}.call($this)
+        })
         """
 
     it 'Stringify event with model', ->
@@ -871,17 +882,37 @@ describe 'Vdt', ->
         <input v-model="a" ev-input={b} />
         """
 
-        Vdt.stringifier.stringify(Vdt.parser.parse(source)).should.eql """
-        return h('input', {'v-model': 'a', value: _getModel(self, 'a'), 'ev-input': [function() {try {return (b)} catch(e) {_e(e)}}.call($this),function(__e) { _setModel(self, 'a', __e.target.value, $this) }]})
+        Vdt.stringifier.body(Vdt.parser.parse(source)).should.eql """
+        return h('input', {
+            'value': _getModel(self, 'a'),
+            'ev-input': [
+                function() {try {return (b)} catch(e) {_e(e)}}.call($this),
+                function(__e) { _setModel(self, 'a', __e.target.value, $this) }
+            ]
+        })
         """
+    
+    it 'Stringify v-model of radio', ->
+        source = """
+        <input type="radio" v-model="a" />
+        """
+        console.log Vdt.stringifier.body(Vdt.parser.parse(source))
+
 
     it 'Strigify event with model in Component', ->
         source = """
         <Input v-model="a" ev-$change:value={b} />
         """
 
-        Vdt.stringifier.stringify(Vdt.parser.parse(source)).should.eql """
-        return h(Input, {'v-model': 'a', 'children': null, '_context': $this, value: _getModel(self, 'a'), 'ev-$change:value': [function() {try {return (b)} catch(e) {_e(e)}}.call($this),function(__c, __n) { _setModel(self, 'a', __n, $this) }]})
+        Vdt.stringifier.body(Vdt.parser.parse(source)).should.eql """
+        return h(Input, {
+            '_context': $this,
+            'value': _getModel(self, 'a'),
+            'ev-$change:value': [
+                function() {try {return (b)} catch(e) {_e(e)}}.call($this),
+                function(__c, __n) { _setModel(self, 'a', __n, $this) }
+            ]
+        })
         """
 
     it 'render template', ->

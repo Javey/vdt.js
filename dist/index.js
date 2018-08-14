@@ -263,8 +263,8 @@ var Type$1 = {
     JSXString: i++
 };
 var TypeName$1 = [];
-for (var type$1 in Type$1) {
-    TypeName$1[Type$1[type$1]] = type$1;
+for (var type in Type$1) {
+    TypeName$1[Type$1[type]] = type;
 }
 
 // which children must be text
@@ -647,6 +647,8 @@ Parser.prototype = {
             if ((ch === '\'' || ch === '"') && ((ch = this._char()) === ';' || ch === '\n')) {
                 if (ch === '\n') {
                     this._updateLine();
+                } else {
+                    this._updateIndex();
                 }
                 this._updateIndex();
                 break;
@@ -1191,7 +1193,7 @@ Parser.prototype = {
     _isElementStart: function _isElementStart() {
         var index = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : this.index;
 
-        return this._char(index) === '<' && (this._isExpect('<!--') || elementNameRegexp.test(this.source.slice(index)));
+        return this._char(index) === '<' && (this._isExpect('<!--', index) || elementNameRegexp.test(this.source.slice(index)));
     },
 
     _isJSImport: function _isJSImport() {
@@ -1257,26 +1259,35 @@ var attrMap = function () {
     };
 }();
 
-var normalizeArgs = function normalizeArgs(args) {
-    var l = args.length - 1;
-    for (var i = l; i >= 0; i--) {
-        if (args[i] !== 'null') {
-            break;
-        }
-    }
-    return (i === l ? args : args.slice(0, i + 1)).join(', ');
-};
-
 function Stringifier() {}
 
 Stringifier.prototype = {
     constructor: Stringifier,
 
-    stringify: function stringify(ast, autoReturn) {
-        if (arguments.length === 1) {
-            autoReturn = true;
-        }
-        this.autoReturn = !!autoReturn;
+    stringify: function stringify(ast, options) {
+        this._init(options);
+
+        this._start(ast);
+
+        return this.buffer.join('');
+    },
+
+    /**
+     * @brief for unit test to get body
+     *
+     * @param ast
+     * @param options
+     */
+    body: function body(ast, options) {
+        this._init(options);
+
+        this._visitJSXExpressionContainer(ast, true);
+
+        return this.buffer.join('');
+    },
+    _init: function _init(options) {
+        this.options = extend({}, configure(), options);
+
         this.enterStringExpression = false;
         this.head = ''; // save import syntax
 
@@ -1287,104 +1298,104 @@ Stringifier.prototype = {
 
         this.line = 1;
         this.column = 1;
-
-        var ret = this._visitJSXExpressionContainer(ast, true);
-        console.log(this.buffer.join(''), this.mappings);
-        return ret;
     },
+    _start: function _start(ast) {
+        var _this = this;
 
-    _addMapping: function _addMapping(element) {
-        this.mappings.push({
-            generated: {
-                line: this.line,
-                column: this.column
-            },
-            original: {
-                line: element.line,
-                column: element.column
-            },
-            element: element
+        this._append('function(obj, _Vdt, blocks, $callee) {\n');
+        this._indent();
+        var params = ['_Vdt || (_Vdt = Vdt);', 'obj || (obj = {});', 'blocks || (blocks = {});', 'var h = _Vdt.miss.h, hc = _Vdt.miss.hc, hu = _Vdt.miss.hu, widgets = this && this.widgets || {}, _blocks = {}, __blocks = {},', '    __u = _Vdt.utils, extend = __u.extend, _e = __u.error, _className = __u.className, __slice = __u.slice, __noop = __u.noop,', '    __m = __u.map, __o = __u.Options, _getModel = __o.getModel, _setModel = __o.setModel,', '    _setCheckboxModel = __u.setCheckboxModel, _detectCheckboxChecked = __u.detectCheckboxChecked,', '    _setSelectModel = __u.setSelectModel,', this.options.server ? '    require = function(file) { return _Vdt.require(file, "' + this.options.filename.replace(/\\/g, '\\\\') + '    ") }, ' : undefined, '    self = this.data, $this = this, scope = obj, Animate = self && self.Animate, parent = ($callee || {})._super;'];
+
+        each(params, function (code) {
+            if (code) {
+                _this._append(code);
+                _this._append('\n');
+            }
         });
+
+        this._append('\n');
+
+        if (!this.options.noWith) {
+            this._append('with (obj) {\n');
+            this._indent();
+            this._visitJSXExpressionContainer(ast, true);
+            this._append('\n');
+            this._dedent();
+            this._append('}\n');
+        } else {
+            this._visitJSXExpressionContainer(ast, true);
+            this._append('\n');
+        }
+        this._dedent();
+        this._append('}');
     },
 
 
     _visitJSXExpressionContainer: function _visitJSXExpressionContainer(ast, isRoot) {
         var length = ast.length;
+        var addWrapper = false;
         var hasDestructuring = false;
+
+        if (!isRoot && !this.enterStringExpression) {
+            var element = ast[0];
+            if (element && element.type === Type$2.JS) {
+                // special for ... syntaxt
+                var value = element.value;
+                if (value[0] === '.' && value[1] === '.' && value[2] === '.') {
+                    hasDestructuring = true;
+                    element.value = value.substr(3);
+                    this._append('...');
+                }
+            }
+
+            this._append('function() {try {return (');
+            addWrapper = true;
+        }
 
         each(ast, function (element, i) {
             // if is root, add `return` keyword
-            if (this.autoReturn && isRoot && i === length - 1) {
+            if (this.options.autoReturn && isRoot && i === length - 1) {
                 this._append('return ');
             }
 
-            var str = this._visit(element, isRoot);
-            // if (isRoot && element.type === Type.JSImport) {
-            // this.head += `${str}\n`;
-            // }
-
-            // if (!isRoot && !this.enterStringExpression) {
-            // // special for ... syntaxt
-            // if (str[0] === '.' && str[1] === '.' && str[2] === '.') {
-            // hasDestructuring = true;
-            // str = str.substr(3); 
-            // }
-            // str = 'function() {try {return (' + str + ')} catch(e) {_e(e)}}.call($this)';
-            // if (hasDestructuring) {
-            // str = '...' + str;
-            // }
-            // }
-
-            // if (isRoot) {
-            // this._append(str, element);
-            // }
+            this._visit(element, isRoot);
         }, this);
+
+        if (addWrapper) {
+            this._append(')} catch(e) {_e(e)}}.call($this)');
+        }
     },
 
     _visit: function _visit(element, isRoot) {
         element = element || {};
-        var ret = void 0;
         switch (element.type) {
             case Type$2.JS:
+                return this._visitJS(element);
             case Type$2.JSImport:
-                ret = this._visitJS(element);
-                break;
+                return this._visitJSImport(element);
             case Type$2.JSXElement:
-                ret = this._visitJSXElement(element);
-                break;
+                return this._visitJSXElement(element);
             case Type$2.JSXText:
-                ret = this._visitJSXText(element);
-                break;
+                return this._visitJSXText(element);
             case Type$2.JSXUnescapeText:
-                ret = this._visitJSXUnescapeText(element);
-                break;
+                return this._visitJSXUnescapeText(element);
             case Type$2.JSXExpressionContainer:
-                ret = this._visitJSXExpressionContainer(element.value);
-                break;
+                return this._visitJSXExpressionContainer(element.value);
             case Type$2.JSXWidget:
-                ret = this._visitJSXWidget(element);
-                break;
+                return this._visitJSXWidget(element);
             case Type$2.JSXBlock:
-                ret = this._visitJSXBlock(element, true);
-                break;
+                return this._visitJSXBlock(element, true);
             case Type$2.JSXVdt:
-                ret = this._visitJSXVdt(element, isRoot);
-                break;
+                return this._visitJSXVdt(element, isRoot);
             case Type$2.JSXComment:
-                ret = this._visitJSXComment(element);
-                break;
+                return this._visitJSXComment(element);
             case Type$2.JSXTemplate:
-                ret = this._visitJSXTemplate(element);
-                break;
+                return this._visitJSXTemplate(element);
             case Type$2.JSXString:
-                ret = this._visitJSXString(element);
-                break;
+                return this._visitJSXString(element);
             default:
-                ret = 'null';
-                break;
+                return this._append('null');
         }
-
-        return ret;
     },
 
     _visitJS: function _visitJS(element) {
@@ -1393,50 +1404,78 @@ Stringifier.prototype = {
         this._append(ret, element);
     },
 
+    _visitJSImport: function _visitJSImport(element) {
+        this.head += element.value;
+    },
+
+
     _visitJSXElement: function _visitJSXElement(element) {
+        var _this2 = this;
+
         if (element.value === 'template') {
             // <template> is a fake tag, we only need handle its children and itself directives
-            return this._visitJSXDirective(element, this._visitJSXChildren(element.children));
+            this._visitJSXDirective(element, function () {
+                _this2._visitJSXChildren(element.children);
+            });
+        } else {
+            this._visitJSXDirective(element, function () {
+                _this2.__visitJSXElement(element);
+            });
         }
+    },
 
-        this._append('h(\'' + element.value + '\', ', element);
+    __visitJSXElement: function __visitJSXElement(element) {
+        this._append('h(\'' + element.value + '\'', element);
 
-        var attributes = this._visitJSXAttribute(element, true, true);
+        // a flag to remove redundant params for
+        // converting h('div', null, 'a', null, null) to h('div', null, 'a')
+        var start = this.buffer.length;
         this._append(', ');
 
+        var _visitJSXAttribute = this._visitJSXAttribute(element, true, true),
+            attributes = _visitJSXAttribute.attributes,
+            hasProps = _visitJSXAttribute.hasProps;
+
+        if (hasProps) {
+            start = this.buffer.length;
+        }
+
+        this._append(', ');
         this._visitJSXChildren(element.children);
+        if (element.children.length) {
+            start = this.buffer.length;
+        }
+
         this._append(', ');
         if (attributes.className) {
             this._visitJSXAttributeClassName(attributes.className);
+            start = this.buffer.length;
         } else {
             this._append('null');
         }
+
         this._append(', ');
         if (attributes.key) {
             this._visitJSXAttributeValue(attributes.key);
+            start = this.buffer.length;
         } else {
             this._append('null');
         }
+
         this._append(', ');
         if (attributes.ref) {
             this._visitJSXAttributeRef(attributes.ref);
+            start = this.buffer.length;
         } else {
             this._append('null');
         }
+
+        if (start !== this.buffer.length) {
+            this.buffer.splice(start, this.buffer.length - start);
+        }
         this._append(')');
-
-        // return this._visitJSXDirective(element, ret);
-        // var ret = "h(" + normalizeArgs([
-        // "'" + element.value + "'", 
-        // attributes.props, 
-        // this._visitJSXChildren(element.children),
-        // attributes.className,
-        // attributes.key,
-        // attributes.ref
-        // ]) + ')';
-
-        // return this._visitJSXDirective(element, ret);
     },
+
 
     _visitJSXChildren: function _visitJSXChildren(children) {
         var length = children.length;
@@ -1445,6 +1484,7 @@ Stringifier.prototype = {
         }
         if (length > 1) {
             this._append('[\n');
+            this._indent();
         }
         each(children, function (child, index) {
             this._visit(child);
@@ -1453,84 +1493,128 @@ Stringifier.prototype = {
             }
         }, this);
         if (length > 1) {
-            this._append('\n]');
+            this._append('\n');
+            this._dedent();
+            this._append(']');
         }
     },
 
-    _visitJSXDirective: function _visitJSXDirective(element, ret) {
-        var directiveFor = {
-            data: null,
-            value: 'value',
-            key: 'key'
-        };
+    _visitJSXDirective: function _visitJSXDirective(element, body) {
+        var _this3 = this;
+
+        var directiveFor = {};
+        var directiveIf = void 0;
+
         each(element.directives, function (directive) {
             switch (directive.name) {
                 case 'v-if':
-                    ret = this._visitJSXDirectiveIf(directive, ret, element);
+                    directiveIf = directive;
                     break;
                 case 'v-for':
-                    directiveFor.data = this._visitJSXAttributeValue(directive.value);
+                    directiveFor.data = directive.value;
                     break;
                 case 'v-for-value':
-                    directiveFor.value = this._visitJSXText(directive.value, true);
+                    directiveFor.value = directive.value;
                     break;
                 case 'v-for-key':
-                    directiveFor.key = this._visitJSXText(directive.value, true);
+                    directiveFor.key = directive.value;
                     break;
                 default:
                     break;
             }
         }, this);
-        // if exists v-for
-        if (directiveFor.data) {
-            ret = this._visitJSXDirectiveFor(directiveFor, ret);
-        }
 
-        return this._result(ret);
+        // handle v-for firstly
+        if (directiveFor.data) {
+            if (directiveIf) {
+                this._visitJSXDirectiveFor(directiveFor, element, function () {
+                    _this3._visitJSXDirectiveIf(directiveIf, element, body);
+                });
+            } else {
+                this._visitJSXDirectiveFor(directiveFor, element, body);
+            }
+        } else if (directiveIf) {
+            this._visitJSXDirectiveIf(directiveIf, element, body);
+        } else {
+            body();
+        }
     },
 
-    _visitJSXDirectiveIf: function _visitJSXDirectiveIf(directive, ret, element) {
-        var result = this._visitJSXAttributeValue(directive.value) + ' ? ' + ret + ' : ',
-            hasElse = false,
+    _visitJSXDirectiveIf: function _visitJSXDirectiveIf(directive, element, body) {
+        var hasElse = false,
             next = element;
+
+        this._visitJSXAttributeValue(directive.value);
+        this._append(' ?\n');
+        this._indent();
+        body();
+        this._append(' :\n');
 
         while (next = next.next) {
             var nextDirectives = next.directives;
 
             if (!nextDirectives) break;
 
-            if (nextDirectives['v-else-if']) {
-                result += this._visitJSXAttributeValue(nextDirectives['v-else-if'].value) + ' ? ' + this._visit(next) + ' : ';
+            var velseif = nextDirectives['v-else-if'];
+            if (velseif) {
+                this._visitJSXAttributeValue(velseif.value);
+                this._append(' ?\n');
+                this._indent();
+                this._visit(next);
+                this._append(' :\n');
                 continue;
             }
             if (nextDirectives['v-else']) {
-                result += this._visit(next);
+                this._visit(next);
+                this._dedent();
                 hasElse = true;
             }
 
             break;
         }
-        if (!hasElse) result += 'undefined';
 
-        return result;
+        if (!hasElse) this._append('undefined');
+        this._dedent();
     },
 
-    _visitJSXDirectiveFor: function _visitJSXDirectiveFor(directive, ret) {
-        return '__m(' + directive.data + ', function(' + directive.value + ', ' + directive.key + ') {\n' + 'return ' + ret + ';\n' + '}, $this)';
+    _visitJSXDirectiveFor: function _visitJSXDirectiveFor(directive, element, body) {
+        this._append('__m(');
+        this._visitJSXAttributeValue(directive.data);
+        this._append(', function(');
+        if (directive.value) {
+            this._visitJSXText(directive.value, true);
+        } else {
+            this._append('value');
+        }
+        this._append(', ');
+        if (directive.key) {
+            this._visitJSXText(directive.key, true);
+        } else {
+            this._append('key');
+        }
+        this._append(') {\n');
+        this._indent();
+        this._append('return ');
+        body();
+        this._append(';\n');
+        this._dedent();
+        this._append('}, $this)');
     },
 
     _visitJSXString: function _visitJSXString(element) {
-        var ret = [];
         this.enterStringExpression = true;
-        each(element.value, function (child) {
-            ret.push(this._visit(child));
+        var length = element.value.length;
+        each(element.value, function (child, i) {
+            this._visit(child);
+            if (i !== length - 1) {
+                this._append(' + ');
+            }
         }, this);
         this.enterStringExpression = false;
-        return ret.join('+');
     },
 
     _visitJSXAttribute: function _visitJSXAttribute(element, individualClassName, individualKeyAndRef) {
-        var _this = this;
+        var _this4 = this;
 
         var set = {},
             events = {},
@@ -1545,24 +1629,29 @@ Stringifier.prototype = {
         },
             attributes = element.attributes,
             models = [],
-            addition = { trueValue: true, falseValue: false, type: 'text' },
+            addition = {},
             isFirst;
 
         var addAttribute = function addAttribute(name, attr) {
             if (isFirst === undefined) {
-                _this._append('{\n');
+                _this4._append('{\n');
+                _this4._indent();
                 isFirst = true;
             }
             if (!isFirst) {
-                _this._append(',\n');
+                _this4._append(',\n');
             }
-            _this._append('\'' + name + '\': ', attr);
+            if (name) {
+                _this4._append('\'' + name + '\': ', attr);
+            }
             isFirst = false;
         };
 
         each(attributes, function (attr) {
             if (attr.type === Type$2.JSXExpressionContainer) {
-                return this._visitJSXAttributeValue(attr);
+                addAttribute();
+                this._visitJSXAttributeValue(attr);
+                return;
             }
 
             var name = attrMap(attr.name);
@@ -1595,13 +1684,20 @@ Stringifier.prototype = {
                 addition.trueValue = attr.value;
             } else if (name === 'v-model-false') {
                 addition.falseValue = attr.value;
-            } else if (name === 'type' || name === 'value') {
-                // save the type value for v-model of input element
-                addAttribute(name, attr);
+            } else if (name === 'type') {
+                // save the type for v-model of input element
+                addAttribute('type', attr);
                 this._visitJSXAttributeValue(attr.value);
-                addition[name] = attr.value;
+                addition.type = this.last;
+            } else if (name === 'value') {
+                addAttribute('value', attr);
+                this._visitJSXAttributeValue(attr.value);
+                addition.value = attr.value;
             } else if (isEventProp(name)) {
                 addEvent(name, attr);
+            } else if (name === '_blocks') {
+                addAttribute('_blocks');
+                this._visitJSXBlocks(attr.value, false);
             } else {
                 addAttribute(name, attr);
                 this._visitJSXAttributeValue(attr.value);
@@ -1620,31 +1716,36 @@ Stringifier.prototype = {
 
             var length = events.length;
             if (length > 1) {
-                _this._append('[\n');
+                _this4._append('[\n');
+                _this4._indent();
             }
             for (var _i = 0; _i < length; _i++) {
                 var event = events[_i];
                 if (typeof event === 'function') {
                     event();
                 } else {
-                    _this._visitJSXAttributeValue(event.value);
+                    _this4._visitJSXAttributeValue(event.value);
                 }
                 if (_i !== length - 1) {
-                    _this._append(',\n');
+                    _this4._append(',\n');
                 }
             }
             if (length > 1) {
-                _this._append('\n]');
+                _this4._append('\n');
+                _this4._dedent();
+                _this4._append(']');
             }
         });
 
         if (isFirst !== undefined) {
-            this._append('\n}');
+            this._append('\n');
+            this._dedent();
+            this._append('}');
         } else {
             this._append('null');
         }
 
-        return set;
+        return { attributes: set, hasProps: isFirst !== undefined };
     },
 
     _visitJSXAttributeClassName: function _visitJSXAttributeClassName(value) {
@@ -1672,7 +1773,7 @@ Stringifier.prototype = {
 
 
     _visitJSXAttributeModel: function _visitJSXAttributeModel(element, model, addition, addEvent, addAttribute) {
-        var _this2 = this;
+        var _this5 = this;
 
         var valueName = model.name,
             value = model.value,
@@ -1685,9 +1786,9 @@ Stringifier.prototype = {
 
             for (var i = 0; i < args.length; i++) {
                 if (i % 2) {
-                    _this2._visitJSXAttributeValue(args[i]);
+                    _this5._visitJSXAttributeValue(args[i]);
                 } else {
-                    _this2._append(args[i]);
+                    _this5._append(args[i]);
                 }
             }
         };
@@ -1702,24 +1803,24 @@ Stringifier.prototype = {
                         case "'radio'":
                         case "'checkbox'":
                             addAttribute('checked', model.attr);
-                            var trueValue = addition.trueValue,
-                                falseValue = addition.falseValue,
+                            var trueValue = addition.trueValue || { type: Type$2.JS, value: 'true' },
+                                falseValue = addition.falseValue || { type: Type$2.JS, value: 'false' },
                                 inputValue = addition.value;
                             if (isNullOrUndefined(inputValue)) {
                                 append('_getModel(self, ', value, ') === ', trueValue);
                                 addEvent('ev-change', function () {
-                                    append('function(__e) {\n__e.target.checked ? ', trueValue, ' : ', falseValue, ', $this);\n}');
+                                    append('function(__e) {_setModel(self, ', value, ', __e.target.checked ? ', trueValue, ' : ', falseValue, ', $this);}');
                                 });
                             } else {
-                                if (type === "'radio'") {
-                                    append('_getModel(self, ', value, ') === ', trueValue);
+                                if (addition.type === "'radio'") {
+                                    append('_getModel(self, ', value, ') === ', inputValue);
                                     addEvent('ev-change', function () {
-                                        append('function(__e) {\n_setModel(self, ', value, ', __e.target.checked ? ', inputValue, ' : ', falseValue, ', $this);\n}');
+                                        append('function(__e) {_setModel(self, ', value, ', __e.target.checked ? ', inputValue, ' : ', falseValue, ', $this);}');
                                     });
                                 } else {
-                                    append('_detectCheckboxChecked(self, ', value, ', ', inputValue, '), \n');
+                                    append('_detectCheckboxChecked(self, ', value, ', ', inputValue, ')');
                                     addEvent('ev-change', function () {
-                                        append('function(__e) {\n_setCheckboxModel(self, ', value, ', ', inputValue, ', ', falseValue, ', __e, $this);\n}');
+                                        append('function(__e) {_setCheckboxModel(self, ', value, ', ', inputValue, ', ', falseValue, ', __e, $this);}');
                                     });
                                 }
                             }
@@ -1733,7 +1834,7 @@ Stringifier.prototype = {
                     addAttribute('value', model.attr);
                     append('_getModel(self, ', value, ')');
                     addEvent('ev-change', function () {
-                        append('function(__e) {\n__setSelectModel(self, ', value, ', _e, $this);\n}');
+                        append('function(__e) {_setSelectModel(self, ', value, ', __e, $this);}');
                     });
                     return;
                 case 'textarea':
@@ -1768,39 +1869,92 @@ Stringifier.prototype = {
     },
 
     _visitJSXUnescapeText: function _visitJSXUnescapeText(element) {
-        this._append('hu(');
+        this._append('hu(', element);
         this._visitJSXExpressionContainer(element.value);
         this._append(')');
     },
 
     _visitJSXWidget: function _visitJSXWidget(element) {
-        var _visitJSXBlocks = this._visitJSXBlocks(element, false),
-            blocks = _visitJSXBlocks.blocks,
-            children = _visitJSXBlocks.children,
-            hasBlock = _visitJSXBlocks.hasBlock;
+        var _this6 = this;
 
-        element.attributes.push({ name: 'children', value: children });
+        this._visitJSXDirective(element, function () {
+            _this6.__visitJSXWidget(element);
+        });
+    },
+
+
+    __visitJSXWidget: function __visitJSXWidget(element) {
+        var _getJSXBlocks = this._getJSXBlocks(element),
+            blocks = _getJSXBlocks.blocks,
+            children = _getJSXBlocks.children;
+
+        if (children.length) {
+            element.attributes.push({ name: 'children', value: children });
+        }
         element.attributes.push({ name: '_context', value: {
                 type: Type$2.JS,
                 value: '$this'
             } });
-        if (hasBlock) {
+        if (blocks.length) {
             element.attributes.push({ name: '_blocks', value: blocks });
         }
 
-        var attributes = this._visitJSXAttribute(element, false, false);
-        return this._visitJSXDirective(element, 'h(' + normalizeArgs([element.value, attributes.props, 'null', 'null', attributes.key, attributes.ref]) + ')');
+        this._append('h(' + element.value + ', ', element);
+        this._visitJSXAttribute(element, false, false);
+        this._append(')');
     },
 
     _visitJSXBlock: function _visitJSXBlock(element, isAncestor) {
-        var _visitJSXBlockAttribu = this._visitJSXBlockAttribute(element),
-            params = _visitJSXBlockAttribu.params,
-            args = _visitJSXBlockAttribu.args;
+        var _this7 = this;
 
-        return this._visitJSXDirective(element, '(_blocks["' + element.value + '"] = function(parent' + (params ? ', ' + params : '') + ') {\n' + '    return ' + this._visitJSXChildren(element.children) + ';\n' + '}) && (__blocks["' + element.value + '"] = function(parent) {\n' + '    var args = arguments;\n' + '    return blocks["' + element.value + '"] ? blocks["' + element.value + '"].apply($this, [function() {\n' + '        return _blocks["' + element.value + '"].apply($this, args);\n' + '    }].concat(__slice.call(args, 1))) : _blocks["' + element.value + '"].apply($this, args);\n' + '})' + (isAncestor ? ' && __blocks["' + element.value + '"].apply($this, ' + (args ? '[__noop].concat(' + args + ')' : '[__noop]') + ')' : ''));
+        this._visitJSXDirective(element, function () {
+            _this7.__visitJSXBlock(element, isAncestor);
+        });
     },
 
-    _visitJSXBlockAttribute: function _visitJSXBlockAttribute(element) {
+    __visitJSXBlock: function __visitJSXBlock(element, isAncestor) {
+        var _getJSXBlockAttribute = this._getJSXBlockAttribute(element),
+            params = _getJSXBlockAttribute.params,
+            args = _getJSXBlockAttribute.args;
+
+        var name = element.value;
+
+        this._append('(_blocks[\'' + name + '\'] = function(parent', element);
+        if (params) {
+            this._append(', ');
+            this._visitJSXText(params, true);
+        }
+        this._append(') {\n');
+        this._indent();
+        this._append('return ');
+        this._visitJSXChildren(element.children);
+        this._append(';\n');
+        this._dedent();
+        this._append('}) && (__blocks[\'' + name + '\'] = function(parent) {\n');
+        this._indent();
+        this._append('var args = arguments;\n');
+        this._append('return blocks[\'' + name + '\'] ? blocks[\'' + name + '\'].apply($this, [function() {\n');
+        this._indent();
+        this._append('return _blocks[\'' + name + '\'].apply($this, args);\n');
+        this._dedent();
+        this._append('}].concat(__slice.call(args, 1))) : _blocks[\'' + name + '\'].apply($this, args);\n');
+        this._dedent();
+        this._append('})');
+        if (isAncestor) {
+            this._append(' && __blocks[\'' + name + '\'].apply($this, ');
+            if (args) {
+                this._append('[__noop].concat(');
+                this._visitJSXAttributeValue(args);
+                this._append(')');
+            } else {
+                this._append('[__noop]');
+            }
+            this._append(')');
+        }
+    },
+
+
+    _getJSXBlockAttribute: function _getJSXBlockAttribute(element) {
         var ret = {};
 
         each(element.attributes, function (attr) {
@@ -1808,72 +1962,126 @@ Stringifier.prototype = {
             var value = void 0;
             switch (name) {
                 case 'args':
-                    value = this._visitJSXAttributeValue(attr.value);
+                    ret.args = attr.value;
                     break;
                 case 'params':
-                    value = this._visitJSXText(attr.value, true);
+                    ret.params = attr.value;
                     break;
                 default:
                     return;
             }
-            ret[name] = value;
         }, this);
 
         return ret;
     },
 
-    _visitJSXBlocks: function _visitJSXBlocks(element, isRoot) {
+    _getJSXBlocks: function _getJSXBlocks(element) {
         var blocks = [];
         var children = [];
 
         each(element.children, function (child) {
             if (child.type === Type$2.JSXBlock) {
-                blocks.push(this._visitJSXBlock(child, false));
+                blocks.push(child);
             } else {
                 children.push(child);
             }
         }, this);
 
-        var _blocks = {
-            type: Type$2.JS,
-            value: blocks.length ? ['function(blocks) {', '    var _blocks = {}, __blocks = extend({}, blocks);', '    return (' + blocks.join(' && ') + ', __blocks);', '}.call($this, ' + (isRoot ? 'blocks' : '{}') + ')'].join('\n') : isRoot ? 'blocks' : 'null'
-        };
-
-        return { blocks: _blocks, children: children.length ? children : null, hasBlock: blocks.length };
+        return { blocks: blocks, children: children };
     },
+
+    _visitJSXBlocks: function _visitJSXBlocks(blocks, isRoot) {
+        var length = blocks.length;
+        if (!length) return this._append(isRoot ? 'blocks' : 'null');
+
+        this._append('function(blocks) {\n');
+        this._indent();
+        this._append('var _blocks = {}, __blocks = extend({}, blocks);\n');
+        this._append('return (');
+
+        for (var i = 0; i < length; i++) {
+            this._visitJSXBlock(blocks[i], false);
+            if (i !== length - 1) {
+                this._append(' && ');
+            }
+        }
+        this._append(', __blocks);\n');
+        this._dedent();
+        this._append('}.call($this, ' + (isRoot ? 'blocks' : '{}') + ')');
+    },
+
 
     _visitJSXVdt: function _visitJSXVdt(element, isRoot) {
-        var _visitJSXBlocks2 = this._visitJSXBlocks(element, isRoot),
-            blocks = _visitJSXBlocks2.blocks,
-            children = _visitJSXBlocks2.children;
+        var _this8 = this;
 
-        element.attributes.push({ name: 'children', value: children });
+        this._visitJSXDirective(element, function () {
+            _this8.__visitJSXVdt(element, isRoot);
+        });
+    },
+
+    __visitJSXVdt: function __visitJSXVdt(element, isRoot) {
+        var name = element.value;
+
+        var _getJSXBlocks2 = this._getJSXBlocks(element),
+            blocks = _getJSXBlocks2.blocks,
+            children = _getJSXBlocks2.children;
+
+        if (children.length) {
+            element.attributes.push({ name: 'children', value: children });
+        }
+
+        this._append('(function() {\n', element);
+        this._indent();
+        this._append('var _obj = ');
 
         var _visitJSXAttribute2 = this._visitJSXAttribute(element, false, false),
-            props = _visitJSXAttribute2.props,
-            set = _visitJSXAttribute2.set;
+            attributes = _visitJSXAttribute2.attributes;
 
-        var ret = ['(function() {', '    var _obj = ' + props + ';', set.hasOwnProperty('arguments') ? '    extend(_obj, _obj.arguments === true ? obj : _obj.arguments);\n' + '    delete _obj.arguments;' : '', '    return ' + element.value + '.call($this, _obj, _Vdt, ' + this._visitJS(blocks) + ', ' + element.value + ')', '}).call($this)'].join('\n');
-
-        return this._visitJSXDirective(element, ret);
+        this._append(';\n');
+        if (attributes.hasOwnProperty('arguments')) {
+            this._append('extend(_obj, _obj.arguments === true ? obj : _obj.arguments);\n');
+            this._append('delete _obj.arguments;\n');
+        }
+        this._append('return ' + name + '.call($this, _obj, _Vdt, ');
+        this._visitJSXBlocks(blocks, isRoot);
+        this._append(', ' + name + ')\n');
+        this._dedent();
+        this._append('}).call($this)');
     },
+
 
     _visitJSXComment: function _visitJSXComment(element) {
-        return 'hc(' + this._visitJSXText(element) + ')';
+        this._append('hc(');
+        this._visitJSXText(element);
+        this._append(')');
     },
 
-    _result: function _result(code) {
-        // const {line, column} = getLineAndColumn(code);
-        // this.line += line - 1;
-        // this.column = line > 1 ? column + 1 : this.column + column + 1; 
-
-        return code;
+    _addMapping: function _addMapping(element) {
+        this.mappings.push({
+            generated: {
+                line: this.line,
+                column: this.column
+            },
+            original: {
+                line: element.line,
+                column: element.column
+            }
+        });
     },
     _append: function _append(code, element) {
         if (element) {
             this._addMapping(element);
         }
-        this.buffer.push(code);
+        var buffer = this.buffer;
+
+        // add indent if the last line ends with \n
+        if (this.indent && this.last && this.last[this.last.length - 1] === '\n' && code[0] !== '\n') {
+            buffer.push(new Array(this.indent + 1).join('    '));
+        }
+
+        this.last = code;
+
+        buffer.push(code);
 
         for (var i = 0; i < code.length; i++) {
             if (code[i] === '\n') {
@@ -1888,10 +2096,7 @@ Stringifier.prototype = {
         this.indent++;
     },
     _dedent: function _dedent() {
-        this.index--;
-    },
-    _getIndent: function _getIndent() {
-        new Array(this.indent + 1).join('    ');
+        this.indent--;
     }
 };
 
@@ -4007,12 +4212,17 @@ function compile(source, options) {
     switch (typeof source === 'undefined' ? 'undefined' : _typeof(source)) {
         case 'string':
             var ast = parser.parse(source, options),
-                hscript = stringifier.stringify(ast, options.autoReturn);
+                hscript = stringifier.stringify(ast, options);
 
-            hscript = ['_Vdt || (_Vdt = Vdt);', 'obj || (obj = {});', 'blocks || (blocks = {});', 'var h = _Vdt.miss.h, hc = _Vdt.miss.hc, hu = _Vdt.miss.hu, widgets = this && this.widgets || {}, _blocks = {}, __blocks = {},', '    __u = _Vdt.utils, extend = __u.extend, _e = __u.error, _className = __u.className, __slice = __u.slice, __noop = __u.noop,', '    __m = __u.map, __o = __u.Options, _getModel = __o.getModel, _setModel = __o.setModel,', '    _setCheckboxModel = __u.setCheckboxModel, _detectCheckboxChecked = __u.detectCheckboxChecked,', '    _setSelectModel = __u.setSelectModel,', options.server ? '    require = function(file) { return _Vdt.require(file, "' + options.filename.replace(/\\/g, '\\\\') + '    ") }, ' : '', '    self = this.data, $this = this, scope = obj, Animate = self && self.Animate, parent = ($callee || {})._super', options.noWith ? hscript : ['    with (obj) {', '        ' + hscript, '    }'].join('\n')].join('\n');
-            templateFn = options.onlySource ? function () {} : new Function('obj', '_Vdt', 'blocks', '$callee', hscript);
-            templateFn.source = 'function(obj, _Vdt, blocks, $callee) {\n' + hscript + '\n}';
+            if (options.onlySource) {
+                templateFn = function templateFn() {};
+            } else {
+                var buffer = stringifier.buffer;
+                templateFn = new Function('obj', '_Vdt', 'blocks', '$callee', buffer.slice(1, buffer.length - 1).join(''));
+            }
+            templateFn.source = hscript;
             templateFn.head = stringifier.head;
+            templateFn.mappings = stringifier.mappings;
             break;
         case 'function':
             templateFn = source;

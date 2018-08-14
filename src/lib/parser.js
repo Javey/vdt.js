@@ -111,6 +111,8 @@ Parser.prototype = {
             ) {
                 if (ch === '\n') {
                     this._updateLine();
+                } else {
+                    this._updateIndex();
                 }
                 this._updateIndex();
                 break;
@@ -661,7 +663,7 @@ Parser.prototype = {
     _isElementStart: function(index = this.index) {
         return this._char(index) === '<' && 
             (
-                this._isExpect('<!--') || 
+                this._isExpect('<!--', index) || 
                 elementNameRegexp.test(this.source.slice(index))
             );
     },

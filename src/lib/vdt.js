@@ -79,32 +79,17 @@ function compile(source, options) {
     switch (typeof source) {
         case 'string':
             var ast = parser.parse(source, options),
-                hscript = stringifier.stringify(ast, options.autoReturn);
+                hscript = stringifier.stringify(ast, options);
 
-            hscript = [
-                '_Vdt || (_Vdt = Vdt);',
-                'obj || (obj = {});',
-                'blocks || (blocks = {});',
-                'var h = _Vdt.miss.h, hc = _Vdt.miss.hc, hu = _Vdt.miss.hu, widgets = this && this.widgets || {}, _blocks = {}, __blocks = {},',
-                '    __u = _Vdt.utils, extend = __u.extend, _e = __u.error, _className = __u.className, __slice = __u.slice, __noop = __u.noop,',
-                '    __m = __u.map, __o = __u.Options, _getModel = __o.getModel, _setModel = __o.setModel,',
-                '    _setCheckboxModel = __u.setCheckboxModel, _detectCheckboxChecked = __u.detectCheckboxChecked,',
-                '    _setSelectModel = __u.setSelectModel,',
-                (options.server ? 
-                '    require = function(file) { return _Vdt.require(file, "' + 
-                        options.filename.replace(/\\/g, '\\\\') + 
-                '    ") }, ' : 
-                ''),
-                '    self = this.data, $this = this, scope = obj, Animate = self && self.Animate, parent = ($callee || {})._super',
-                options.noWith ? hscript : [
-                '    with (obj) {',
-                '        ' + hscript,
-                '    }',
-                ].join('\n')
-            ].join('\n');
-            templateFn = options.onlySource ? function() {} : new Function('obj', '_Vdt', 'blocks', '$callee', hscript);
-            templateFn.source = 'function(obj, _Vdt, blocks, $callee) {\n' + hscript + '\n}';
+            if (options.onlySource) {
+                templateFn = function() {};
+            } else {
+                const buffer = stringifier.buffer;
+                templateFn = new Function('obj', '_Vdt', 'blocks', '$callee', buffer.slice(1, buffer.length - 1).join(''));
+            }
+            templateFn.source = hscript;
             templateFn.head = stringifier.head;
+            templateFn.mappings = stringifier.mappings;
             break;
         case 'function':
             templateFn = source;
