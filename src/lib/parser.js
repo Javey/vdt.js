@@ -31,7 +31,7 @@ Parser.prototype = {
         this.source = Utils.trimRight(source);
         this.index = 0;
         this.line = 1;
-        this.column = 1;
+        this.column = 0;
         this.length = this.source.length;
 
         this.options = Utils.extend({}, Utils.configure(), options);
@@ -113,6 +113,9 @@ Parser.prototype = {
                     this._updateLine();
                 } else {
                     this._updateIndex();
+                    if (this._char() === '\n') {
+                        this._updateLine();
+                    }
                 }
                 this._updateIndex();
                 break;
@@ -683,7 +686,10 @@ Parser.prototype = {
 
     _updateLine: function() {
         this.line++;
-        this.column = 0;
+        // because we call _updateLine firstly then call _updateIndex
+        // it will add column in _updateIndex
+        // set it to -1 here
+        this.column = -1;
     },
 
     _updateIndex: function(value) {
@@ -696,7 +702,8 @@ Parser.prototype = {
 
     _error: function(msg, element) {
         const lines = this.source.split('\n');
-        const {line, column} = element || this;
+        let {line, column} = element || this;
+        column++;
         const error = new Error(
             `${msg} (${line}:${column})\n` +
             `> ${line} | ${lines[line - 1]}\n` +

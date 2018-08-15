@@ -302,7 +302,8 @@ var Options = {
         return data[key];
     },
     disableSplitText: false, // split text with <!---->
-    sourceMap: true
+    sourceMap: false,
+    indent: '    ' // code indent style
 };
 
 var hasOwn = Object.prototype.hasOwnProperty;
@@ -572,7 +573,7 @@ Parser.prototype = {
         this.source = trimRight(source);
         this.index = 0;
         this.line = 1;
-        this.column = 1;
+        this.column = 0;
         this.length = this.source.length;
 
         this.options = extend({}, configure(), options);
@@ -651,6 +652,9 @@ Parser.prototype = {
                     this._updateLine();
                 } else {
                     this._updateIndex();
+                    if (this._char() === '\n') {
+                        this._updateLine();
+                    }
                 }
                 this._updateIndex();
                 break;
@@ -1213,7 +1217,10 @@ Parser.prototype = {
 
     _updateLine: function _updateLine() {
         this.line++;
-        this.column = 0;
+        // because we call _updateLine firstly then call _updateIndex
+        // it will add column in _updateIndex
+        // set it to -1 here
+        this.column = -1;
     },
 
     _updateIndex: function _updateIndex(value) {
@@ -1231,6 +1238,7 @@ Parser.prototype = {
             line = _ref.line,
             column = _ref.column;
 
+        column++;
         var error$$1 = new Error(msg + ' (' + line + ':' + column + ')\n' + ('> ' + line + ' | ' + lines[line - 1] + '\n') + ('  ' + new Array(String(line).length + 1).join(' ') + ' | ' + new Array(column).join(' ') + '^'));
         error$$1.line = line;
         error$$1.column = column;
@@ -1294,10 +1302,11 @@ Stringifier.prototype = {
         this.indent = 0;
 
         this.buffer = [];
+        this.queue = [];
         this.mappings = [];
 
         this.line = 1;
-        this.column = 1;
+        this.column = 0;
     },
     _start: function _start(ast) {
         var _this = this;
@@ -1427,60 +1436,46 @@ Stringifier.prototype = {
     __visitJSXElement: function __visitJSXElement(element) {
         this._append('h(\'' + element.value + '\'', element);
 
-        // a flag to remove redundant params for
-        // converting h('div', null, 'a', null, null) to h('div', null, 'a')
-        var start = this.buffer.length;
-        this._append(', ');
+        this._appendQueue(', ');
 
-        var _visitJSXAttribute = this._visitJSXAttribute(element, true, true),
-            attributes = _visitJSXAttribute.attributes,
-            hasProps = _visitJSXAttribute.hasProps;
+        var _visitJSXAttribute = this._visitJSXAttribute(element, true, true, true /* appendQueue */),
+            attributes = _visitJSXAttribute.attributes;
 
-        if (hasProps) {
-            start = this.buffer.length;
-        }
+        this._appendQueue(', ');
+        this._visitJSXChildren(element.children, true /* appendQueue */);
 
-        this._append(', ');
-        this._visitJSXChildren(element.children);
-        if (element.children.length) {
-            start = this.buffer.length;
-        }
-
-        this._append(', ');
+        this._appendQueue(', ');
         if (attributes.className) {
             this._visitJSXAttributeClassName(attributes.className);
-            start = this.buffer.length;
         } else {
-            this._append('null');
+            this._appendQueue('null');
         }
 
-        this._append(', ');
+        this._appendQueue(', ');
         if (attributes.key) {
             this._visitJSXAttributeValue(attributes.key);
-            start = this.buffer.length;
         } else {
-            this._append('null');
+            this._appendQueue('null');
         }
 
-        this._append(', ');
+        this._appendQueue(', ');
         if (attributes.ref) {
             this._visitJSXAttributeRef(attributes.ref);
-            start = this.buffer.length;
-        } else {
-            this._append('null');
         }
 
-        if (start !== this.buffer.length) {
-            this.buffer.splice(start, this.buffer.length - start);
-        }
+        this._clearQueue();
         this._append(')');
     },
 
 
-    _visitJSXChildren: function _visitJSXChildren(children) {
+    _visitJSXChildren: function _visitJSXChildren(children, appendQueue) {
         var length = children.length;
         if (!length) {
-            this._append('null');
+            if (appendQueue) {
+                this._appendQueue('null');
+            } else {
+                this._append('null');
+            }
         }
         if (length > 1) {
             this._append('[\n');
@@ -1542,7 +1537,8 @@ Stringifier.prototype = {
 
     _visitJSXDirectiveIf: function _visitJSXDirectiveIf(directive, element, body) {
         var hasElse = false,
-            next = element;
+            next = element,
+            indent = this.indent;
 
         this._visitJSXAttributeValue(directive.value);
         this._append(' ?\n');
@@ -1566,7 +1562,6 @@ Stringifier.prototype = {
             }
             if (nextDirectives['v-else']) {
                 this._visit(next);
-                this._dedent();
                 hasElse = true;
             }
 
@@ -1574,7 +1569,8 @@ Stringifier.prototype = {
         }
 
         if (!hasElse) this._append('undefined');
-        this._dedent();
+
+        this.indent = indent;
     },
 
     _visitJSXDirectiveFor: function _visitJSXDirectiveFor(directive, element, body) {
@@ -1613,7 +1609,7 @@ Stringifier.prototype = {
         this.enterStringExpression = false;
     },
 
-    _visitJSXAttribute: function _visitJSXAttribute(element, individualClassName, individualKeyAndRef) {
+    _visitJSXAttribute: function _visitJSXAttribute(element, individualClassName, individualKeyAndRef, appendQueue) {
         var _this4 = this;
 
         var set = {},
@@ -1741,7 +1737,11 @@ Stringifier.prototype = {
             this._dedent();
             this._append('}');
         } else {
-            this._append('null');
+            if (appendQueue) {
+                this._appendQueue('null');
+            } else {
+                this._append('null');
+            }
         }
 
         return { attributes: set, hasProps: isFirst !== undefined };
@@ -2061,35 +2061,57 @@ Stringifier.prototype = {
                 line: this.line,
                 column: this.column
             },
-            original: {
+            original: element && element.line !== undefined ? {
                 line: element.line,
                 column: element.column
-            }
+            } : undefined
         });
     },
     _append: function _append(code, element) {
-        if (element) {
+        var buffer = this.buffer;
+        var _options = this.options,
+            sourceMap = _options.sourceMap,
+            indent = _options.indent;
+
+
+        this._flushQueue();
+        if (sourceMap) {
             this._addMapping(element);
         }
-        var buffer = this.buffer;
 
         // add indent if the last line ends with \n
-        if (this.indent && this.last && this.last[this.last.length - 1] === '\n' && code[0] !== '\n') {
-            buffer.push(new Array(this.indent + 1).join('    '));
+        if (indent && this.indent && this.last && this.last[this.last.length - 1] === '\n' && code[0] !== '\n') {
+            buffer.push(new Array(this.indent + 1).join(indent));
+            this.column += indent.length * this.indent;
         }
 
         this.last = code;
 
         buffer.push(code);
 
-        for (var i = 0; i < code.length; i++) {
-            if (code[i] === '\n') {
-                this.line++;
-                this.column = 0;
-            } else {
-                this.column++;
+        if (sourceMap) {
+            for (var i = 0; i < code.length; i++) {
+                if (code[i] === '\n') {
+                    this.line++;
+                    this.column = 0;
+                } else {
+                    this.column++;
+                }
             }
         }
+    },
+    _appendQueue: function _appendQueue(code, element) {
+        this.queue.push([code, element]);
+    },
+    _flushQueue: function _flushQueue() {
+        var queue = this.queue;
+        var item = void 0;
+        while (item = queue.shift()) {
+            this._append(item[0], item[1]);
+        }
+    },
+    _clearQueue: function _clearQueue() {
+        this.queue = [];
     },
     _indent: function _indent() {
         this.indent++;

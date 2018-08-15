@@ -40,8 +40,5 @@
     "rollup-watch": "^4.0.0",
     "should": "^11.2.1",
     "uglify-js": "^3.3.23"
-  },
-  "dependencies": {
-    "source-map": "^0.7.3"
   }
 }

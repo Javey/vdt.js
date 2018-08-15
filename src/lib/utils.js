@@ -74,7 +74,8 @@ export const Options = {
         return data[key]; 
     },
     disableSplitText: false, // split text with <!---->
-    sourceMap: true,
+    sourceMap: false,
+    indent: '    ', // code indent style
 };
 
 export const hasOwn = Object.prototype.hasOwnProperty;

@@ -54,10 +54,11 @@ Stringifier.prototype = {
         this.indent = 0;
 
         this.buffer = [];
+        this.queue = [];
         this.mappings = [];
 
         this.line = 1;
-        this.column = 1;
+        this.column = 0;
     },
 
     _start(ast) {
@@ -199,55 +200,43 @@ Stringifier.prototype = {
     __visitJSXElement(element) {
         this._append(`h('${element.value}'`, element);
 
-        // a flag to remove redundant params for
-        // converting h('div', null, 'a', null, null) to h('div', null, 'a')
-        let start = this.buffer.length;
-        this._append(', ');
-        const {attributes, hasProps} = this._visitJSXAttribute(element, true, true);
-        if (hasProps) {
-            start = this.buffer.length;
-        }
+        this._appendQueue(', ');
+        const {attributes} = this._visitJSXAttribute(element, true, true, true /* appendQueue */);
 
-        this._append(', ');
-        this._visitJSXChildren(element.children);
-        if (element.children.length) {
-            start = this.buffer.length;
-        }
+        this._appendQueue(', ');
+        this._visitJSXChildren(element.children, true /* appendQueue */);
 
-        this._append(', ');
+        this._appendQueue(', ');
         if (attributes.className) {
             this._visitJSXAttributeClassName(attributes.className);
-            start = this.buffer.length;
         } else {
-            this._append('null');
+            this._appendQueue('null');
         }
 
-        this._append(', ');
+        this._appendQueue(', ');
         if (attributes.key) {
             this._visitJSXAttributeValue(attributes.key);
-            start = this.buffer.length;
         } else {
-            this._append('null');
+            this._appendQueue('null');
         }
 
-        this._append(', ');
+        this._appendQueue(', ');
         if (attributes.ref) {
             this._visitJSXAttributeRef(attributes.ref);
-            start = this.buffer.length;
-        } else {
-            this._append('null');
         }
 
-        if (start !== this.buffer.length) {
-            this.buffer.splice(start, this.buffer.length - start);
-        }
+        this._clearQueue();
         this._append(')');
     },
 
-    _visitJSXChildren: function(children) {
+    _visitJSXChildren: function(children, appendQueue) {
         const length = children.length;
         if (!length) {
-            this._append('null');
+            if (appendQueue) {
+                this._appendQueue('null');
+            } else {
+                this._append('null');
+            }
         }
         if (length > 1) {
             this._append('[\n');
@@ -307,7 +296,8 @@ Stringifier.prototype = {
 
     _visitJSXDirectiveIf: function(directive, element, body) {
         var hasElse = false,
-            next = element;
+            next = element,
+            indent = this.indent;
 
         this._visitJSXAttributeValue(directive.value);
         this._append(' ?\n');
@@ -331,7 +321,6 @@ Stringifier.prototype = {
             }
             if (nextDirectives['v-else']) {
                 this._visit(next);
-                this._dedent();
                 hasElse = true;
             }
 
@@ -339,7 +328,8 @@ Stringifier.prototype = {
         }
 
         if (!hasElse) this._append('undefined');
-        this._dedent();
+
+        this.indent = indent;
     },
 
     _visitJSXDirectiveFor: function(directive, element, body) {
@@ -378,7 +368,7 @@ Stringifier.prototype = {
         this.enterStringExpression = false;
     },
 
-    _visitJSXAttribute: function(element, individualClassName, individualKeyAndRef) {
+    _visitJSXAttribute: function(element, individualClassName, individualKeyAndRef, appendQueue) {
         var set = {},
             events = {},
             // support bind multiple callbacks for the same event
@@ -502,7 +492,11 @@ Stringifier.prototype = {
             this._dedent();
             this._append('}');
         } else {
-            this._append('null');
+            if (appendQueue) {
+                this._appendQueue('null');
+            } else {
+                this._append('null');
+            }
         }
 
         return {attributes: set, hasProps: isFirst !== undefined}; 
@@ -795,36 +789,62 @@ Stringifier.prototype = {
                 line: this.line,
                 column: this.column, 
             },
-            original: {
+            original: element && element.line !== undefined ? {
                 line: element.line,
                 column: element.column,
-            },
+            } : undefined,
         });
     },
 
     _append(code, element) {
-        if (element) {
+        const buffer = this.buffer;
+        const {sourceMap, indent} = this.options;
+
+        this._flushQueue();
+        if (sourceMap) {
             this._addMapping(element);
         }
-        const buffer = this.buffer;
 
         // add indent if the last line ends with \n
-        if (this.indent && this.last && this.last[this.last.length - 1] === '\n' && code[0] !== '\n') {
-            buffer.push(new Array(this.indent + 1).join('    '));
+        if (
+            indent && this.indent && this.last && 
+            this.last[this.last.length - 1] === '\n' && 
+            code[0] !== '\n'
+        ) {
+            buffer.push(new Array(this.indent + 1).join(indent));
+            this.column += indent.length * this.indent;
         }
 
         this.last = code;
 
         buffer.push(code);
 
-        for (let i = 0; i < code.length; i++) {
-            if (code[i] === '\n') {
-                this.line++;
-                this.column = 0;
-            } else {
-                this.column++;
+        if (sourceMap) {
+            for (let i = 0; i < code.length; i++) {
+                if (code[i] === '\n') {
+                    this.line++;
+                    this.column = 0;
+                } else {
+                    this.column++;
+                }
             }
         }
+    },
+
+    _appendQueue(code, element) {
+        this.queue.push([code, element]);        
+    },
+
+    _flushQueue() {
+        const queue = this.queue;
+        let item;
+        while (item = queue.shift()) {
+            this._append(item[0], item[1]);
+        }
+    },
+
+    _clearQueue() {
+        this.queue = [];
     },
 
     _indent() {

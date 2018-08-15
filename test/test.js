@@ -114,16 +114,26 @@ source = `const a = 1;
 //     <b:name>test</b:name>
 // </Div>`
 // source = `import a from 'a';
-// // aaa
-// import b from 'b';
 // <div {...a} a="1"></div>`
-source =`<input />`
+// source =`<input />`
+// source = `<div a={[<div>1</div>, <div>2</div>]}>
+//     <span></span>
+// </div>`
+
+source = `<div icon>
+    <i v-if={{ !vertical }}></i>
+    <i v-else-if={{ a }}></i> 
+    <i v-else-if={{ b }}></i> 
+    <i v-else></i>
+</div>
+`
 
 // source = "var Page = function(attrs) {\n    return <div title={attrs.title}>\n        {attrs.children}\n    </div>\n}\n<Page title=\"test\">\n    <div>1</div>\n    <div>2</div>\n</Page>";
 // source = "var A = function(attrs) {\n    return <div>{attrs.data}{attrs.value}</div>\n}\n<A data={[<div>1</div>, <div>2</div>]} value={[1, 2]}></A>";
 // source = "<script type=\"text/javascript\">\n    var a = 1;\n    console.log(a);\n    if (a < 2) {\n        console.log('less than {{ a < 2 ? 'a' : 'b' }}');\n    }\n</script>";
 // source = "<ul>\n    <li v-if={index % 2} class=\"test\" v-for={data} v-for-key=\"index\">{value}</li>\n</ul>";
-var ast = Vdt.parser.parse(source, {skipWhitespace: true});
+// var ast = Vdt.parser.parse(source, {skipWhitespace: true});
+var ast = Vdt.parser.parse(source, {skipWhitespace: true, delimiters: ['{{', '}}']});
 // console.log(util.inspect(ast, {showHidden: true, depth: null}));
 console.log(Vdt.stringifier.stringify(ast))
 

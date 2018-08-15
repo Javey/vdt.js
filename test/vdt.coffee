@@ -896,8 +896,13 @@ describe 'Vdt', ->
         source = """
         <input type="radio" v-model="a" />
         """
-        console.log Vdt.stringifier.body(Vdt.parser.parse(source))
-
+        Vdt.stringifier.body(Vdt.parser.parse(source)).should.eql """
+        return h('input', {
+            'type': 'radio',
+            'checked': _getModel(self, 'a') === true,
+            'ev-change': function(__e) {_setModel(self, 'a', __e.target.checked ? true : false, $this);}
+        })
+        """
 
     it 'Strigify event with model in Component', ->
         source = """
@@ -937,3 +942,50 @@ describe 'Vdt', ->
             
         </div>
         """
+
+    it 'indent', ->
+        source = """
+        <div>
+            <Div><i v-if={a}></i><i v-else></i></Div>
+            <div><i v-if={a}></i><i v-else></i></div>
+            <div><i v-if={a}></i></div>
+            <div><i v-if={a}></i><i v-else-if={b}></i></div>
+            <div><i v-if={a}></i><i v-else-if={b}></i><i v-else></i></div>
+            <div><i v-if={a}></i><i v-else-if={b}></i><i v-else-if={c}></i><i v-else></i></div>
+        </div>
+        """
+
+        Vdt.stringifier.body(Vdt.parser.parse(source, {skipWhitespace: true})).should.eql """
+        return h('div', null, [
+            h(Div, {
+                'children': function() {try {return (a)} catch(e) {_e(e)}}.call($this) ?
+                    h('i') :
+                    h('i'),
+                '_context': $this
+            }),
+            h('div', null, function() {try {return (a)} catch(e) {_e(e)}}.call($this) ?
+                h('i') :
+                h('i')),
+            h('div', null, function() {try {return (a)} catch(e) {_e(e)}}.call($this) ?
+                h('i') :
+                undefined),
+            h('div', null, function() {try {return (a)} catch(e) {_e(e)}}.call($this) ?
+                h('i') :
+                function() {try {return (b)} catch(e) {_e(e)}}.call($this) ?
+                    h('i') :
+                    undefined),
+            h('div', null, function() {try {return (a)} catch(e) {_e(e)}}.call($this) ?
+                h('i') :
+                function() {try {return (b)} catch(e) {_e(e)}}.call($this) ?
+                    h('i') :
+                    h('i')),
+            h('div', null, function() {try {return (a)} catch(e) {_e(e)}}.call($this) ?
+                h('i') :
+                function() {try {return (b)} catch(e) {_e(e)}}.call($this) ?
+                    h('i') :
+                    function() {try {return (c)} catch(e) {_e(e)}}.call($this) ?
+                        h('i') :
+                        h('i'))
+        ])
+        """
+
