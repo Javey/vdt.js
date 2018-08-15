@@ -5,8 +5,9 @@ var babel = require('rollup-plugin-babel');
 
 module.exports = {
     entry: 'src/client.js',
-    dest: 'dist/vdt.js',
-    format: 'cjs',
+    dest: 'dist/vdt.min.js',
+    format: 'umd',
+    moduleName: 'Vdt',
     external: ['fs', 'path', 'url'],
     legacy: true,
     plugins: [
@@ -25,8 +26,8 @@ module.exports = {
         }),
         nodeResolve({module: true, jsnext: true, main: true, browser: true}),
         commonjs(),
-        // replace({
-            // 'process.env.NODE_ENV': JSON.stringify('production')
-        // })
+        replace({
+            'process.env.NODE_ENV': JSON.stringify('production')
+        })
     ]
 };
