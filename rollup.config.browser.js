@@ -5,7 +5,7 @@ var babel = require('rollup-plugin-babel');
 
 module.exports = {
     entry: 'src/client.js',
-    dest: 'dist/vdt.min.js',
+    dest: 'dist/vdt.js',
     format: 'umd',
     moduleName: 'Vdt',
     external: ['fs', 'path', 'url'],

@@ -1,8 +1,4 @@
-(function (global, factory) {
-	typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory() :
-	typeof define === 'function' && define.amd ? define(factory) :
-	(global.Vdt = factory());
-}(this, (function () { 'use strict';
+'use strict';
 
 var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) {
   return typeof obj;
@@ -2144,7 +2140,7 @@ Types.ComponentClassOrInstance = Types.ComponentClass | Types.ComponentInstance;
 Types.TextElement = Types.Text | Types.HtmlComment;
 
 var EMPTY_OBJ = {};
-if ("production" !== 'production' && !browser.isIE) {
+if (process.env.NODE_ENV !== 'production' && !browser.isIE) {
     Object.freeze(EMPTY_OBJ);
 }
 
@@ -4261,6 +4257,4 @@ Vdt$1.configure = configure;
 // for compatibility v1.0
 Vdt$1.virtualDom = miss;
 
-return Vdt$1;
-
-})));
+module.exports = Vdt$1;
