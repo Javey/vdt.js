@@ -3,3 +3,7 @@ node_modules
 .vscode
 npm-debug.log
 /coverage
+site/.cache
+site/log
+site/dist
+site/node_modules
