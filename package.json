@@ -10,6 +10,8 @@
   },
   "license": "MIT",
   "scripts": {
+    "doc": "cd site && node server.js",
+    "deploy:doc": "cd site && gulp build",
     "build": "rollup -c rollup.config.js && rollup -c rollup.config.browser.js && uglifyjs dist/vdt.js -o dist/vdt.min.js -m && rollup -c rollup.config.node.js",
     "test": "mocha --require coffee-script/register test/*.coffee; mocha-headless-chrome -f test/browser/index.html -a no-sandbox -a disable-setuid-sandbox",
     "cover": "istanbul cover _mocha -- --compilers coffee:coffee-script/register test/*.coffee",

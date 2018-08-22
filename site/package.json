@@ -23,6 +23,16 @@
     "expose-loader": "^0.7.1",
     "file-loader": "^2.0.0",
     "github-fork-ribbon-css": "^0.2.1",
+    "gulp-clean-css": "^3.0.4",
+    "gulp-copy": "^1.0.0",
+    "gulp-document-write": "0.0.5",
+    "gulp-imerge": "^0.1.0",
+    "gulp-nocache": "^0.1.0",
+    "gulp-sequence": "^0.4.6",
+    "gulp-stylus": "^2.6.0",
+    "gulp-tap": "git://github.com/Javey/gulp-tap.git#master",
+    "gulp-uglify": "^3.0.1",
+    "gulp-vdt": "^0.2.0",
     "handlebars": "^4.0.11",
     "highcharts": "^6.0.7",
     "highlight.js": "^9.12.0",
@@ -40,7 +50,6 @@
     "underscore": "^1.8.3",
     "vdt-loader": "^1.5.1",
     "webpack": "^3.12.0",
-    "webpack-cli": "^3.1.0",
-    "webpack-dev-server": "^2.11.2"
+    "path-replace-map-loader": "0.0.1"
   }
 }
