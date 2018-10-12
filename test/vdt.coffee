@@ -851,14 +851,13 @@ describe 'Vdt', ->
 
     it 'Stringify es6 import should be hoisted', ->
         source = """
-        import a from './a'
-        import {b} from "./b"; import "c"
+        import a from './a' 
+        import {b} from "./b"; import "c" 
 
         <div>{test}</div>
         """
 
         Vdt.stringifier.body(Vdt.parser.parse(source)).should.eql """
-        
         return h('div', null, function() {try {return (test)} catch(e) {_e(e)}}.call($this))
         """
 

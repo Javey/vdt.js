@@ -133,7 +133,10 @@ source = `<div icon>
 // source = "<script type=\"text/javascript\">\n    var a = 1;\n    console.log(a);\n    if (a < 2) {\n        console.log('less than {{ a < 2 ? 'a' : 'b' }}');\n    }\n</script>";
 // source = "<ul>\n    <li v-if={index % 2} class=\"test\" v-for={data} v-for-key=\"index\">{value}</li>\n</ul>";
 // var ast = Vdt.parser.parse(source, {skipWhitespace: true});
-var ast = Vdt.parser.parse(source, {skipWhitespace: true, delimiters: ['{{', '}}']});
+
+source = "import a from './a' \nimport {b} from \"./b\"; import \"c\" \n\n<div>{test}</div>";
+// var ast = Vdt.parser.parse(source, {skipWhitespace: true, delimiters: ['{{', '}}']});
+var ast = Vdt.parser.parse(source);
 // console.log(util.inspect(ast, {showHidden: true, depth: null}));
 console.log(Vdt.stringifier.stringify(ast))
 
