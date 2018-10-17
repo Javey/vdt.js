@@ -31,7 +31,7 @@
     "babel-preset-es2015-loose": "^8.0.0",
     "babel-preset-stage-0": "^6.24.1",
     "coffee-script": "^1.9.2",
-    "gulp": "^3.9.1",
+    "gulp": "^4.0.0",
     "gulp-babel": "^6.1.2",
     "istanbul": "^0.4.5",
     "jquery": "^3.3.1",

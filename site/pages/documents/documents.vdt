@@ -94,7 +94,7 @@ var currentNav = {};
             <div class="edit-link">
                 如果你发现文档有问题，请帮忙在
                 <a target="_blank" 
-                    href={{ `https://github.com/Javey/javey.github.io/blob/master/vdt/docs/${self.get('index')}.md` }}
+                    href={{ `https://github.com/Javey/vdt.js/blob/master/docs/${self.get('index')}.md` }}
                 >github</a>
                 上修正该文档
             </div>
