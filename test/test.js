@@ -134,7 +134,11 @@ source = `<div icon>
 // source = "<ul>\n    <li v-if={index % 2} class=\"test\" v-for={data} v-for-key=\"index\">{value}</li>\n</ul>";
 // var ast = Vdt.parser.parse(source, {skipWhitespace: true});
 
-source = "import a from './a' \nimport {b} from \"./b\"; import \"c\" \n\n<div>{test}</div>";
+// source = "import a from './a' \nimport {b} from \"./b\"; import \"c\" \n\n<div>{test}</div>";
+
+// source = "<div validate={/\"<`/}>test</div>";
+// source = "<ul className=\"list\">\n    {[list].map(function(item) {\n        return <li id={item}}>{item}</li>\n    })}\n</ul>";
+source = "<div>{{a}</div>";
 // var ast = Vdt.parser.parse(source, {skipWhitespace: true, delimiters: ['{{', '}}']});
 var ast = Vdt.parser.parse(source);
 // console.log(util.inspect(ast, {showHidden: true, depth: null}));

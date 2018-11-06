@@ -169,6 +169,12 @@ describe 'Vdt', ->
         """
         render(source).should.eql "<div><a></a></div>"
 
+    it 'Parse special characters in RegExp', ->
+        source = """
+        <div validate={/"<`/}>test</div>
+        """
+        render(source).should.eql "<div>test</div>"
+
     it 'Widget should have _context prop', ->
         source = """
         var C = function(props) {
