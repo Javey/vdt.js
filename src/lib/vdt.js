@@ -38,11 +38,11 @@ Vdt.prototype = {
         return this.vNode;
     },
 
-    renderString(data, blocks) {
+    renderString(data, blocks, parent) {
         this.data = data;
         const vNode = this.template(data, Vdt, blocks, this.template) || miss.hc('empty');
 
-        return miss.renderString(vNode, null, Vdt.configure().disableSplitText);
+        return miss.renderString(vNode, parent, Vdt.configure().disableSplitText);
     },
 
     update(data, parentDom, queue, parentVNode, isSVG, blocks) {
