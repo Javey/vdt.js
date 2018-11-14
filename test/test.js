@@ -138,7 +138,8 @@ source = `<div icon>
 
 // source = "<div validate={/\"<`/}>test</div>";
 // source = "<ul className=\"list\">\n    {[list].map(function(item) {\n        return <li id={item}}>{item}</li>\n    })}\n</ul>";
-source = "<div>{{a}</div>";
+// source = "<div>{{a}</div>";
+source = "/te'st/; var a = /*test */ /*test */ /te'st/; (function() { return 1 })() / 2; <div width={100 / 10}></div>";
 // var ast = Vdt.parser.parse(source, {skipWhitespace: true, delimiters: ['{{', '}}']});
 var ast = Vdt.parser.parse(source);
 // console.log(util.inspect(ast, {showHidden: true, depth: null}));

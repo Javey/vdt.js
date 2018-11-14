@@ -128,8 +128,31 @@ export function className(obj) {
 }
 
 export function isWhiteSpace(charCode) {
-    return ((charCode <= 160 && (charCode >= 9 && charCode <= 13) || charCode == 32 || charCode == 160) || charCode == 5760 || charCode == 6158 ||
-    (charCode >= 8192 && (charCode <= 8202 || charCode == 8232 || charCode == 8233 || charCode == 8239 || charCode == 8287 || charCode == 12288 || charCode == 65279)));
+    return (
+        (charCode <= 160 && (charCode >= 9 && charCode <= 13) || 
+            charCode == 32 || 
+            charCode == 160
+        ) ||
+        charCode == 5760 || 
+        charCode == 6158 ||
+        (charCode >= 8192 && 
+            (
+                charCode <= 8202 || 
+                charCode == 8232 ||
+                charCode == 8233 || 
+                charCode == 8239 || 
+                charCode == 8287 || 
+                charCode == 12288 || 
+                charCode == 65279
+            )
+        )
+    );
+}
+
+export function isWhiteSpaceExpectLinebreak(charCode) {
+    return charCode !== 10 && // \n
+        charCode !== 13 && // \r
+        isWhiteSpace(charCode);
 }
 
 export function trimRight(str) {

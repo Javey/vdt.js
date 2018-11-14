@@ -358,6 +358,12 @@ function isWhiteSpace(charCode) {
     return charCode <= 160 && charCode >= 9 && charCode <= 13 || charCode == 32 || charCode == 160 || charCode == 5760 || charCode == 6158 || charCode >= 8192 && (charCode <= 8202 || charCode == 8232 || charCode == 8233 || charCode == 8239 || charCode == 8287 || charCode == 12288 || charCode == 65279);
 }
 
+function isWhiteSpaceExpectLinebreak(charCode) {
+    return charCode !== 10 && // \n
+    charCode !== 13 && // \r
+    isWhiteSpace(charCode);
+}
+
 function trimRight(str) {
     var index = str.length;
 
@@ -523,6 +529,7 @@ var utils = (Object.freeze || Object)({
 	map: map,
 	className: className,
 	isWhiteSpace: isWhiteSpace,
+	isWhiteSpaceExpectLinebreak: isWhiteSpaceExpectLinebreak,
 	trimRight: trimRight,
 	trimLeft: trimLeft,
 	setDelimiters: setDelimiters,
@@ -553,11 +560,15 @@ var TypeName$$1 = TypeName$1;
 var elementNameRegexp = /^<\w+:?\s*[\{\w\/>]/;
 // const importRegexp = /^\s*\bimport\b/;
 
-function isJSXIdentifierPart(ch) {
-    return ch === 58 || ch === 95 || ch === 45 || ch === 36 || ch === 46 || // : _ (underscore) - $ .
+function isJSIdentifierPart(ch) {
+    return ch === 95 || ch === 36 || // _ (underscore) $
     ch >= 65 && ch <= 90 || // A..Z
     ch >= 97 && ch <= 122 || // a..z
     ch >= 48 && ch <= 57; // 0..9
+}
+
+function isJSXIdentifierPart(ch) {
+    return ch === 58 || ch === 45 || ch === 46 || isJSIdentifierPart(ch); // : - .
 }
 
 function Parser() {
@@ -617,8 +628,14 @@ Parser.prototype = {
             ch === '/' && (
             // is not /* and //, this is comment
             tmp = this._char(this.index + 1)) && tmp !== '*' && tmp !== '/' && (
+            // is the first char
+            this.index === 0 ||
             // is not </, this is a end tag
-            tmp = this._char(this.index - 1)) && tmp !== '<') {
+            (tmp = this._char(this.index - 1)) && tmp !== '<' && (
+            // is not a sign of division
+            // FIXME: expect `if (a > 1) /test/`
+            tmp = this._getLastCharCode()) && !isJSIdentifierPart(tmp) && tmp !== 41 // )
+            )) {
                 // skip element(<div>) in quotes
                 this._scanStringLiteral();
             } else if (this._isElementStart()) {
@@ -655,14 +672,14 @@ Parser.prototype = {
             var ch = this._char();
             if (ch === '\'' || ch === '"') {
                 this._scanStringLiteral();
-                var _start = void 0;
+                var _start2 = void 0;
                 do {
-                    _start = this.index;
+                    _start2 = this.index;
                     this._skipWhitespaceAndJSComment();
                     if (this._char() === ';') {
                         this._updateIndex();
                     }
-                } while (_start !== this.index);
+                } while (_start2 !== this.index);
                 break;
             } else {
                 this._updateIndex();
@@ -1253,6 +1270,38 @@ Parser.prototype = {
         error$$1.source = this.source;
 
         throw error$$1;
+    },
+
+    _getLastCharCode: function _getLastCharCode() {
+        var start = this.index - 1;
+        var _start = void 0;
+        do {
+            _start = start;
+            while (start >= 0) {
+                var code = this._charCode(start);
+                if (!isWhiteSpaceExpectLinebreak(code)) {
+                    break;
+                }
+                start--;
+            }
+
+            // only check multi-line comments '/* comment */'
+            while (start >= 0) {
+                if (this._char(start) === '/' && this._char(start - 1) === '*') {
+                    start -= 2;
+                    while (start >= 0) {
+                        if (this._char(start) === '*' && this._char(start - 1) === '/') {
+                            start -= 2;
+                            break;
+                        }
+                        start--;
+                    }
+                }
+                break;
+            }
+        } while (start !== _start);
+
+        return this._charCode(start);
     }
 };
 

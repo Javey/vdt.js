@@ -11,11 +11,15 @@ const elementNameRegexp = /^<\w+:?\s*[\{\w\/>]/;
 const emptyRegexp = /^\s*$/;
 // const importRegexp = /^\s*\bimport\b/;
 
-function isJSXIdentifierPart(ch) {
-    return (ch === 58) || (ch === 95) || (ch === 45) || ch === 36 || ch === 46 ||  // : _ (underscore) - $ .
+function isJSIdentifierPart(ch) {
+    return (ch === 95) || ch === 36 ||  // _ (underscore) $
         (ch >= 65 && ch <= 90) ||         // A..Z
         (ch >= 97 && ch <= 122) ||        // a..z
         (ch >= 48 && ch <= 57);         // 0..9
+}
+
+function isJSXIdentifierPart(ch) {
+    return (ch === 58) || (ch === 45) || ch === 46 || isJSIdentifierPart(ch);  // : - .
 }
 
 export default function Parser() {
@@ -75,9 +79,15 @@ Parser.prototype = {
                 // is a RegExp, treat it as literal sting
                 ch === '/' && 
                 // is not /* and //, this is comment
-                (tmp = this._char(this.index + 1)) && tmp !== '*' && tmp !== '/' &&
-                // is not </, this is a end tag
-                (tmp = this._char(this.index - 1)) && tmp !== '<'
+                (tmp = this._char(this.index + 1)) && tmp !== '*' && tmp !== '/' && (
+                    // is the first char
+                    this.index === 0 || 
+                    // is not </, this is a end tag
+                    (tmp = this._char(this.index - 1)) && tmp !== '<' &&
+                    // is not a sign of division
+                    // FIXME: expect `if (a > 1) /test/`
+                    (tmp = this._getLastCharCode()) && !isJSIdentifierPart(tmp) && tmp !== 41 // )
+                )
             ) {
                 // skip element(<div>) in quotes
                 this._scanStringLiteral();
@@ -721,5 +731,37 @@ Parser.prototype = {
         error.source = this.source;
 
         throw error;
+    },
+
+    _getLastCharCode() {
+        let start = this.index - 1;
+        let _start;
+        do {
+            _start = start;
+            while (start >= 0) {
+                var code = this._charCode(start);
+                if (!Utils.isWhiteSpaceExpectLinebreak(code)) {
+                    break;
+                }
+                start--;
+            }
+
+            // only check multi-line comments '/* comment */'
+            while (start >= 0) {
+                if (this._char(start) === '/' && this._char(start - 1) === '*') {
+                    start -= 2;
+                    while (start >= 0) {
+                        if (this._char(start) === '*' && this._char(start - 1) === '/') {
+                            start -= 2;
+                            break;
+                        }
+                        start--;
+                    }
+                }
+                break;
+            }
+        } while (start !== _start);
+
+        return this._charCode(start);
     }
 };

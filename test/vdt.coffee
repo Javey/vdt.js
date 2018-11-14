@@ -175,6 +175,15 @@ describe 'Vdt', ->
         """
         render(source).should.eql "<div>test</div>"
 
+    it '/ maybe a sign of division rather than a regexp', ->
+        source = """
+        /te'st/
+        var a = /*test*/ /*test*/ /te'st/;
+        (function() { return 1; }) / 2;
+        <div width={100 / 10}></div>
+        """
+        render(source).should.eql """<div width="10"></div>"""
+
     it 'Widget should have _context prop', ->
         source = """
         var C = function(props) {
