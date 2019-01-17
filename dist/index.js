@@ -58,20 +58,7 @@ var indexOf = function () {
     }
 }();
 
-var nativeObject = Object.create;
-var createObject = function () {
-    if (nativeObject) {
-        return function (obj) {
-            return nativeObject(obj);
-        };
-    } else {
-        return function (obj) {
-            function Fn() {}
-            Fn.prototype = obj;
-            return new Fn();
-        };
-    }
-}();
+
 
 var SimpleMap = typeof Map === 'function' ? Map : function () {
     function SimpleMap() {
@@ -149,7 +136,9 @@ var strictProps = {
     volume: true,
     defaultChecked: true,
     value: true,
-    htmlFor: true
+    htmlFor: true,
+    scrollLeft: true,
+    scrollTop: true
 };
 
 var selfClosingTags = {
@@ -174,6 +163,8 @@ var selfClosingTags = {
 
 function MountedQueue() {
     this.queue = [];
+    // if done is true, it indicate that this queue should be discarded
+    this.done = false;
 }
 MountedQueue.prototype.push = function (fn) {
     this.queue.push(fn);
@@ -187,6 +178,7 @@ MountedQueue.prototype.trigger = function () {
     while (callback = queue.shift()) {
         callback();
     }
+    this.done = true;
 };
 
 var browser = {};
@@ -198,6 +190,10 @@ if (typeof navigator !== 'undefined') {
         var version = parseInt(ua.substring(index + 5, ua.indexOf('.', index)), 10);
         browser.version = version;
         browser.isIE8 = version === 8;
+    } else if (~ua.indexOf('trident/')) {
+        browser.isIE = true;
+        var rv = ua.indexOf('rv:');
+        browser.version = parseInt(ua.substring(rv + 3, ua.indexOf('.', rv)), 10);
     } else if (~ua.indexOf('edge')) {
         browser.isEdge = true;
     } else if (~ua.indexOf('safari')) {
@@ -230,6 +226,10 @@ var namespaces = {
     'xml:base': xmlNS,
     'xml:lang': xmlNS,
     'xml:space': xmlNS
+};
+
+var hooks = {
+    beforeInsert: null
 };
 
 var _typeof$1 = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
@@ -2274,16 +2274,16 @@ function createVNode(tag, props, children, className, key, ref) {
     return new VNode(type, tag, props, children, className || props.className, key || props.key, ref || props.ref);
 }
 
-function createCommentVNode(children) {
-    return new VNode(Types.HtmlComment, null, EMPTY_OBJ, children);
+function createCommentVNode(children, key) {
+    return new VNode(Types.HtmlComment, null, EMPTY_OBJ, children, null, key);
 }
 
 function createUnescapeTextVNode(children) {
     return new VNode(Types.UnescapeText, null, EMPTY_OBJ, children);
 }
 
-function createTextVNode(text) {
-    return new VNode(Types.Text, null, EMPTY_OBJ, text);
+function createTextVNode(text, key) {
+    return new VNode(Types.Text, null, EMPTY_OBJ, text, null, key);
 }
 
 
@@ -2375,30 +2375,11 @@ function directClone(vNode) {
         newVNode = new VNode(type, vNode.tag, props, vNode.children, null, vNode.key, vNode.ref);
 
         var newProps = newVNode.props;
-        var newChildren = newProps.children;
-
+        var newChildren = directCloneChildren(newProps.children);
         if (newChildren) {
-            if (isArray(newChildren)) {
-                var len = newChildren.length;
-                if (len > 0) {
-                    var tmpArray = [];
-
-                    for (var i = 0; i < len; i++) {
-                        var child = newChildren[i];
-                        if (isStringOrNumber(child)) {
-                            tmpArray.push(child);
-                        } else if (!isInvalid(child) && child.type) {
-                            tmpArray.push(directClone(child));
-                        }
-                    }
-                    newProps.children = tmpArray;
-                }
-            } else if (newChildren.type) {
-                newProps.children = directClone(newChildren);
-            }
+            newProps.children = newChildren;
         }
     } else if (type & Types.Element) {
-        var children = vNode.children;
         var _props = void 0;
         var _propsToClone = vNode.props;
 
@@ -2411,100 +2392,78 @@ function directClone(vNode) {
             }
         }
 
-        newVNode = new VNode(type, vNode.tag, vNode.props, children, vNode.className, vNode.key, vNode.ref);
+        newVNode = new VNode(type, vNode.tag, vNode.props, directCloneChildren(vNode.children), vNode.className, vNode.key, vNode.ref);
     } else if (type & Types.Text) {
-        newVNode = createTextVNode(vNode.children);
+        newVNode = createTextVNode(vNode.children, vNode.key);
     } else if (type & Types.HtmlComment) {
-        newVNode = createCommentVNode(vNode.children);
+        newVNode = createCommentVNode(vNode.children, vNode.key);
     }
 
     return newVNode;
 }
 
-var ALL_PROPS = ["altKey", "bubbles", "cancelable", "ctrlKey", "eventPhase", "metaKey", "relatedTarget", "shiftKey", "target", "timeStamp", "type", "view", "which"];
-var KEY_PROPS = ["char", "charCode", "key", "keyCode"];
-var MOUSE_PROPS = ["button", "buttons", "clientX", "clientY", "layerX", "layerY", "offsetX", "offsetY", "pageX", "pageY", "screenX", "screenY", "toElement"];
+function directCloneChildren(children) {
+    if (children) {
+        if (isArray(children)) {
+            var len = children.length;
+            if (len > 0) {
+                var tmpArray = [];
 
-var rkeyEvent = /^key|input/;
-var rmouseEvent = /^(?:mouse|pointer|contextmenu)|click/;
-
-function Event(e) {
-    for (var i = 0; i < ALL_PROPS.length; i++) {
-        var propKey = ALL_PROPS[i];
-        this[propKey] = e[propKey];
+                for (var i = 0; i < len; i++) {
+                    var child = children[i];
+                    if (isStringOrNumber(child)) {
+                        tmpArray.push(child);
+                    } else if (!isInvalid(child) && child.type) {
+                        tmpArray.push(directClone(child));
+                    }
+                }
+                return tmpArray;
+            }
+        } else if (children.type) {
+            return directClone(children);
+        }
     }
 
-    if (!e.target) {
-        this.target = e.srcElement;
-    }
-
-    this._rawEvent = e;
+    return children;
 }
-Event.prototype.preventDefault = function () {
-    var e = this._rawEvent;
-    if (e.preventDefault) {
-        e.preventDefault();
-    } else {
-        e.returnValue = false;
-    }
-};
-Event.prototype.stopPropagation = function () {
-    var e = this._rawEvent;
-    e.cancelBubble = true;
-    e.stopImmediatePropagation && e.stopImmediatePropagation();
-};
 
-function MouseEvent(e) {
-    Event.call(this, e);
-    for (var j = 0; j < MOUSE_PROPS.length; j++) {
-        var mousePropKey = MOUSE_PROPS[j];
-        this[mousePropKey] = e[mousePropKey];
-    }
+function preventDefault() {
+    this.returnValue = false;
 }
-MouseEvent.prototype = createObject(Event.prototype);
-MouseEvent.prototype.constructor = MouseEvent;
 
-function KeyEvent(e) {
-    Event.call(this, e);
-    for (var j = 0; j < KEY_PROPS.length; j++) {
-        var keyPropKey = KEY_PROPS[j];
-        this[keyPropKey] = e[keyPropKey];
-    }
-}
-KeyEvent.prototype = createObject(Event.prototype);
-KeyEvent.prototype.constructor = KeyEvent;
-
-function proxyEvent(e) {
-    if (rkeyEvent.test(e.type)) {
-        return new KeyEvent(e);
-    } else if (rmouseEvent.test(e.type)) {
-        return new MouseEvent(e);
-    } else {
-        return new Event(e);
-    }
+function stopPropagation() {
+    this.cancelBubble = true;
+    this.stopImmediatePropagation && this.stopImmediatePropagation();
 }
 
 var addEventListener = void 0;
 var removeEventListener = void 0;
+function fixEvent(fn) {
+    return function (event) {
+        event.stopPropagation = stopPropagation;
+        if (!event.preventDefault) {
+            event.preventDefault = preventDefault;
+        }
+        fn(event);
+    };
+}
 if ('addEventListener' in doc) {
     addEventListener = function addEventListener(dom, name, fn) {
-        dom.addEventListener(name, fn, false);
+        fn._$cb = fixEvent(fn);
+        dom.addEventListener(name, fn._$cb, false);
     };
 
     removeEventListener = function removeEventListener(dom, name, fn) {
-        dom.removeEventListener(name, fn);
+        dom.removeEventListener(name, fn._$cb || fn);
     };
 } else {
     addEventListener = function addEventListener(dom, name, fn) {
-        fn.cb = function (e) {
-            e = proxyEvent(e);
-            fn(e);
-        };
-        dom.attachEvent("on" + name, fn.cb);
+        fn._$cb = fixEvent(fn);
+        dom.attachEvent('on' + name, fn._$cb);
     };
 
     removeEventListener = function removeEventListener(dom, name, fn) {
-        dom.detachEvent("on" + name, fn.cb || fn);
+        dom.detachEvent('on' + name, fn._$cb || fn);
     };
 }
 
@@ -2522,6 +2481,7 @@ if (browser.isIE8) {
 }
 
 function handleEvent(name, lastEvent, nextEvent, dom) {
+    // debugger;
     if (name === 'blur') {
         name = 'focusout';
     } else if (name === 'focus') {
@@ -2575,11 +2535,19 @@ function handleEvent(name, lastEvent, nextEvent, dom) {
     }
 }
 
-function dispatchEvent(event, target, items, count, isClick) {
+function dispatchEvent(event, target, items, count, isClick, eventData) {
+    // if event has cancelled bubble, return directly  
+    // otherwise it is also triggered sometimes, e.g in React
+    if (event.cancelBubble) {
+        return;
+    }
+
     var eventToTrigger = items.get(target);
     if (eventToTrigger) {
         count--;
-        event.currentTarget = target;
+        eventData.dom = target;
+        // for fallback when Object.defineProperty is undefined
+        event._currentTarget = target;
         if (isArray(eventToTrigger)) {
             for (var i = 0; i < eventToTrigger.length; i++) {
                 var _eventToTrigger = eventToTrigger[i];
@@ -2590,26 +2558,36 @@ function dispatchEvent(event, target, items, count, isClick) {
         } else {
             eventToTrigger(event);
         }
-        if (event._rawEvent.cancelBubble) {
-            return;
-        }
     }
     if (count > 0) {
         var parentDom = target.parentNode;
         if (isNullOrUndefined(parentDom) || isClick && parentDom.nodeType === 1 && parentDom.disabled) {
             return;
         }
-        dispatchEvent(event, parentDom, items, count, isClick);
+        dispatchEvent(event, parentDom, items, count, isClick, eventData);
     }
 }
 
 function attachEventToDocument(name, delegatedRoots) {
     var docEvent = function docEvent(event) {
         var count = delegatedRoots.items.size;
-        event || (event = window.event);
         if (count > 0) {
-            event = proxyEvent(event);
-            dispatchEvent(event, event.target, delegatedRoots.items, count, event.type === 'click');
+            var eventData = {
+                dom: doc
+            };
+            try {
+                Object.defineProperty(event, 'currentTarget', {
+                    configurable: true,
+                    get: function get() {
+                        return eventData.dom;
+                    }
+                });
+            } catch (e) {}
+            // ie8
+
+            // for compatibility
+            event._rawEvent = event;
+            dispatchEvent(event, event.target, delegatedRoots.items, count, event.type === 'click', eventData);
         }
     };
     addEventListener(doc, name, docEvent);
@@ -2804,28 +2782,23 @@ function createHtmlElement(vNode, parentDom, mountedQueue, isRender, parentVNode
         }
     }
 
+    if (hooks.beforeInsert) {
+        hooks.beforeInsert(vNode);
+    }
+
     // in IE8, the select value will be set to the first option's value forcely
     // when it is appended to parent dom. We change its value in processForm does not
     // work. So processForm after it has be appended to parent dom.
-    var isFormElement = void 0;
+    if (parentDom) {
+        appendChild(parentDom, dom);
+    }
     if (props !== EMPTY_OBJ) {
-        isFormElement = (vNode.type & Types.FormElement) > 0;
-        for (var prop in props) {
-            patchProp(prop, null, props[prop], dom, isFormElement, isSVG);
-        }
+        patchProps(null, vNode, isSVG, true);
     }
 
     var ref = vNode.ref;
     if (!isNullOrUndefined(ref)) {
         createRef(dom, ref, mountedQueue);
-    }
-
-    if (parentDom) {
-        appendChild(parentDom, dom);
-    }
-
-    if (isFormElement) {
-        processForm(vNode, dom, props, true);
     }
 
     return dom;
@@ -2842,7 +2815,7 @@ function createTextElement(vNode, parentDom) {
     return dom;
 }
 
-function createComponentClassOrInstance(vNode, parentDom, mountedQueue, lastVNode, isRender, parentVNode, isSVG) {
+function createOrHydrateComponentClassOrInstance(vNode, parentDom, mountedQueue, lastVNode, isRender, parentVNode, isSVG, createDom) {
     var props = vNode.props;
     var instance = vNode.type & Types.ComponentClass ? new vNode.tag(props) : vNode.children;
     instance.parentDom = parentDom;
@@ -2851,17 +2824,13 @@ function createComponentClassOrInstance(vNode, parentDom, mountedQueue, lastVNod
     instance.parentVNode = parentVNode;
     instance.isSVG = isSVG;
     instance.vNode = vNode;
-    var dom = instance.init(lastVNode, vNode);
-    var ref = vNode.ref;
-
-    vNode.dom = dom;
     vNode.children = instance;
     vNode.parentVNode = parentVNode;
 
-    if (parentDom) {
-        appendChild(parentDom, dom);
-        // parentDom.appendChild(dom);
-    }
+    var dom = createDom(instance);
+    var ref = vNode.ref;
+
+    vNode.dom = dom;
 
     if (typeof instance.mount === 'function') {
         mountedQueue.push(function () {
@@ -2876,7 +2845,46 @@ function createComponentClassOrInstance(vNode, parentDom, mountedQueue, lastVNod
     return dom;
 }
 
+function createComponentClassOrInstance(vNode, parentDom, mountedQueue, lastVNode, isRender, parentVNode, isSVG) {
+    return createOrHydrateComponentClassOrInstance(vNode, parentDom, mountedQueue, lastVNode, isRender, parentVNode, isSVG, function (instance) {
+        var dom = instance.init(lastVNode, vNode);
+        if (parentDom) {
+            appendChild(parentDom, dom);
+        }
 
+        return dom;
+    });
+}
+
+// export function createComponentFunction(vNode, parentDom, mountedQueue) {
+// const props = vNode.props;
+// const ref = vNode.ref;
+
+// createComponentFunctionVNode(vNode);
+
+// let children = vNode.children;
+// let dom;
+// // support ComponentFunction return an array for macro usage
+// if (isArray(children)) {
+// dom = [];
+// for (let i = 0; i < children.length; i++) {
+// dom.push(createElement(children[i], parentDom, mountedQueue));
+// }
+// } else {
+// dom = createElement(vNode.children, parentDom, mountedQueue);
+// }
+// vNode.dom = dom;
+
+// // if (parentDom) {
+// // parentDom.appendChild(dom);
+// // }
+
+// if (ref) {
+// createRef(dom, ref, mountedQueue);
+// }
+
+// return dom;
+// }
 
 function createCommentElement(vNode, parentDom) {
     var dom = doc.createComment(vNode.children);
@@ -2889,7 +2897,20 @@ function createCommentElement(vNode, parentDom) {
     return dom;
 }
 
+// export function createComponentFunctionVNode(vNode) {
+// let result = vNode.tag(vNode.props);
+// if (isStringOrNumber(result)) {
+// result = createTextVNode(result);
+// } else if (process.env.NODE_ENV !== 'production') {
+// if (isArray(result)) {
+// throw new Error(`ComponentFunction ${vNode.tag.name} returned a invalid vNode`);
+// }
+// }
 
+// vNode.children = result;
+
+// return vNode;
+// }
 
 function createElements(vNodes, parentDom, mountedQueue, isRender, parentVNode, isSVG) {
     if (isStringOrNumber(vNodes)) {
@@ -3121,7 +3142,7 @@ function patchElement(lastVNode, nextVNode, parentDom, mountedQueue, parentVNode
         }
 
         if (lastProps !== nextProps) {
-            patchProps(lastVNode, nextVNode, isSVG);
+            patchProps(lastVNode, nextVNode, isSVG, false);
         }
 
         if (lastClassName !== nextClassName) {
@@ -3165,14 +3186,16 @@ function patchComponentClass(lastVNode, nextVNode, parentDom, mountedQueue, pare
     } else {
         instance = lastVNode.children;
         instance.mountedQueue = mountedQueue;
-        instance.isRender = false;
+        if (instance.mounted) {
+            instance.isRender = false;
+        }
         instance.parentVNode = parentVNode;
         instance.vNode = nextVNode;
         instance.isSVG = isSVG;
-        newDom = instance.update(lastVNode, nextVNode);
-        nextVNode.dom = newDom;
         nextVNode.children = instance;
         nextVNode.parentVNode = parentVNode;
+        newDom = instance.update(lastVNode, nextVNode);
+        nextVNode.dom = newDom;
 
         // for intact.js, the dom will not be removed and
         // the component will not be destoryed, so the ref
@@ -3209,7 +3232,9 @@ function patchComponentIntance(lastVNode, nextVNode, parentDom, mountedQueue, pa
         newDom = createComponentClassOrInstance(nextVNode, parentDom, mountedQueue, lastVNode, false, parentVNode, isSVG);
     } else {
         lastInstance.mountedQueue = mountedQueue;
-        lastInstance.isRender = false;
+        if (lastInstance.mounted) {
+            lastInstance.isRender = false;
+        }
         lastInstance.parentVNode = parentVNode;
         newDom = lastInstance.update(lastVNode, nextVNode);
         nextVNode.dom = newDom;
@@ -3533,30 +3558,32 @@ function patchText(lastVNode, nextVNode, parentDom) {
     }
 }
 
-function patchProps(lastVNode, nextVNode, isSVG) {
-    var lastProps = lastVNode.props;
+function patchProps(lastVNode, nextVNode, isSVG, isRender) {
+    var lastProps = lastVNode && lastVNode.props || EMPTY_OBJ;
     var nextProps = nextVNode.props;
     var dom = nextVNode.dom;
     var prop = void 0;
+
+    var isInputOrTextArea = (nextVNode.type & (Types.InputElement | Types.TextareaElement)) > 0;
     if (nextProps !== EMPTY_OBJ) {
         var isFormElement = (nextVNode.type & Types.FormElement) > 0;
         for (prop in nextProps) {
-            patchProp(prop, lastProps[prop], nextProps[prop], dom, isFormElement, isSVG);
+            patchProp(prop, lastProps[prop], nextProps[prop], dom, isFormElement, isSVG, isInputOrTextArea);
         }
         if (isFormElement) {
-            processForm(nextVNode, dom, nextProps, false);
+            processForm(nextVNode, dom, nextProps, isRender);
         }
     }
     if (lastProps !== EMPTY_OBJ) {
         for (prop in lastProps) {
             if (!isSkipProp(prop) && isNullOrUndefined(nextProps[prop]) && !isNullOrUndefined(lastProps[prop])) {
-                removeProp(prop, lastProps[prop], dom);
+                removeProp(prop, lastProps[prop], dom, isInputOrTextArea);
             }
         }
     }
 }
 
-function patchProp(prop, lastValue, nextValue, dom, isFormElement, isSVG) {
+function patchProp(prop, lastValue, nextValue, dom, isFormElement, isSVG, isInputOrTextArea) {
     if (lastValue !== nextValue) {
         if (isSkipProp(prop) || isFormElement && prop === 'value') {
             return;
@@ -3574,24 +3601,80 @@ function patchProp(prop, lastValue, nextValue, dom, isFormElement, isSVG) {
                 dom._value = value;
             }
         } else if (isNullOrUndefined(nextValue)) {
-            removeProp(prop, lastValue, dom);
+            removeProp(prop, lastValue, dom, isInputOrTextArea);
         } else if (isEventProp(prop)) {
             handleEvent(prop.substr(3), lastValue, nextValue, dom);
         } else if (isObject$1(nextValue)) {
-            patchPropByObject(prop, lastValue, nextValue, dom);
+            patchPropByObject(prop, lastValue, nextValue, dom, isInputOrTextArea);
         } else if (prop === 'innerHTML') {
             dom.innerHTML = nextValue;
         } else {
             if (isSVG && namespaces[prop]) {
                 dom.setAttributeNS(namespaces[prop], prop, nextValue);
             } else {
+                // https://github.com/Javey/Intact/issues/19
+                // IE 10/11 set placeholder will trigger input event
+                if (isInputOrTextArea && browser.isIE && (browser.version === 10 || browser.version === 11) && prop === 'placeholder') {
+                    ignoreInputEvent(dom);
+                    if (nextValue !== '') {
+                        addFocusEvent(dom);
+                    } else {
+                        removeFocusEvent(dom);
+                    }
+                }
                 dom.setAttribute(prop, nextValue);
             }
         }
     }
 }
 
-function removeProp(prop, lastValue, dom) {
+function ignoreInputEvent(dom) {
+    if (!dom.__ignoreInputEvent) {
+        var cb = function cb(e) {
+            e.stopImmediatePropagation();
+            delete dom.__ignoreInputEvent;
+            dom.removeEventListener('input', cb);
+        };
+        dom.addEventListener('input', cb);
+        dom.__ignoreInputEvent = true;
+    }
+}
+
+function addFocusEvent(dom) {
+    if (!dom.__addFocusEvent) {
+        var ignore = false;
+        var inputCb = function inputCb(e) {
+            if (ignore) e.stopImmediatePropagation();
+            ignore = false;
+        };
+        var focusCb = function focusCb() {
+            ignore = true;
+            // if we call input.focus(), the input event will not
+            // be called, so we reset it next tick
+            setTimeout(function () {
+                ignore = false;
+            });
+        };
+        dom.addEventListener('input', inputCb);
+        dom.addEventListener('focusin', focusCb);
+        dom.addEventListener('focusout', focusCb);
+        dom.__addFocusEvent = {
+            focusCb: focusCb, inputCb: inputCb
+        };
+    }
+}
+
+function removeFocusEvent(dom) {
+    var cbs = dom.__addFocusEvent;
+    if (cbs) {
+        dom.addEventListener('input', cbs.inputCb);
+        dom.addEventListener('focusin', cbs.focusCb);
+        dom.addEventListener('focusout', cbs.focusCb);
+        delete dom.__addFocusEvent;
+    }
+}
+
+function removeProp(prop, lastValue, dom, isInputOrTextArea) {
     if (!isNullOrUndefined(lastValue)) {
         switch (prop) {
             case 'value':
@@ -3630,6 +3713,9 @@ function removeProp(prop, lastValue, dom) {
                 }
             }
         } else {
+            if (isInputOrTextArea && browser.isIE && (browser.version === 10 || browser.version === 11) && prop === 'placeholder') {
+                removeFocusEvent(dom);
+            }
             dom.removeAttribute(prop);
         }
     }
@@ -3646,9 +3732,9 @@ var removeDataset = browser.isIE || browser.isSafari ? function (lastValue, dom)
     }
 };
 
-function patchPropByObject(prop, lastValue, nextValue, dom) {
+function patchPropByObject(prop, lastValue, nextValue, dom, isInputOrTextArea) {
     if (lastValue && !isObject$1(lastValue) && !isNullOrUndefined(lastValue)) {
-        removeProp(prop, lastValue, dom);
+        removeProp(prop, lastValue, dom, isInputOrTextArea);
         lastValue = null;
     }
     switch (prop) {
@@ -3768,13 +3854,19 @@ function toString$1(vNode, parent, disableSplitText, firstChild) {
     var tag = vNode.tag;
     var props = vNode.props;
     var children = vNode.children;
+    vNode.parentVNode = parent;
 
     var html = void 0;
     if (type & Types.ComponentClass) {
         var instance = new tag(props);
+        instance.parentVNode = parent;
+        instance.vNode = vNode;
+        vNode.children = instance;
         html = instance.toString();
     } else if (type & Types.ComponentInstance) {
-        html = vNode.children.toString();
+        children.parentVNode = parent;
+        children.vNode = vNode;
+        html = children.toString();
     } else if (type & Types.Element) {
         var innerHTML = void 0;
         html = '<' + tag;
@@ -4020,36 +4112,14 @@ function hydrateElement(vNode, dom, mountedQueue, parentDom, parentVNode, isSVG)
 }
 
 function hydrateComponentClassOrInstance(vNode, dom, mountedQueue, parentDom, parentVNode, isSVG) {
-    var props = vNode.props;
-    var instance = vNode.type & Types.ComponentClass ? new vNode.tag(props) : vNode.children;
-    instance.parentDom = parentDom;
-    instance.mountedQueue = mountedQueue;
-    instance.isRender = true;
-    instance.parentVNode = parentVNode;
-    instance.isSVG = isSVG;
-    instance.vNode = vNode;
-    var newDom = instance.hydrate(vNode, dom);
+    return createOrHydrateComponentClassOrInstance(vNode, parentDom, mountedQueue, null, true, parentVNode, isSVG, function (instance) {
+        var newDom = instance.hydrate(vNode, dom);
+        if (dom !== newDom && dom.parentNode) {
+            dom.parentNode.replaceChild(newDom, dom);
+        }
 
-    vNode.dom = newDom;
-    vNode.children = instance;
-    vNode.parentVNode = parentVNode;
-
-    if (typeof instance.mount === 'function') {
-        mountedQueue.push(function () {
-            return instance.mount(null, vNode);
-        });
-    }
-
-    var ref = vNode.ref;
-    if (typeof ref === 'function') {
-        ref(instance);
-    }
-
-    if (dom !== newDom && dom.parentNode) {
-        dom.parentNode.replaceChild(newDom, dom);
-    }
-
-    return dom;
+        return newDom;
+    });
 }
 
 function hydrateComment(vNode, dom) {
@@ -4215,7 +4285,8 @@ var miss = (Object.freeze || Object)({
 	hydrateRoot: hydrateRoot,
 	hydrate: hydrate,
 	Types: Types,
-	VNode: VNode
+	VNode: VNode,
+	hooks: hooks
 });
 
 var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
@@ -4315,7 +4386,7 @@ function compile(source, options) {
 
 Vdt$1.parser = parser;
 Vdt$1.stringifier = stringifier;
-Vdt$1.miss = miss;
+Vdt$1.miss = extend({}, miss);
 Vdt$1.compile = compile;
 Vdt$1.utils = utils;
 Vdt$1.setDelimiters = setDelimiters;

@@ -103,7 +103,7 @@ function compile(source, options) {
 
 Vdt.parser = parser;
 Vdt.stringifier = stringifier;
-Vdt.miss = miss;
+Vdt.miss = utils.extend({}, miss);
 Vdt.compile = compile;
 Vdt.utils = utils;
 Vdt.setDelimiters = utils.setDelimiters;
