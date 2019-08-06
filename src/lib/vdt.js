@@ -34,7 +34,7 @@ Vdt.prototype = {
         const vNode = this.vNode = this.template(this.data, Vdt, this.blocks, this.template) || miss.hc('empty');
         // for Animate we need this key
         if (vNode.key === undefined && parentVNode) {
-            vNode.key === parentVNode.key;
+            vNode.key = parentVNode.key;
         }
 
         return vNode;
