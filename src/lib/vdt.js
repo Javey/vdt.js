@@ -20,22 +20,24 @@ Vdt.prototype = {
     constructor: Vdt,
 
     render(data, parentDom, queue, parentVNode, isSVG, blocks) {
-        this.renderVNode(data, blocks);
+        this.renderVNode(data, blocks, parentVNode);
         this.node = miss.render(this.vNode, parentDom, queue, parentVNode, isSVG);
 
         return this.node;
     },
 
-    renderVNode(data, blocks) {
+    renderVNode(data, blocks, parentVNode) {
         if (data !== undefined) {
             this.data = data;
         }
-        // if (blocks !== undefined) {
         this.blocks = blocks;
-        // }
-        this.vNode = this.template(this.data, Vdt, this.blocks, this.template) || miss.hc('empty');
+        const vNode = this.vNode = this.template(this.data, Vdt, this.blocks, this.template) || miss.hc('empty');
+        // for Animate we need this key
+        if (vNode.key === undefined && parentVNode) {
+            vNode.key === parentVNode.key;
+        }
 
-        return this.vNode;
+        return vNode.key;
     },
 
     renderString(data, blocks, parent) {
@@ -47,14 +49,14 @@ Vdt.prototype = {
 
     update(data, parentDom, queue, parentVNode, isSVG, blocks) {
         var oldVNode = this.vNode;
-        this.renderVNode(data, blocks);
+        this.renderVNode(data, blocks, parentVNode);
         this.node = miss.patch(oldVNode, this.vNode, parentDom, queue, parentVNode, isSVG);
 
         return this.node;
     },
 
     hydrate(data, dom, queue, parentDom, parentVNode, isSVG, blocks) {
-        this.renderVNode(data, blocks);
+        this.renderVNode(data, blocks, parentVNode);
         miss.hydrate(this.vNode, dom, queue, parentDom, parentVNode, isSVG);
         this.node = this.vNode.dom;
 
