@@ -37,7 +37,7 @@ Vdt.prototype = {
             vNode.key === parentVNode.key;
         }
 
-        return vNode.key;
+        return vNode;
     },
 
     renderString(data, blocks, parent) {
