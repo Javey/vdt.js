@@ -35,9 +35,7 @@ function isEventProp(propName) {
     return propName.substr(0, 3) === 'ev-';
 }
 
-function isInvalid(o) {
-    return isNullOrUndefined(o) || o === false || o === true;
-}
+
 
 var indexOf = function () {
     if (Array.prototype.indexOf) {
@@ -127,7 +125,8 @@ var booleanProps = {
     hidden: true,
     autofocus: true,
     selected: true,
-    indeterminate: true
+    indeterminate: true,
+    multiple: true
 };
 
 var strictProps = {
@@ -228,6 +227,11 @@ var namespaces = {
 
 var hooks = {
     beforeInsert: null
+};
+
+var config = {
+    disableDelegate: false, // for using in React/Vue, disable delegate the event
+    delegateTarget: doc
 };
 
 /** 
@@ -2229,7 +2233,8 @@ function createVNode(tag, props, children, className, key, ref) {
             }
             break;
         case 'function':
-            if (tag.prototype.init) {
+            // arrow function has not prototype
+            if (tag.prototype && tag.prototype.init) {
                 type = Types.ComponentClass;
             } else {
                 // return tag(props);
@@ -2248,7 +2253,6 @@ function createVNode(tag, props, children, className, key, ref) {
         if (!isNullOrUndefined(children)) {
             if (props === EMPTY_OBJ) props = {};
             props.children = normalizeChildren(children, false);
-            // props.children = children;
         } else if (!isNullOrUndefined(props.children)) {
             props.children = normalizeChildren(props.children, false);
         }
@@ -2292,8 +2296,14 @@ function normalizeChildren(vNodes, isAddKey) {
         return childNodes.length ? childNodes : null;
     } else if (isComponentInstance(vNodes)) {
         return createComponentInstanceVNode(vNodes);
-    } else if (vNodes.type && !isNullOrUndefined(vNodes.dom)) {
-        return directClone(vNodes);
+    } else if (vNodes.type && isAddKey) {
+        if (!isNullOrUndefined(vNodes.dom) || vNodes.$) {
+            return directClone(vNodes);
+        }
+
+        // add a flag to indicate that we have handle the vNode
+        // when it came back we should clone it
+        vNodes.$ = true;
     }
     return vNodes;
 }
@@ -2338,7 +2348,7 @@ function addChild(vNodes, reference, isAddKey) {
             if (!newVNodes) {
                 newVNodes = vNodes.slice(0, i);
             }
-            if (n.dom || n.$) {
+            if (isAddKey && (n.dom || n.$)) {
                 newVNodes.push(applyKey(directClone(n), reference, isAddKey));
             } else {
                 newVNodes.push(applyKey(n, reference, isAddKey));
@@ -2348,44 +2358,38 @@ function addChild(vNodes, reference, isAddKey) {
     return newVNodes || vNodes;
 }
 
-function directClone(vNode) {
+function directClone(vNode, extraProps, changeType) {
     var newVNode = void 0;
     var type = vNode.type;
 
-    if (type & Types.ComponentClassOrInstance) {
-        var props = void 0;
-        var propsToClone = vNode.props;
-
-        if (propsToClone === EMPTY_OBJ || isNullOrUndefined(propsToClone)) {
-            props = EMPTY_OBJ;
-        } else {
-            props = {};
-            for (var key in propsToClone) {
-                props[key] = propsToClone[key];
+    if (type & (Types.ComponentClassOrInstance | Types.Element)) {
+        // maybe we does not shadow copy props
+        var props = vNode.props || EMPTY_OBJ;
+        /**
+         * if this is a instance vNode, then we must change its type to new instance again
+         * 
+         * but if we change the type, it will lead to replace element because of different type.
+         * only change the type, when we really clone it
+         */
+        var _type = type & Types.ComponentInstance && changeType ? Types.ComponentClass : type;
+        if (extraProps) {
+            // if exist extraProps, shadow copy
+            var _props = {};
+            for (var key in props) {
+                _props[key] = props[key];
             }
-        }
-
-        newVNode = new VNode(type, vNode.tag, props, vNode.children, null, vNode.key, vNode.ref);
-
-        var newProps = newVNode.props;
-        var newChildren = directCloneChildren(newProps.children);
-        if (newChildren) {
-            newProps.children = newChildren;
-        }
-    } else if (type & Types.Element) {
-        var _props = void 0;
-        var _propsToClone = vNode.props;
-
-        if (_propsToClone === EMPTY_OBJ || isNullOrUndefined(_propsToClone)) {
-            _props = EMPTY_OBJ;
-        } else {
-            _props = {};
-            for (var _key in _propsToClone) {
-                _props[_key] = _propsToClone[_key];
+            for (var _key in extraProps) {
+                _props[_key] = extraProps[_key];
             }
-        }
+            var children = extraProps.children;
+            if (children) {
+                _props.children = normalizeChildren(children, false);
+            }
 
-        newVNode = new VNode(type, vNode.tag, vNode.props, directCloneChildren(vNode.children), vNode.className, vNode.key, vNode.ref);
+            newVNode = new VNode(_type, vNode.tag, _props, vNode.children, _props.className || vNode.className, _props.key || vNode.key, _props.ref || vNode.ref);
+        } else {
+            newVNode = new VNode(_type, vNode.tag, props, vNode.children, vNode.className, vNode.key, vNode.ref);
+        }
     } else if (type & Types.Text) {
         newVNode = createTextVNode(vNode.children, vNode.key);
     } else if (type & Types.HtmlComment) {
@@ -2393,31 +2397,6 @@ function directClone(vNode) {
     }
 
     return newVNode;
-}
-
-function directCloneChildren(children) {
-    if (children) {
-        if (isArray(children)) {
-            var len = children.length;
-            if (len > 0) {
-                var tmpArray = [];
-
-                for (var i = 0; i < len; i++) {
-                    var child = children[i];
-                    if (isStringOrNumber(child)) {
-                        tmpArray.push(child);
-                    } else if (!isInvalid(child) && child.type) {
-                        tmpArray.push(directClone(child));
-                    }
-                }
-                return tmpArray;
-            }
-        } else if (children.type) {
-            return directClone(children);
-        }
-    }
-
-    return children;
 }
 
 function preventDefault() {
@@ -2432,18 +2411,24 @@ function stopPropagation() {
 var addEventListener = void 0;
 var removeEventListener = void 0;
 function fixEvent(fn) {
-    return function (event) {
-        event.stopPropagation = stopPropagation;
-        if (!event.preventDefault) {
-            event.preventDefault = preventDefault;
-        }
-        fn(event);
-    };
+    if (!fn._$cb) {
+        fn._$cb = function (event) {
+            // for compatibility
+            event._rawEvent = event;
+
+            event.stopPropagation = stopPropagation;
+            if (!event.preventDefault) {
+                event.preventDefault = preventDefault;
+            }
+            fn(event);
+        };
+    }
+    return fn._$cb;
 }
 if ('addEventListener' in doc) {
     addEventListener = function addEventListener(dom, name, fn) {
-        fn._$cb = fixEvent(fn);
-        dom.addEventListener(name, fn._$cb, false);
+        fn = fixEvent(fn);
+        dom.addEventListener(name, fn, false);
     };
 
     removeEventListener = function removeEventListener(dom, name, fn) {
@@ -2451,8 +2436,8 @@ if ('addEventListener' in doc) {
     };
 } else {
     addEventListener = function addEventListener(dom, name, fn) {
-        fn._$cb = fixEvent(fn);
-        dom.attachEvent('on' + name, fn._$cb);
+        fn = fixEvent(fn);
+        dom.attachEvent('on' + name, fn);
     };
 
     removeEventListener = function removeEventListener(dom, name, fn) {
@@ -2465,10 +2450,11 @@ var unDelegatesEvents = {
     'mouseenter': true,
     'mouseleave': true,
     'propertychange': true,
-    'scroll': true
+    'scroll': true,
+    'wheel': true
 };
 
-// change event can not be deletegated in IE8 
+// change event can not be deletegated in IE8
 if (browser.isIE8) {
     unDelegatesEvents.change = true;
 }
@@ -2483,7 +2469,7 @@ function handleEvent(name, lastEvent, nextEvent, dom) {
         name = 'propertychange';
     }
 
-    if (!unDelegatesEvents[name]) {
+    if (!config.disableDelegate && !unDelegatesEvents[name]) {
         var delegatedRoots = delegatedEvents[name];
 
         if (nextEvent) {
@@ -2529,7 +2515,7 @@ function handleEvent(name, lastEvent, nextEvent, dom) {
 }
 
 function dispatchEvent(event, target, items, count, isClick, eventData) {
-    // if event has cancelled bubble, return directly  
+    // if event has cancelled bubble, return directly
     // otherwise it is also triggered sometimes, e.g in React
     if (event.cancelBubble) {
         return;
@@ -2578,12 +2564,11 @@ function attachEventToDocument(name, delegatedRoots) {
             } catch (e) {}
             // ie8
 
-            // for compatibility
-            event._rawEvent = event;
+            // nt._rawEvent = event
             dispatchEvent(event, event.target, delegatedRoots.items, count, event.type === 'click', eventData);
         }
     };
-    addEventListener(doc, name, docEvent);
+    addEventListener(config.delegateTarget, name, docEvent);
     return docEvent;
 }
 
@@ -2783,7 +2768,7 @@ function createHtmlElement(vNode, parentDom, mountedQueue, isRender, parentVNode
     // when it is appended to parent dom. We change its value in processForm does not
     // work. So processForm after it has be appended to parent dom.
     if (parentDom) {
-        appendChild(parentDom, dom);
+        parentDom.appendChild(dom);
     }
     if (props !== EMPTY_OBJ) {
         patchProps(null, vNode, isSVG, true);
@@ -2842,7 +2827,15 @@ function createComponentClassOrInstance(vNode, parentDom, mountedQueue, lastVNod
     return createOrHydrateComponentClassOrInstance(vNode, parentDom, mountedQueue, lastVNode, isRender, parentVNode, isSVG, function (instance) {
         var dom = instance.init(lastVNode, vNode);
         if (parentDom) {
-            appendChild(parentDom, dom);
+            // for Animate component reuse dom in Intact
+            if (!lastVNode && parentDom._reserve) {
+                lastVNode = parentDom._reserve[vNode.key];
+            }
+            if (!lastVNode ||
+            // maybe we have reused the component and replaced the dom
+            lastVNode.dom !== dom && !dom.parentNode || !dom.parentNode.tagName) {
+                parentDom.appendChild(dom);
+            }
         }
 
         return dom;
@@ -2909,10 +2902,22 @@ function createElements(vNodes, parentDom, mountedQueue, isRender, parentVNode, 
     if (isStringOrNumber(vNodes)) {
         setTextContent(parentDom, vNodes);
     } else if (isArray(vNodes)) {
+        var cloned = false;
         for (var i = 0; i < vNodes.length; i++) {
-            createElement(vNodes[i], parentDom, mountedQueue, isRender, parentVNode, isSVG);
+            var child = vNodes[i];
+            if (child.dom) {
+                if (!cloned) {
+                    parentVNode.children = vNodes = vNodes.slice(0);
+                    cloned = true;
+                }
+                vNodes[i] = child = directClone(child);
+            }
+            createElement(child, parentDom, mountedQueue, isRender, parentVNode, isSVG);
         }
     } else {
+        if (vNodes.dom) {
+            parentVNode.children = vNodes = directClone(vNodes);
+        }
         createElement(vNodes, parentDom, mountedQueue, isRender, parentVNode, isSVG);
     }
 }
@@ -2985,6 +2990,7 @@ function removeComponentClassOrInstance(vNode, parentDom, nextVNode) {
     var ref = vNode.ref;
 
     if (typeof instance.destroy === 'function') {
+        instance._isRemoveDirectly = !!parentDom;
         instance.destroy(vNode, nextVNode, parentDom);
     }
 
@@ -3031,15 +3037,6 @@ function removeChild(parentDom, vNode) {
     }
 }
 
-function appendChild(parentDom, dom) {
-    // in IE8, when a element has appendChild,
-    // then its parentNode will be HTMLDocument object,
-    // so check the tagName for this case
-    if (!dom.parentNode || !dom.parentNode.tagName) {
-        parentDom.appendChild(dom);
-    }
-}
-
 function createRef(dom, ref, mountedQueue) {
     if (typeof ref === 'function') {
         // mountedQueue.push(() => ref(dom));
@@ -3073,42 +3070,41 @@ function patch(lastVNode, nextVNode, parentDom, mountedQueue, parentVNode, isSVG
 }
 
 function patchVNode(lastVNode, nextVNode, parentDom, mountedQueue, parentVNode, isSVG) {
-    if (lastVNode !== nextVNode) {
-        var nextType = nextVNode.type;
-        var lastType = lastVNode.type;
+    var nextType = nextVNode.type;
+    var lastType = lastVNode.type;
 
-        if (nextType & Types.Element) {
-            if (lastType & Types.Element) {
-                patchElement(lastVNode, nextVNode, parentDom, mountedQueue, parentVNode, isSVG);
-            } else {
-                replaceElement(lastVNode, nextVNode, parentDom, mountedQueue, parentVNode, isSVG);
-            }
-        } else if (nextType & Types.TextElement) {
-            if (lastType === nextType) {
-                patchText(lastVNode, nextVNode);
-            } else {
-                replaceElement(lastVNode, nextVNode, parentDom, mountedQueue, isSVG);
-            }
-        } else if (nextType & Types.ComponentClass) {
-            if (lastType & Types.ComponentClass) {
-                patchComponentClass(lastVNode, nextVNode, parentDom, mountedQueue, parentVNode, isSVG);
-            } else {
-                replaceElement(lastVNode, nextVNode, parentDom, mountedQueue, parentVNode, isSVG);
-            }
-            // } else if (nextType & Types.ComponentFunction) {
-            // if (lastType & Types.ComponentFunction) {
-            // patchComponentFunction(lastVNode, nextVNode, parentDom, mountedQueue);
-            // } else {
-            // replaceElement(lastVNode, nextVNode, parentDom, mountedQueue);
-            // }
-        } else if (nextType & Types.ComponentInstance) {
-            if (lastType & Types.ComponentInstance) {
-                patchComponentIntance(lastVNode, nextVNode, parentDom, mountedQueue, parentVNode, isSVG);
-            } else {
-                replaceElement(lastVNode, nextVNode, parentDom, mountedQueue, parentVNode, isSVG);
-            }
+    if (nextType & Types.Element) {
+        if (lastType & Types.Element) {
+            patchElement(lastVNode, nextVNode, parentDom, mountedQueue, parentVNode, isSVG);
+        } else {
+            replaceElement(lastVNode, nextVNode, parentDom, mountedQueue, parentVNode, isSVG);
+        }
+    } else if (nextType & Types.TextElement) {
+        if (lastType === nextType) {
+            patchText(lastVNode, nextVNode);
+        } else {
+            replaceElement(lastVNode, nextVNode, parentDom, mountedQueue, isSVG);
+        }
+    } else if (nextType & Types.ComponentClass) {
+        if (lastType & Types.ComponentClass) {
+            patchComponentClass(lastVNode, nextVNode, parentDom, mountedQueue, parentVNode, isSVG);
+        } else {
+            replaceElement(lastVNode, nextVNode, parentDom, mountedQueue, parentVNode, isSVG);
+        }
+        // } else if (nextType & Types.ComponentFunction) {
+        // if (lastType & Types.ComponentFunction) {
+        // patchComponentFunction(lastVNode, nextVNode, parentDom, mountedQueue);
+        // } else {
+        // replaceElement(lastVNode, nextVNode, parentDom, mountedQueue);
+        // }
+    } else if (nextType & Types.ComponentInstance) {
+        if (lastType & Types.ComponentInstance) {
+            patchComponentInstance(lastVNode, nextVNode, parentDom, mountedQueue, parentVNode, isSVG);
+        } else {
+            replaceElement(lastVNode, nextVNode, parentDom, mountedQueue, parentVNode, isSVG);
         }
     }
+
     return nextVNode.dom;
 }
 
@@ -3213,7 +3209,7 @@ function patchComponentClass(lastVNode, nextVNode, parentDom, mountedQueue, pare
     }
 }
 
-function patchComponentIntance(lastVNode, nextVNode, parentDom, mountedQueue, parentVNode, isSVG) {
+function patchComponentInstance(lastVNode, nextVNode, parentDom, mountedQueue, parentVNode, isSVG) {
     var lastInstance = lastVNode.children;
     var nextInstance = nextVNode.children;
     var dom = lastVNode.dom;
@@ -3228,10 +3224,11 @@ function patchComponentIntance(lastVNode, nextVNode, parentDom, mountedQueue, pa
         if (lastInstance.mounted) {
             lastInstance.isRender = false;
         }
+        lastInstance.vNode = nextVNode;
         lastInstance.parentVNode = parentVNode;
+        nextVNode.parentVNode = parentVNode;
         newDom = lastInstance.update(lastVNode, nextVNode);
         nextVNode.dom = newDom;
-        nextVNode.parentVNode = parentVNode;
 
         var ref = nextVNode.ref;
         if (typeof ref === 'function') {
@@ -3407,14 +3404,14 @@ function patchChildrenByKey(a, b, dom, mountedQueue, parentVNode, isSVG) {
                 }
             }
         } else {
-            var keyIndex = {};
+            var keyIndex = new SimpleMap();
             for (i = bStart; i <= bEnd; i++) {
-                keyIndex[b[i].key] = i;
+                keyIndex.set(b[i].key, i);
             }
             for (i = aStart; i <= aEnd; i++) {
                 aNode = a[i];
                 if (patched < bLength) {
-                    j = keyIndex[aNode.key];
+                    j = keyIndex.get(aNode.key);
                     if (j !== undefined) {
                         bNode = b[j];
                         sources[j - bStart] = i;
@@ -3532,7 +3529,6 @@ function insertOrAppend(pos, length, newDom, nodes, dom, detectParent) {
         dom.insertBefore(newDom, nodes[nextPos].dom);
     } else {
         dom.appendChild(newDom);
-        // appendChild(dom, newDom);
     }
 }
 
@@ -4277,7 +4273,9 @@ var miss = (Object.freeze || Object)({
 	hydrate: hydrate,
 	Types: Types,
 	VNode: VNode,
-	hooks: hooks
+	hooks: hooks,
+	clone: directClone,
+	config: config
 });
 
 var parser = new Parser();
@@ -4297,21 +4295,23 @@ Vdt$1.prototype = {
     constructor: Vdt$1,
 
     render: function render$$1(data, parentDom, queue, parentVNode, isSVG, blocks) {
-        this.renderVNode(data, blocks);
+        this.renderVNode(data, blocks, parentVNode);
         this.node = render(this.vNode, parentDom, queue, parentVNode, isSVG);
 
         return this.node;
     },
-    renderVNode: function renderVNode(data, blocks) {
+    renderVNode: function renderVNode(data, blocks, parentVNode) {
         if (data !== undefined) {
             this.data = data;
         }
-        // if (blocks !== undefined) {
         this.blocks = blocks;
-        // }
-        this.vNode = this.template(this.data, Vdt$1, this.blocks, this.template) || createCommentVNode('empty');
+        var vNode = this.vNode = this.template(this.data, Vdt$1, this.blocks, this.template) || createCommentVNode('empty');
+        // for Animate we need this key
+        if (vNode.key === undefined && parentVNode) {
+            vNode.key = parentVNode.key;
+        }
 
-        return this.vNode;
+        return vNode;
     },
     renderString: function renderString$$1(data, blocks, parent) {
         this.data = data;
@@ -4321,13 +4321,13 @@ Vdt$1.prototype = {
     },
     update: function update(data, parentDom, queue, parentVNode, isSVG, blocks) {
         var oldVNode = this.vNode;
-        this.renderVNode(data, blocks);
+        this.renderVNode(data, blocks, parentVNode);
         this.node = patch(oldVNode, this.vNode, parentDom, queue, parentVNode, isSVG);
 
         return this.node;
     },
     hydrate: function hydrate$$1(data, dom, queue, parentDom, parentVNode, isSVG, blocks) {
-        this.renderVNode(data, blocks);
+        this.renderVNode(data, blocks, parentVNode);
         hydrate(this.vNode, dom, queue, parentDom, parentVNode, isSVG);
         this.node = this.vNode.dom;
 
